@@ -1,6 +1,5 @@
 import React from 'react';
-import { Button } from '@/components/ui/button';
-import { Bot, FileQuestion, PenLine, MoveRight, Mic, Users, BookOpen, Target } from 'lucide-react';
+import { Bot, FileQuestion, PenLine, Mic, Users, BookOpen, Target } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 const FloatingIcon = ({ icon, className, animation, delay, gradient }: { icon: React.ReactNode, className?: string, animation?: string, delay?: string, gradient?: string }) => (
@@ -27,18 +26,15 @@ const Hero = () => {
         </div>
 
         <div className="container mx-auto px-4 z-10 text-center">
-            <h1 className="font-headline text-5xl md:text-7xl lg:text-8xl font-bold tracking-tighter animate-gradient-anim bg-[length:200%_auto] bg-gradient-to-r from-primary via-accent to-pink-500 bg-clip-text text-transparent">
-                Prep for Success
+            <h1 className="font-headline text-4xl md:text-6xl lg:text-7xl font-bold tracking-tighter">
+              Ace your exams and interviews with <br className="hidden md:block" />
+              <span className="animate-gradient-anim bg-[length:200%_auto] bg-gradient-to-r from-primary via-accent to-pink-500 bg-clip-text text-transparent">
+                personalized, AI-powered, practice.
+              </span>
             </h1>
-            <p className="mt-4 max-w-2xl mx-auto text-lg md:text-xl text-muted-foreground">
-                AI-powered tools designed around you. Ace your exams with mock interviews, daily quizzes, and guided writing practice.
+            <p className="mt-6 max-w-2xl mx-auto text-lg md:text-xl text-muted-foreground">
+              We combine cutting-edge AI with community feedback to create a prep experience that truly adapts to you.
             </p>
-            <div className="mt-8">
-                <Button size="lg" className="group">
-                    Get Started Free
-                    <MoveRight className="w-5 h-5 ml-2 transition-transform group-hover:translate-x-1" />
-                </Button>
-            </div>
         </div>
         
         <div className="absolute inset-0 z-0 w-full h-full pointer-events-none">
