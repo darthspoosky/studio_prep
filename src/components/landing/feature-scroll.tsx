@@ -4,8 +4,8 @@ import React, { useRef } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import Link from 'next/link';
 import { Mic, FileQuestion, PenLine, MoveRight, Newspaper } from 'lucide-react';
-import { motion, useScroll, useTransform } from 'framer-motion';
-import FeedbackWall from './feedback-wall';
+import { motion, useScroll, useTransform, type MotionValue } from 'framer-motion';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 
 const tools = [
     {
@@ -62,6 +62,82 @@ const ToolCard = ({ icon, title, description, gradient, href }: { icon: React.Re
     </Link>
 );
 
+const testimonials = [
+  {
+    quote: "PrepTalk's AI bot is a game-changer for my interview practice. The feedback is so insightful!",
+    name: 'Alex Johnson',
+    handle: 'Software Engineer',
+    avatar: 'AJ',
+  },
+  {
+    quote: 'The daily quizzes are the perfect way to start my study sessions. Short, sharp, and relevant.',
+    name: 'Maria Garcia',
+    handle: 'Pre-Med Student',
+    avatar: 'MG',
+  },
+  {
+    quote: "I finally feel confident about my writing skills for the GRE. The prompts are fantastic.",
+    name: 'David Chen',
+    handle: 'Graduate Applicant',
+    avatar: 'DC',
+  },
+  {
+    quote: "The community feedback feature is brilliant. It's like having thousands of study partners.",
+    name: 'Samantha Lee',
+    handle: 'SAT Taker',
+    avatar: 'SL',
+  },
+  {
+    quote: 'An indispensable tool. The mock interviews helped me land my dream internship.',
+    name: 'Ben Carter',
+    handle: 'MBA Candidate',
+    avatar: 'BC',
+  },
+  {
+    quote: 'The AI-powered writing practice has drastically improved my essays. A must-have!',
+    name: 'Priya Patel',
+    handle: 'Law Student',
+    avatar: 'PP',
+  },
+];
+
+const duplicatedTestimonials = [...testimonials, ...testimonials];
+
+const FeedbackWall = ({ scrollYProgress }: { scrollYProgress: MotionValue<number> }) => {
+    return (
+        <div className="relative h-screen flex flex-col justify-center overflow-hidden">
+            <div className="container mx-auto px-4 text-center mb-16">
+                <h2 className="font-headline text-3xl md:text-4xl font-bold tracking-tight">
+                    From the PrepTalk Community
+                </h2>
+                <p className="mt-3 max-w-2xl mx-auto text-lg text-muted-foreground">
+                    See what our users are saying about their prep journey with us.
+                </p>
+            </div>
+
+            <motion.div style={{ x: scrollYProgress }} className="flex gap-8 pl-8">
+                {duplicatedTestimonials.map((testimonial, index) => (
+                    <Card key={index} className="w-[400px] lg:w-[450px] shrink-0 glassmorphic">
+                        <CardContent className="pt-6 flex flex-col h-full">
+                            <p className="mb-4 text-foreground flex-grow text-base md:text-lg">"{testimonial.quote}"</p>
+                            <div className="flex items-center mt-auto">
+                                <Avatar>
+                                    <AvatarImage data-ai-hint="person" src={`https://placehold.co/40x40.png`} />
+                                    <AvatarFallback>{testimonial.avatar}</AvatarFallback>
+                                </Avatar>
+                                <div className="ml-4 text-left">
+                                    <p className="font-semibold text-foreground">{testimonial.name}</p>
+                                    <p className="text-sm text-muted-foreground">{testimonial.handle}</p>
+                                </div>
+                            </div>
+                        </CardContent>
+                    </Card>
+                ))}
+            </motion.div>
+        </div>
+    );
+};
+
 
 const FeatureScroll = () => {
     const containerRef = useRef<HTMLDivElement>(null);
@@ -70,28 +146,20 @@ const FeatureScroll = () => {
         offset: ['start start', 'end end']
     });
 
-    const titleOpacity = useTransform(scrollYProgress, [0, 0.05, 0.6], [0, 1, 0]);
+    const titleOpacity = useTransform(scrollYProgress, [0, 0.05, 0.4], [0, 1, 0]);
     const titleY = useTransform(scrollYProgress, [0, 0.05], ['20px', '0px']);
+    
+    // Animate the cards from a spread-out, transparent state into a stacked, opaque state.
+    const cardsOpacity = useTransform(scrollYProgress, [0.05, 0.15], [0, 1]);
 
-    const cardTransforms = tools.map((_, i) => {
-        const totalCards = tools.length;
-        // Each card starts animating a bit later than the previous one
-        const start = 0.1 + i * 0.1;
-        // The point where all cards are stacked and the feedback wall starts to appear
-        const end = 0.7;
-
-        const scaleInput = [start, Math.min(start + 0.1, end)];
-        const scale = useTransform(scrollYProgress, scaleInput, [1, 1 - (i * 0.05)]);
-
-        const yInput = [start, Math.min(start + 0.1, end)];
-        const y = useTransform(scrollYProgress, yInput, [0, i * 12]);
-        
-        return { scale, y };
-    });
-
-    const feedbackOpacity = useTransform(scrollYProgress, [0.6, 0.7], [0, 1]);
-    const feedbackY = useTransform(scrollYProgress, [0.6, 0.8], ['100vh', '0vh']);
-    const feedbackX = useTransform(scrollYProgress, [0.8, 1], ['0%', '-50%']);
+    const feedbackStart = 0.5;
+    const feedbackEnd = 0.7;
+    const feedbackOpacity = useTransform(scrollYProgress, [feedbackStart, feedbackEnd], [0, 1]);
+    const feedbackY = useTransform(scrollYProgress, [feedbackStart, feedbackEnd], ['100vh', '0vh']);
+    
+    const feedbackScrollStart = 0.7;
+    const feedbackScrollEnd = 1.0;
+    const feedbackX = useTransform(scrollYProgress, [feedbackScrollStart, feedbackScrollEnd], ['0%', '-50%']);
 
 
     return (
@@ -114,15 +182,18 @@ const FeatureScroll = () => {
                     </div>
                 </motion.div>
 
-                <div className="absolute inset-0 flex items-center justify-center">
-                    {[...tools].reverse().map((tool, i) => {
-                        const originalIndex = tools.length - 1 - i;
+                <motion.div style={{opacity: cardsOpacity}} className="absolute inset-0 flex items-center justify-center">
+                    {tools.map((tool, i) => {
+                        const inputRange = [0.1, 0.5];
+                        const y = useTransform(scrollYProgress, inputRange, [`${(i - 1.5) * 120}px`, `${i * 12}px`]);
+                        const scale = useTransform(scrollYProgress, inputRange, [0.8, 1 - (tools.length - 1 - i) * 0.05]);
+                        
                         return (
                             <motion.div
                                 key={tool.title}
                                 style={{
-                                    scale: cardTransforms[originalIndex].scale,
-                                    y: cardTransforms[originalIndex].y,
+                                    y,
+                                    scale,
                                     zIndex: i,
                                 }}
                                 className="absolute h-[450px] w-full max-w-2xl"
@@ -131,11 +202,11 @@ const FeatureScroll = () => {
                             </motion.div>
                         );
                     })}
-                </div>
+                </motion.div>
 
                 <motion.div
-                    style={{ y: feedbackY, opacity: feedbackOpacity }}
-                    className="absolute inset-0 z-40 bg-gray-50 dark:bg-gray-900"
+                    style={{ y: feedbackY, opacity: feedbackOpacity, zIndex: 50 }}
+                    className="absolute inset-0 bg-gray-50 dark:bg-gray-900"
                 >
                     <FeedbackWall scrollYProgress={feedbackX} />
                 </motion.div>
