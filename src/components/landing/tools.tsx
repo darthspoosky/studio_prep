@@ -1,10 +1,10 @@
 "use client";
 
-import React from 'react';
+import React, { useRef } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import Link from 'next/link';
 import { Mic, FileQuestion, PenLine, MoveRight, Newspaper } from 'lucide-react';
-import { motion } from 'framer-motion';
+import { motion, useScroll, useTransform } from 'framer-motion';
 
 const ToolCard = ({ icon, title, description, gradient, href }: { icon: React.ReactNode, title: string, description: string, gradient: string, href: string }) => (
     <Link href={href} className="group relative w-full h-full block">
@@ -63,46 +63,39 @@ const Tools = () => {
         }
     ];
 
-    const containerVariants = {
-        hidden: { opacity: 0 },
-        show: {
-          opacity: 1,
-          transition: {
-            staggerChildren: 0.2,
-          },
-        },
-      };
-    
-      const itemVariants = {
-        hidden: { opacity: 0, y: 50 },
-        show: { opacity: 1, y: 0, transition: { duration: 0.5 } },
-      };
+    const targetRef = useRef<HTMLDivElement>(null);
+    const { scrollYProgress } = useScroll({
+        target: targetRef,
+        offset: ['start start', 'end start'],
+    });
 
+    const opacity = useTransform(scrollYProgress, [0, 0.6, 0.8], [1, 1, 0]);
+    const scale = useTransform(scrollYProgress, [0, 0.8], [1, 0.8]);
+    const position = useTransform(scrollYProgress, (pos) =>
+        pos >= 1 ? 'relative' : 'sticky'
+    );
+    
     return (
-        <section className="py-20 sm:py-32 bg-gray-50 dark:bg-gray-900/50">
-            <div className="container mx-auto px-4">
-                <div className="text-center mb-12">
-                    <h2 className="font-headline text-3xl md:text-4xl font-bold tracking-tight">
-                        Our Core Tools
-                    </h2>
-                    <p className="mt-3 max-w-2xl mx-auto text-lg text-muted-foreground">
-                        Everything you need to get exam-ready, all in one place.
-                    </p>
+        <section ref={targetRef} className="h-[300vh] bg-gray-50 dark:bg-gray-900/50">
+            <motion.div style={{ position, opacity, scale }} className="top-0 flex h-screen flex-col items-center justify-center">
+                <div className="container mx-auto px-4">
+                    <div className="text-center mb-12">
+                        <h2 className="font-headline text-3xl md:text-4xl font-bold tracking-tight">
+                            Our Core Tools
+                        </h2>
+                        <p className="mt-3 max-w-2xl mx-auto text-lg text-muted-foreground">
+                            Everything you need to get exam-ready, all in one place.
+                        </p>
+                    </div>
+                    <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
+                        {tools.map((tool, index) => (
+                            <motion.div key={index}>
+                                <ToolCard {...tool} />
+                            </motion.div>
+                        ))}
+                    </div>
                 </div>
-                <motion.div 
-                    className="grid md:grid-cols-2 lg:grid-cols-4 gap-8"
-                    variants={containerVariants}
-                    initial="hidden"
-                    whileInView="show"
-                    viewport={{ once: true, amount: 0.2 }}
-                >
-                    {tools.map((tool, index) => (
-                        <motion.div key={index} variants={itemVariants}>
-                            <ToolCard {...tool} />
-                        </motion.div>
-                    ))}
-                </motion.div>
-            </div>
+            </motion.div>
         </section>
     );
 };
