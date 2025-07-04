@@ -1,9 +1,9 @@
 "use client";
 
-import React from 'react';
+import React, { useRef } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { motion, MotionValue, useTransform } from 'framer-motion';
+import { motion, useScroll, useTransform } from 'framer-motion';
 
 const testimonials = [
   {
@@ -44,49 +44,50 @@ const testimonials = [
   },
 ];
 
-const FeedbackWall = ({ scrollYProgress }: { scrollYProgress: MotionValue<number> }) => {
-    
-    // Animate this section between 70% and 100% of the parent scroll
-    const animationStart = 0.7;
-    const animationEnd = 1.0;
+const duplicatedTestimonials = [...testimonials, ...testimonials];
 
-    const opacity = useTransform(scrollYProgress, [animationStart, animationStart + 0.1, animationEnd - 0.1, animationEnd], [0, 1, 1, 0]);
-    const y = useTransform(scrollYProgress, [animationStart, animationStart + 0.1, animationEnd - 0.1, animationEnd], ['40px', '0px', '0px', '-40px']);
+const FeedbackWall = () => {
+    const targetRef = useRef<HTMLDivElement>(null);
+    const { scrollYProgress } = useScroll({
+        target: targetRef,
+        offset: ['start start', 'end end'],
+    });
+
+    const x = useTransform(scrollYProgress, [0.1, 0.9], ['0%', '-50%']);
 
     return (
-        <div className="sticky top-0 h-screen flex items-center justify-center z-20">
-            <motion.div style={{ opacity, y }} className="container mx-auto px-4">
-                <div className="text-center mb-12">
-                <h2 className="font-headline text-3xl md:text-4xl font-bold tracking-tight">
-                    From the PrepTalk Community
-                </h2>
-                <p className="mt-3 max-w-2xl mx-auto text-lg text-muted-foreground">
-                    See what our users are saying about their prep journey with us.
-                </p>
+        <section ref={targetRef} className="relative h-[300vh] bg-background">
+            <div className="sticky top-0 h-screen flex flex-col justify-center overflow-hidden">
+                <div className="container mx-auto px-4 text-center mb-16">
+                    <h2 className="font-headline text-3xl md:text-4xl font-bold tracking-tight">
+                        From the PrepTalk Community
+                    </h2>
+                    <p className="mt-3 max-w-2xl mx-auto text-lg text-muted-foreground">
+                        See what our users are saying about their prep journey with us.
+                    </p>
                 </div>
-                <div
-                className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8"
-                >
-                {testimonials.map((testimonial, index) => (
-                    <Card key={index} className="h-full glassmorphic">
-                        <CardContent className="pt-6 flex flex-col h-full">
-                        <p className="mb-4 text-foreground flex-grow">"{testimonial.quote}"</p>
-                        <div className="flex items-center mt-auto">
-                            <Avatar>
-                            <AvatarImage data-ai-hint="person" src={`https://placehold.co/40x40.png`} />
-                            <AvatarFallback>{testimonial.avatar}</AvatarFallback>
-                            </Avatar>
-                            <div className="ml-4">
-                            <p className="font-semibold text-foreground">{testimonial.name}</p>
-                            <p className="text-sm text-muted-foreground">{testimonial.handle}</p>
-                            </div>
-                        </div>
-                        </CardContent>
-                    </Card>
-                ))}
-                </div>
-            </motion.div>
-        </div>
+
+                <motion.div style={{ x }} className="flex gap-8 pl-8">
+                    {duplicatedTestimonials.map((testimonial, index) => (
+                        <Card key={index} className="w-[400px] lg:w-[450px] shrink-0 glassmorphic">
+                            <CardContent className="pt-6 flex flex-col h-full">
+                                <p className="mb-4 text-foreground flex-grow text-base md:text-lg">"{testimonial.quote}"</p>
+                                <div className="flex items-center mt-auto">
+                                    <Avatar>
+                                        <AvatarImage data-ai-hint="person" src={`https://placehold.co/40x40.png`} />
+                                        <AvatarFallback>{testimonial.avatar}</AvatarFallback>
+                                    </Avatar>
+                                    <div className="ml-4 text-left">
+                                        <p className="font-semibold text-foreground">{testimonial.name}</p>
+                                        <p className="text-sm text-muted-foreground">{testimonial.handle}</p>
+                                    </div>
+                                </div>
+                            </CardContent>
+                        </Card>
+                    ))}
+                </motion.div>
+            </div>
+        </section>
     );
 };
 

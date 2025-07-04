@@ -5,7 +5,6 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import Link from 'next/link';
 import { Mic, FileQuestion, PenLine, MoveRight, Newspaper } from 'lucide-react';
 import { motion, useScroll, useTransform, MotionValue } from 'framer-motion';
-import FeedbackWall from './feedback-wall';
 
 const ToolCard = ({ icon, title, description, gradient, href }: { icon: React.ReactNode, title: string, description: string, gradient: string, href: string }) => (
     <Link href={href} className="group relative w-full h-full block">
@@ -101,11 +100,8 @@ const Tools = () => {
         offset: ['start start', 'end end']
     });
     
-    const toolsAnimationEnd = 0.5;
-    const feedbackWallAnimationStart = 0.7;
-
     return (
-        <section ref={containerRef} className="relative bg-gray-50 dark:bg-gray-900 h-[550vh]">
+        <section ref={containerRef} className="relative bg-gray-50 dark:bg-gray-900 h-[400vh]">
              <div className="sticky top-0 h-auto py-16 bg-transparent z-30">
                 <div 
                     className="container mx-auto px-4 text-center"
@@ -121,9 +117,10 @@ const Tools = () => {
                 </div>
             </div>
             
-            <div className="relative z-10">
+            <div className="relative">
                 {tools.map((tool, i) => {
-                    const stepDuration = toolsAnimationEnd / tools.length;
+                    const totalAnimationDuration = 1.0;
+                    const stepDuration = totalAnimationDuration / tools.length;
                     const rangeStart = i * stepDuration;
                     const rangeEnd = rangeStart + stepDuration;
 
@@ -141,8 +138,6 @@ const Tools = () => {
                     );
                 })}
             </div>
-
-            <FeedbackWall scrollYProgress={scrollYProgress} animationStart={feedbackWallAnimationStart} />
         </section>
     );
 };

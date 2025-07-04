@@ -4,6 +4,7 @@ import Explore from '@/components/landing/explore';
 import Tools from '@/components/landing/tools';
 import SurveyCTA from '@/components/landing/survey-cta';
 import Footer from '@/components/landing/footer';
+import FeedbackWall from '@/components/landing/feedback-wall';
 
 export default function Home() {
   return (
@@ -14,6 +15,9 @@ export default function Home() {
         <Explore />
         <section id="tools">
           <Tools />
+        </section>
+        <section id="testimonials">
+          <FeedbackWall />
         </section>
         <SurveyCTA />
       </main>
