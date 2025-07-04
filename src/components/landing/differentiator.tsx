@@ -10,13 +10,13 @@ const Differentiator = () => {
     offset: ['start start', 'end end'],
   });
 
-  const opacity = useTransform(scrollYProgress, [0.1, 0.3, 0.8, 1], [0, 1, 1, 0]);
-  const y = useTransform(scrollYProgress, [0.1, 0.3, 0.8, 1], ['50px', '0px', '0px', '-50px']);
+  const opacity = useTransform(scrollYProgress, [0.1, 0.25, 0.85, 0.95], [0, 1, 1, 0]);
+  const y = useTransform(scrollYProgress, [0.1, 0.25, 0.85, 0.95], ['30px', '0px', '0px', '-30px']);
 
   return (
     <section
       ref={targetRef}
-      className="h-[200vh] bg-background relative"
+      className="h-[180vh] bg-background relative"
     >
       <div className="sticky top-0 h-screen flex items-center justify-center">
         <motion.div

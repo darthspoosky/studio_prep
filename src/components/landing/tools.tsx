@@ -69,11 +69,11 @@ const Tools = () => {
         offset: ['start start', 'end end'],
     });
 
-    const scale = useTransform(scrollYProgress, [0, 0.2, 0.8, 1], [0.8, 1, 1, 0.8]);
-    const opacity = useTransform(scrollYProgress, [0, 0.2, 0.8, 1], [0, 1, 1, 0]);
+    const scale = useTransform(scrollYProgress, [0.05, 0.2, 0.8, 0.95], [0.8, 1, 1, 0.8]);
+    const opacity = useTransform(scrollYProgress, [0.05, 0.2, 0.8, 0.95], [0, 1, 1, 0]);
     
     return (
-        <section ref={targetRef} className="h-[250vh] bg-gray-50 dark:bg-gray-900/50 relative">
+        <section ref={targetRef} className="h-[220vh] bg-gray-50 dark:bg-gray-900/50 relative">
             <div className="sticky top-0 h-screen flex flex-col items-center justify-center">
                 <motion.div 
                     style={{ scale, opacity }}
