@@ -27,7 +27,7 @@ const Hero = () => {
         </div>
 
         <div className="container mx-auto px-4 z-10 text-center">
-            <h1 className="font-headline text-5xl md:text-7xl lg:text-8xl font-bold tracking-tighter animate-hero-glow">
+            <h1 className="font-headline text-5xl md:text-7xl lg:text-8xl font-bold tracking-tighter animate-gradient-anim bg-[length:200%_auto] bg-gradient-to-r from-primary via-accent to-pink-500 bg-clip-text text-transparent">
                 Prep for Success
             </h1>
             <p className="mt-4 max-w-2xl mx-auto text-lg md:text-xl text-muted-foreground">
