@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import Link from 'next/link';
 import { Mic, FileQuestion, PenLine, MoveRight, Newspaper } from 'lucide-react';
 import { motion, useScroll, useTransform, MotionValue } from 'framer-motion';
+import FeedbackWall from './feedback-wall';
 
 const ToolCard = ({ icon, title, description, gradient, href }: { icon: React.ReactNode, title: string, description: string, gradient: string, href: string }) => (
     <Link href={href} className="group relative w-full h-full block">
@@ -45,7 +46,6 @@ const AnimatedCard = ({
   targetScale: number;
   total: number;
 }) => {
-  // Clamp the animation: once a card reaches its target scale, it stops transforming.
   const scale = useTransform(progress, [range[0], range[1], 1], [1, targetScale, targetScale]);
   
   return (
@@ -103,11 +103,12 @@ const Tools = () => {
         offset: ['start start', 'end end']
     });
     
-    const animationEndProgress = 0.7;
+    // Card animation takes up the first 50% of the scroll
+    const animationEndProgress = 0.5;
 
     return (
-        <section ref={containerRef} className="relative bg-gray-50 dark:bg-gray-900 h-[400vh] z-10">
-             <div className="sticky top-0 h-auto py-16 bg-gray-50 dark:bg-gray-900 z-20">
+        <section ref={containerRef} className="relative bg-gray-50 dark:bg-gray-900 h-[550vh]">
+             <div className="sticky top-0 h-auto py-16 bg-transparent z-30">
                 <div 
                     className="container mx-auto px-4 text-center"
                 >
@@ -122,25 +123,29 @@ const Tools = () => {
                 </div>
             </div>
             
-            {tools.map((tool, i) => {
-                const stepDuration = animationEndProgress / tools.length;
-                const rangeStart = i * stepDuration;
-                const rangeEnd = rangeStart + stepDuration;
+            <div className="relative z-10">
+                {tools.map((tool, i) => {
+                    const stepDuration = animationEndProgress / tools.length;
+                    const rangeStart = i * stepDuration;
+                    const rangeEnd = rangeStart + stepDuration;
 
-                const targetScale = 1 - (tools.length - 1 - i) * 0.04;
-                
-                return (
-                <AnimatedCard
-                    key={tool.title}
-                    i={i}
-                    progress={scrollYProgress}
-                    range={[rangeStart, rangeEnd]}
-                    targetScale={targetScale}
-                    tool={tool}
-                    total={tools.length}
-                />
-                );
-            })}
+                    const targetScale = 1 - (i * 0.05);
+                    
+                    return (
+                    <AnimatedCard
+                        key={tool.title}
+                        i={i}
+                        progress={scrollYProgress}
+                        range={[rangeStart, rangeEnd]}
+                        targetScale={targetScale}
+                        tool={tool}
+                        total={tools.length}
+                    />
+                    );
+                })}
+            </div>
+
+            <FeedbackWall scrollYProgress={scrollYProgress} />
         </section>
     );
 };
