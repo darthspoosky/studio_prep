@@ -66,19 +66,19 @@ const Tools = () => {
     const targetRef = useRef<HTMLDivElement>(null);
     const { scrollYProgress } = useScroll({
         target: targetRef,
-        offset: ['start start', 'end start'],
+        offset: ['start start', 'end end'],
     });
 
-    const opacity = useTransform(scrollYProgress, [0, 0.6, 0.8], [1, 1, 0]);
-    const scale = useTransform(scrollYProgress, [0, 0.8], [1, 0.8]);
-    const position = useTransform(scrollYProgress, (pos) =>
-        pos >= 1 ? 'relative' : 'sticky'
-    );
+    const scale = useTransform(scrollYProgress, [0, 0.2, 0.8, 1], [0.8, 1, 1, 0.8]);
+    const opacity = useTransform(scrollYProgress, [0, 0.2, 0.8, 1], [0, 1, 1, 0]);
     
     return (
-        <section ref={targetRef} className="h-[300vh] bg-gray-50 dark:bg-gray-900/50">
-            <motion.div style={{ position, opacity, scale }} className="top-0 flex h-screen flex-col items-center justify-center">
-                <div className="container mx-auto px-4">
+        <section ref={targetRef} className="h-[250vh] bg-gray-50 dark:bg-gray-900/50 relative">
+            <div className="sticky top-0 h-screen flex flex-col items-center justify-center">
+                <motion.div 
+                    style={{ scale, opacity }}
+                    className="container mx-auto px-4"
+                >
                     <div className="text-center mb-12">
                         <h2 className="font-headline text-3xl md:text-4xl font-bold tracking-tight">
                             Our Core Tools
@@ -89,13 +89,11 @@ const Tools = () => {
                     </div>
                     <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
                         {tools.map((tool, index) => (
-                            <motion.div key={index}>
-                                <ToolCard {...tool} />
-                            </motion.div>
+                            <ToolCard key={index} {...tool} />
                         ))}
                     </div>
-                </div>
-            </motion.div>
+                </motion.div>
+            </div>
         </section>
     );
 };

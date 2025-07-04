@@ -1,19 +1,27 @@
 "use client";
 
-import React from 'react';
-import { motion } from 'framer-motion';
+import React, { useRef } from 'react';
+import { motion, useScroll, useTransform } from 'framer-motion';
 
 const Differentiator = () => {
+  const targetRef = useRef<HTMLDivElement>(null);
+  const { scrollYProgress } = useScroll({
+    target: targetRef,
+    offset: ['start start', 'end end'],
+  });
+
+  const opacity = useTransform(scrollYProgress, [0.1, 0.3, 0.8, 1], [0, 1, 1, 0]);
+  const y = useTransform(scrollYProgress, [0.1, 0.3, 0.8, 1], ['50px', '0px', '0px', '-50px']);
+
   return (
     <section
-      className="py-20 sm:py-32 bg-background relative z-10 mt-[-200vh]"
+      ref={targetRef}
+      className="h-[200vh] bg-background relative"
     >
-      <div className="container mx-auto px-4 text-center">
+      <div className="sticky top-0 h-screen flex items-center justify-center">
         <motion.div
-            initial={{ opacity: 0, y: 50 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true, amount: 0.5 }}
-            transition={{ duration: 0.8, ease: "easeOut" }}
+            style={{ opacity, y }}
+            className="container mx-auto px-4 text-center"
         >
             <h2 className="font-headline text-4xl md:text-6xl lg:text-7xl font-bold tracking-tighter">
               Ace your exams and interviews with <br className="hidden md:block" />
