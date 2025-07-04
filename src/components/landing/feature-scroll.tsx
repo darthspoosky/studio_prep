@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import Link from 'next/link';
 import { Mic, FileQuestion, PenLine, MoveRight, Newspaper } from 'lucide-react';
 import { motion, useScroll, useTransform, MotionValue } from 'framer-motion';
+import FeedbackWall from './feedback-wall';
 
 const ToolCard = ({ icon, title, description, gradient, href }: { icon: React.ReactNode, title: string, description: string, gradient: string, href: string }) => (
     <Link href={href} className="group relative w-full h-full block">
@@ -62,7 +63,7 @@ const AnimatedCard = ({
 };
 
 
-const Tools = () => {
+const FeatureScroll = () => {
     const tools = [
         {
             icon: <Newspaper className="w-6 h-6 text-white" />,
@@ -99,13 +100,13 @@ const Tools = () => {
         target: containerRef,
         offset: ['start start', 'end end']
     });
+
+    const testimonialsX = useTransform(scrollYProgress, [0.7, 1], ['0%', '-50%']);
     
     return (
-        <section ref={containerRef} className="relative bg-gray-50 dark:bg-gray-900 h-[400vh]">
-             <div className="sticky top-0 h-auto py-16 bg-transparent z-30">
-                <div 
-                    className="container mx-auto px-4 text-center"
-                >
+        <section id="features" ref={containerRef} className="relative bg-gray-50 dark:bg-gray-900 h-[600vh]">
+             <div className="sticky top-0 h-auto py-16 bg-transparent z-10">
+                <div className="container mx-auto px-4 text-center">
                     <h2 className="font-headline text-3xl md:text-4xl font-bold tracking-tight">
                         <span className="animate-gradient-anim bg-[length:200%_auto] bg-gradient-to-r from-primary via-accent to-pink-500 bg-clip-text text-transparent">
                             Our Core Tools
@@ -119,27 +120,29 @@ const Tools = () => {
             
             <div className="relative">
                 {tools.map((tool, i) => {
-                    const totalAnimationDuration = 1.0;
+                    const totalAnimationDuration = 0.5;
                     const stepDuration = totalAnimationDuration / tools.length;
                     const rangeStart = i * stepDuration;
                     const rangeEnd = rangeStart + stepDuration;
-
                     const targetScale = 1 - ((tools.length - 1 - i) * 0.05);
                     
                     return (
-                    <AnimatedCard
-                        key={tool.title}
-                        i={i}
-                        progress={scrollYProgress}
-                        range={[rangeStart, rangeEnd]}
-                        targetScale={targetScale}
-                        tool={tool}
-                    />
+                        <AnimatedCard
+                            key={tool.title}
+                            i={i}
+                            progress={scrollYProgress}
+                            range={[rangeStart, rangeEnd]}
+                            targetScale={targetScale}
+                            tool={tool}
+                        />
                     );
                 })}
+            </div>
+            <div className="sticky top-0 h-screen z-20">
+              <FeedbackWall scrollYProgress={testimonialsX} />
             </div>
         </section>
     );
 };
 
-export default Tools;
+export default FeatureScroll;
