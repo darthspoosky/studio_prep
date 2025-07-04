@@ -43,7 +43,9 @@ const AnimatedCard = ({
   range: [number, number];
   targetScale: number;
 }) => {
-  const scale = useTransform(progress, range, [1, targetScale]);
+  // Add the third value to the input range and repeat the targetScale in the output range
+  // This "clamps" the animation, ensuring that once a card reaches its target scale, it stops transforming.
+  const scale = useTransform(progress, [range[0], range[1], 1], [1, targetScale, targetScale]);
   
   return (
     <motion.div
@@ -117,7 +119,10 @@ const Tools = () => {
             </div>
             
             {tools.map((tool, i) => {
-                const targetScale = 1 - ((tools.length - i) * 0.05);
+                // The scale of the card in the stack.
+                // The card at the back (i=0) is smallest, the one at the front (i=3) is largest.
+                // The scaling factor is more subtle now for a cleaner look.
+                const targetScale = 1 - (tools.length - 1 - i) * 0.04;
                 const rangeStart = i / tools.length;
                 const rangeEnd = rangeStart + (1 / tools.length);
                 
