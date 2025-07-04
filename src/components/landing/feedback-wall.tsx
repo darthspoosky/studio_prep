@@ -51,7 +51,7 @@ const FeedbackWall = () => {
   const scale = useTransform(scrollYProgress, [0.1, 0.25, 0.85, 0.95], [0.9, 1, 1, 0.9]);
 
   return (
-    <section ref={targetRef} className="h-[180vh] bg-gray-50 dark:bg-gray-900/50 overflow-hidden relative">
+    <section ref={targetRef} className="h-[150vh] bg-gray-50 dark:bg-gray-900/50 overflow-hidden relative">
       <div className="sticky top-0 h-screen flex items-center justify-center">
         <motion.div
             style={{ opacity, scale }}

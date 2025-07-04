@@ -73,8 +73,8 @@ const Tools = () => {
     const opacity = useTransform(scrollYProgress, [0.05, 0.2, 0.8, 0.95], [0, 1, 1, 0]);
     
     return (
-        <section ref={targetRef} className="h-[220vh] bg-gray-50 dark:bg-gray-900/50 relative">
-            <div className="sticky top-0 h-screen flex flex-col items-center justify-center">
+        <section ref={targetRef} className="h-[180vh] bg-gray-50 dark:bg-gray-900/50 relative">
+            <div className="sticky top-0 h-screen flex flex-col items-center justify-start pt-24 sm:pt-32">
                 <motion.div 
                     style={{ scale, opacity }}
                     className="container mx-auto px-4"
