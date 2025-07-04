@@ -1,6 +1,6 @@
 import React from 'react';
 import { Button } from '@/components/ui/button';
-import { Bot, FileQuestion, PenLine, MoveRight, Mic, Users } from 'lucide-react';
+import { Bot, FileQuestion, PenLine, MoveRight, Mic, Users, BookOpen, Target } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 const FloatingIcon = ({ icon, className, animation, delay, gradient }: { icon: React.ReactNode, className?: string, animation?: string, delay?: string, gradient?: string }) => (
@@ -55,6 +55,10 @@ const Hero = () => {
             
             {/* Bottom-right flow */}
             <FloatingIcon icon={<Bot className="w-5 h-5 text-white" />} className="bottom-[10%] right-[15%]" animation="animate-hero-float" delay="1.2s" />
+
+            {/* Added icons */}
+            <FloatingIcon icon={<BookOpen className="w-6 h-6 text-white" />} className="bottom-[25%] right-[45%]" animation="animate-hero-float" delay="0.8s" gradient="from-red-500 to-pink-500" />
+            <FloatingIcon icon={<Target className="w-6 h-6 text-white" />} className="top-[20%] left-[48%]" animation="animate-hero-float-alt" delay="0.4s" gradient="from-blue-500 to-indigo-500" />
         </div>
     </section>
   );
