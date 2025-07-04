@@ -55,7 +55,7 @@ const FeedbackWall = () => {
     const y = useTransform(scrollYProgress, [0.1, 0.3, 0.8, 1], ['40px', '0px', '0px', '-40px']);
 
     return (
-        <section ref={targetRef} className="relative h-[150vh] bg-gray-50 dark:bg-gray-900/50">
+        <section ref={targetRef} className="relative h-[150vh] bg-gray-50 dark:bg-gray-900 z-20">
             <div className="sticky top-0 h-screen flex items-center justify-center">
                 <motion.div style={{ opacity, y }} className="container mx-auto px-4">
                     <div className="text-center mb-12">
