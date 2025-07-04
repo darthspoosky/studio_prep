@@ -49,9 +49,9 @@ const AnimatedCard = ({
     <motion.div
       style={{
         scale,
-        top: `calc(-5vh + ${i * 25}px)`,
+        top: `calc(12rem + ${i * 25}px)`,
       }}
-      className="sticky top-0 h-screen flex items-center justify-center"
+      className="sticky flex items-center justify-center h-[calc(100vh_-_12rem)]"
     >
       <div className="relative h-[450px] w-full max-w-2xl">
         <ToolCard {...tool} />
@@ -100,14 +100,10 @@ const Tools = () => {
     });
 
     return (
-        <section ref={containerRef} className="relative bg-gray-50 dark:bg-gray-900/50 h-[300vh]">
-             <div className="sticky top-0 h-screen flex items-center justify-center">
-                <motion.div 
-                    style={{
-                        opacity: useTransform(scrollYProgress, [0, 0.1], [1, 0]),
-                        y: useTransform(scrollYProgress, [0, 0.1], ['0%', '-50%'])
-                    }}
-                    className="container mx-auto px-4 py-24 sm:py-32 text-center"
+        <section ref={containerRef} className="relative bg-gray-50 dark:bg-gray-900/50 h-[350vh]">
+             <div className="sticky top-0 h-auto py-16 bg-gray-50 dark:bg-gray-900/50 z-10">
+                <div 
+                    className="container mx-auto px-4 text-center"
                 >
                     <h2 className="font-headline text-3xl md:text-4xl font-bold tracking-tight">
                         <span className="animate-gradient-anim bg-[length:200%_auto] bg-gradient-to-r from-primary via-accent to-pink-500 bg-clip-text text-transparent">
@@ -117,8 +113,9 @@ const Tools = () => {
                     <p className="mt-3 max-w-2xl mx-auto text-lg text-muted-foreground">
                         Everything you need to get exam-ready, all in one place.
                     </p>
-                </motion.div>
+                </div>
             </div>
+            
             {tools.map((tool, i) => {
                 const targetScale = 1 - ((tools.length - i) * 0.05);
                 const rangeStart = i / tools.length;
