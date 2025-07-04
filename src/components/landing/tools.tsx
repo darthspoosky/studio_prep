@@ -4,7 +4,7 @@ import React, { useRef } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import Link from 'next/link';
 import { Mic, FileQuestion, PenLine, MoveRight, Newspaper } from 'lucide-react';
-import { motion, useScroll, useTransform } from 'framer-motion';
+import { motion, useScroll, useTransform, MotionValue } from 'framer-motion';
 
 const ToolCard = ({ icon, title, description, gradient, href }: { icon: React.ReactNode, title: string, description: string, gradient: string, href: string }) => (
     <Link href={href} className="group relative w-full h-full block">
@@ -29,6 +29,36 @@ const ToolCard = ({ icon, title, description, gradient, href }: { icon: React.Re
         </Card>
     </Link>
 );
+
+const AnimatedCard = ({
+  tool,
+  i,
+  progress,
+  range,
+  targetScale,
+}: {
+  tool: any;
+  i: number;
+  progress: MotionValue<number>;
+  range: [number, number];
+  targetScale: number;
+}) => {
+  const scale = useTransform(progress, range, [1, targetScale]);
+  
+  return (
+    <div className="sticky top-0 h-screen flex items-center justify-center">
+      <motion.div
+        style={{
+          scale,
+          top: `calc(-5vh + ${i * 25}px)`,
+        }}
+        className="relative h-[450px] w-full max-w-2xl"
+      >
+        <ToolCard {...tool} />
+      </motion.div>
+    </div>
+  );
+};
 
 
 const Tools = () => {
@@ -63,37 +93,36 @@ const Tools = () => {
         }
     ];
 
-    const targetRef = useRef<HTMLDivElement>(null);
+    const containerRef = useRef<HTMLDivElement>(null);
     const { scrollYProgress } = useScroll({
-        target: targetRef,
-        offset: ['start start', 'end end'],
+        target: containerRef,
+        offset: ['start start', 'end end']
     });
 
-    const scale = useTransform(scrollYProgress, [0.05, 0.2, 0.8, 0.95], [0.8, 1, 1, 0.8]);
-    const opacity = useTransform(scrollYProgress, [0.05, 0.2, 0.8, 0.95], [0, 1, 1, 0]);
-    
     return (
-        <section ref={targetRef} className="h-[180vh] bg-gray-50 dark:bg-gray-900/50 relative">
-            <div className="sticky top-0 h-screen flex flex-col items-center justify-start pt-24 sm:pt-32">
-                <motion.div 
-                    style={{ scale, opacity }}
-                    className="container mx-auto px-4"
-                >
-                    <div className="text-center mb-12">
-                        <h2 className="font-headline text-3xl md:text-4xl font-bold tracking-tight">
-                            Our Core Tools
-                        </h2>
-                        <p className="mt-3 max-w-2xl mx-auto text-lg text-muted-foreground">
-                            Everything you need to get exam-ready, all in one place.
-                        </p>
-                    </div>
-                    <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
-                        {tools.map((tool, index) => (
-                            <ToolCard key={index} {...tool} />
-                        ))}
-                    </div>
-                </motion.div>
+        <section ref={containerRef} className="relative bg-gray-50 dark:bg-gray-900/50">
+            <div className="container mx-auto px-4 py-24 sm:py-32 text-center">
+                 <h2 className="font-headline text-3xl md:text-4xl font-bold tracking-tight">
+                    Our Core Tools
+                </h2>
+                <p className="mt-3 max-w-2xl mx-auto text-lg text-muted-foreground">
+                    Everything you need to get exam-ready, all in one place.
+                </p>
             </div>
+            {tools.map((tool, i) => {
+                const targetScale = 1 - ((tools.length - i) * 0.05);
+                return (
+                <AnimatedCard
+                    key={tool.title}
+                    i={i}
+                    {...tool}
+                    progress={scrollYProgress}
+                    range={[i * 0.25, 1]}
+                    targetScale={targetScale}
+                    tool={tool}
+                />
+                );
+            })}
         </section>
     );
 };
