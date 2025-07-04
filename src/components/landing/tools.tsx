@@ -110,7 +110,9 @@ const Tools = () => {
                     className="container mx-auto px-4 py-24 sm:py-32 text-center"
                 >
                     <h2 className="font-headline text-3xl md:text-4xl font-bold tracking-tight">
-                        Our Core Tools
+                        <span className="animate-gradient-anim bg-[length:200%_auto] bg-gradient-to-r from-primary via-accent to-pink-500 bg-clip-text text-transparent">
+                            Our Core Tools
+                        </span>
                     </h2>
                     <p className="mt-3 max-w-2xl mx-auto text-lg text-muted-foreground">
                         Everything you need to get exam-ready, all in one place.

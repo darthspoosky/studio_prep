@@ -13,7 +13,9 @@ export default function Home() {
       <main className="flex-1">
         <Hero />
         <Explore />
-        <Tools />
+        <section id="tools">
+          <Tools />
+        </section>
         <FeedbackWall />
         <SurveyCTA />
       </main>
