@@ -1,7 +1,10 @@
+"use client";
+
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import Link from 'next/link';
 import { Mic, FileQuestion, PenLine, MoveRight, Newspaper } from 'lucide-react';
+import { motion } from 'framer-motion';
 
 const ToolCard = ({ icon, title, description, gradient, href }: { icon: React.ReactNode, title: string, description: string, gradient: string, href: string }) => (
     <Link href={href} className="group relative w-full h-full block">
@@ -60,6 +63,21 @@ const Tools = () => {
         }
     ];
 
+    const containerVariants = {
+        hidden: { opacity: 0 },
+        show: {
+          opacity: 1,
+          transition: {
+            staggerChildren: 0.2,
+          },
+        },
+      };
+    
+      const itemVariants = {
+        hidden: { opacity: 0, y: 50 },
+        show: { opacity: 1, y: 0, transition: { duration: 0.5 } },
+      };
+
     return (
         <section className="py-20 sm:py-32 bg-gray-50 dark:bg-gray-900/50">
             <div className="container mx-auto px-4">
@@ -71,11 +89,19 @@ const Tools = () => {
                         Everything you need to get exam-ready, all in one place.
                     </p>
                 </div>
-                <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
+                <motion.div 
+                    className="grid md:grid-cols-2 lg:grid-cols-4 gap-8"
+                    variants={containerVariants}
+                    initial="hidden"
+                    whileInView="show"
+                    viewport={{ once: true, amount: 0.2 }}
+                >
                     {tools.map((tool, index) => (
-                        <ToolCard key={index} {...tool} />
+                        <motion.div key={index} variants={itemVariants}>
+                            <ToolCard {...tool} />
+                        </motion.div>
                     ))}
-                </div>
+                </motion.div>
             </div>
         </section>
     );
