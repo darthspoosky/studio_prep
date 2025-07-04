@@ -46,17 +46,17 @@ const AnimatedCard = ({
   const scale = useTransform(progress, range, [1, targetScale]);
   
   return (
-    <div className="sticky top-0 h-screen flex items-center justify-center">
-      <motion.div
-        style={{
-          scale,
-          top: `calc(-5vh + ${i * 25}px)`,
-        }}
-        className="relative h-[450px] w-full max-w-2xl"
-      >
+    <motion.div
+      style={{
+        scale,
+        top: `calc(-5vh + ${i * 25}px)`,
+      }}
+      className="sticky top-0 h-screen flex items-center justify-center"
+    >
+      <div className="relative h-[450px] w-full max-w-2xl">
         <ToolCard {...tool} />
-      </motion.div>
-    </div>
+      </div>
+    </motion.div>
   );
 };
 
@@ -80,7 +80,7 @@ const Tools = () => {
         {
             icon: <FileQuestion className="w-6 h-6 text-white" />,
             title: 'Daily Quiz',
-            description: 'Sharpen your knowledge with quick, adaptive quizzes tailored to your exam and. progress',
+            description: 'Sharpen your knowledge with quick, adaptive quizzes tailored to your exam and progress.',
             gradient: 'from-sky-500 to-cyan-500',
             href: '/daily-quiz'
         },
@@ -100,24 +100,34 @@ const Tools = () => {
     });
 
     return (
-        <section ref={containerRef} className="relative bg-gray-50 dark:bg-gray-900/50">
-            <div className="container mx-auto px-4 py-24 sm:py-32 text-center">
-                 <h2 className="font-headline text-3xl md:text-4xl font-bold tracking-tight">
-                    Our Core Tools
-                </h2>
-                <p className="mt-3 max-w-2xl mx-auto text-lg text-muted-foreground">
-                    Everything you need to get exam-ready, all in one place.
-                </p>
+        <section ref={containerRef} className="relative bg-gray-50 dark:bg-gray-900/50 h-[300vh]">
+             <div className="sticky top-0 h-screen flex items-center justify-center">
+                <motion.div 
+                    style={{
+                        opacity: useTransform(scrollYProgress, [0, 0.1], [1, 0]),
+                        y: useTransform(scrollYProgress, [0, 0.1], ['0%', '-50%'])
+                    }}
+                    className="container mx-auto px-4 py-24 sm:py-32 text-center"
+                >
+                    <h2 className="font-headline text-3xl md:text-4xl font-bold tracking-tight">
+                        Our Core Tools
+                    </h2>
+                    <p className="mt-3 max-w-2xl mx-auto text-lg text-muted-foreground">
+                        Everything you need to get exam-ready, all in one place.
+                    </p>
+                </motion.div>
             </div>
             {tools.map((tool, i) => {
                 const targetScale = 1 - ((tools.length - i) * 0.05);
+                const rangeStart = i / tools.length;
+                const rangeEnd = rangeStart + (1 / tools.length);
+                
                 return (
                 <AnimatedCard
                     key={tool.title}
                     i={i}
-                    {...tool}
                     progress={scrollYProgress}
-                    range={[i * 0.25, 1]}
+                    range={[rangeStart, rangeEnd]}
                     targetScale={targetScale}
                     tool={tool}
                 />
