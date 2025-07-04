@@ -1,7 +1,7 @@
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Mic, FileQuestion, PenLine, MoveRight } from 'lucide-react';
+import { Mic, FileQuestion, PenLine, MoveRight, Newspaper } from 'lucide-react';
 
 const ToolCard = ({ icon, title, description, gradient }: { icon: React.ReactNode, title: string, description: string, gradient: string }) => (
     <div className="group relative w-full">
@@ -26,6 +26,12 @@ const ToolCard = ({ icon, title, description, gradient }: { icon: React.ReactNod
 
 const Tools = () => {
     const tools = [
+        {
+            icon: <Newspaper className="w-6 h-6 text-white" />,
+            title: 'Newspaper Analysis',
+            description: 'Get AI-powered analysis of daily news to improve comprehension and critical thinking.',
+            gradient: 'from-orange-500 to-amber-500'
+        },
         {
             icon: <Mic className="w-6 h-6 text-white" />,
             title: 'Mock Interview',
@@ -57,7 +63,7 @@ const Tools = () => {
                         Everything you need to get exam-ready, all in one place.
                     </p>
                 </div>
-                <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
+                <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
                     {tools.map((tool, index) => (
                         <ToolCard key={index} {...tool} />
                     ))}
