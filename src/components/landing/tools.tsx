@@ -36,12 +36,14 @@ const AnimatedCard = ({
   progress,
   range,
   targetScale,
+  total,
 }: {
   tool: any;
   i: number;
   progress: MotionValue<number>;
   range: [number, number];
   targetScale: number;
+  total: number;
 }) => {
   // Clamp the animation: once a card reaches its target scale, it stops transforming.
   const scale = useTransform(progress, [range[0], range[1], 1], [1, targetScale, targetScale]);
@@ -50,7 +52,8 @@ const AnimatedCard = ({
     <motion.div
       style={{
         scale,
-        top: `calc(12rem + ${i * 25}px)`,
+        top: `calc(12rem + ${i * 15}px)`,
+        zIndex: total - i,
       }}
       className="sticky flex items-center justify-center h-[calc(100vh_-_12rem)]"
     >
@@ -100,12 +103,11 @@ const Tools = () => {
         offset: ['start start', 'end end']
     });
     
-    // Animate over the first 70% of the scroll section, leaving 30% for the "pause"
     const animationEndProgress = 0.7;
 
     return (
         <section ref={containerRef} className="relative bg-gray-50 dark:bg-gray-900 h-[400vh] z-10">
-             <div className="sticky top-0 h-auto py-16 bg-gray-50 dark:bg-gray-900 z-10">
+             <div className="sticky top-0 h-auto py-16 bg-gray-50 dark:bg-gray-900 z-20">
                 <div 
                     className="container mx-auto px-4 text-center"
                 >
@@ -135,6 +137,7 @@ const Tools = () => {
                     range={[rangeStart, rangeEnd]}
                     targetScale={targetScale}
                     tool={tool}
+                    total={tools.length}
                 />
                 );
             })}
