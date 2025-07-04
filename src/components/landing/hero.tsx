@@ -54,7 +54,7 @@ const Hero = () => {
             <FloatingIcon icon={<Users className="w-7 h-7 text-white" />} className="bottom-[15%] left-[20%]" animation="animate-hero-float-alt" delay="0.2s" gradient="from-primary to-accent" />
             
             {/* Bottom-right flow */}
-            <FloatingIcon icon={<Bot className="w-5 h-5 text-white" />} className="bottom-[10%] right-[15%]" animation="animate-hero-float" delay="1.2s" />
+            <FloatingIcon icon={<Bot className="w-5 h-5 text-white" />} className="bottom-[10%] right-[15%]" animation="animate-hero-float" delay="1.2s" gradient="from-lime-400 to-green-500" />
 
             {/* Added icons */}
             <FloatingIcon icon={<BookOpen className="w-6 h-6 text-white" />} className="bottom-[25%] right-[45%]" animation="animate-hero-float" delay="0.8s" gradient="from-red-500 to-pink-500" />
