@@ -1,10 +1,16 @@
 import React from 'react';
 import { Button } from '@/components/ui/button';
 import { Bot, FileQuestion, PenLine, MoveRight, Mic, Users } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
-const FloatingIcon = ({ icon, className, animation, delay }: { icon: React.ReactNode, className?: string, animation?: string, delay?: string }) => (
+const FloatingIcon = ({ icon, className, animation, delay, gradient }: { icon: React.ReactNode, className?: string, animation?: string, delay?: string, gradient?: string }) => (
     <div 
-      className={`absolute rounded-full p-3 bg-white/20 dark:bg-white/10 backdrop-blur-lg border border-white/30 dark:border-white/20 shadow-xl ${animation} ${className}`} 
+      className={cn(
+          'absolute rounded-full p-3 backdrop-blur-lg border border-white/30 dark:border-white/20 shadow-xl',
+          animation,
+          gradient ? `bg-gradient-to-br ${gradient}` : 'bg-white/20 dark:bg-white/10',
+          className
+        )}
       style={{ animationDelay: delay }}
     >
         {icon}
@@ -37,15 +43,15 @@ const Hero = () => {
         
         <div className="absolute inset-0 z-0 w-full h-full pointer-events-none">
             {/* Top-left flow */}
-            <FloatingIcon icon={<Bot className="w-8 h-8 text-white" />} className="top-[10%] left-[15%]" animation="animate-hero-float" delay="0s" />
-            <FloatingIcon icon={<FileQuestion className="w-6 h-6 text-white" />} className="top-[30%] left-[5%]" animation="animate-hero-float-alt" delay="1s" />
+            <FloatingIcon icon={<Bot className="w-8 h-8 text-white" />} className="top-[10%] left-[15%]" animation="animate-hero-float" delay="0s" gradient="from-orange-500 to-amber-500" />
+            <FloatingIcon icon={<FileQuestion className="w-6 h-6 text-white" />} className="top-[30%] left-[5%]" animation="animate-hero-float-alt" delay="1s" gradient="from-sky-500 to-cyan-500" />
             
             {/* Top-right flow */}
-            <FloatingIcon icon={<PenLine className="w-7 h-7 text-white" />} className="top-[15%] right-[10%]" animation="animate-hero-float" delay="0.5s" />
-            <FloatingIcon icon={<Mic className="w-5 h-5 text-white" />} className="top-[40%] right-[20%]" animation="animate-hero-float-alt" delay="1.5s" />
+            <FloatingIcon icon={<PenLine className="w-7 h-7 text-white" />} className="top-[15%] right-[10%]" animation="animate-hero-float" delay="0.5s" gradient="from-emerald-500 to-teal-500" />
+            <FloatingIcon icon={<Mic className="w-5 h-5 text-white" />} className="top-[40%] right-[20%]" animation="animate-hero-float-alt" delay="1.5s" gradient="from-purple-500 to-indigo-500" />
 
             {/* Bottom-left flow */}
-            <FloatingIcon icon={<Users className="w-7 h-7 text-white" />} className="bottom-[15%] left-[20%]" animation="animate-hero-float-alt" delay="0.2s" />
+            <FloatingIcon icon={<Users className="w-7 h-7 text-white" />} className="bottom-[15%] left-[20%]" animation="animate-hero-float-alt" delay="0.2s" gradient="from-primary to-accent" />
             
             {/* Bottom-right flow */}
             <FloatingIcon icon={<Bot className="w-5 h-5 text-white" />} className="bottom-[10%] right-[15%]" animation="animate-hero-float" delay="1.2s" />
