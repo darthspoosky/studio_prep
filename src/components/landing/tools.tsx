@@ -37,23 +37,21 @@ const AnimatedCard = ({
   progress,
   range,
   targetScale,
-  total,
 }: {
   tool: any;
   i: number;
   progress: MotionValue<number>;
   range: [number, number];
   targetScale: number;
-  total: number;
 }) => {
-  const scale = useTransform(progress, [range[0], range[1], 1], [1, targetScale, targetScale]);
+  const scale = useTransform(progress, range, [1, targetScale]);
   
   return (
     <motion.div
       style={{
         scale,
-        top: `calc(12rem + ${i * 15}px)`,
-        zIndex: total - i,
+        top: `calc(12rem + ${i * 10}px)`,
+        zIndex: i,
       }}
       className="sticky flex items-center justify-center h-[calc(100vh_-_12rem)]"
     >
@@ -103,8 +101,8 @@ const Tools = () => {
         offset: ['start start', 'end end']
     });
     
-    // Card animation takes up the first 50% of the scroll
-    const animationEndProgress = 0.5;
+    const toolsAnimationEnd = 0.5;
+    const feedbackWallAnimationStart = 0.7;
 
     return (
         <section ref={containerRef} className="relative bg-gray-50 dark:bg-gray-900 h-[550vh]">
@@ -125,11 +123,11 @@ const Tools = () => {
             
             <div className="relative z-10">
                 {tools.map((tool, i) => {
-                    const stepDuration = animationEndProgress / tools.length;
+                    const stepDuration = toolsAnimationEnd / tools.length;
                     const rangeStart = i * stepDuration;
                     const rangeEnd = rangeStart + stepDuration;
 
-                    const targetScale = 1 - (i * 0.05);
+                    const targetScale = 1 - ((tools.length - 1 - i) * 0.05);
                     
                     return (
                     <AnimatedCard
@@ -139,13 +137,12 @@ const Tools = () => {
                         range={[rangeStart, rangeEnd]}
                         targetScale={targetScale}
                         tool={tool}
-                        total={tools.length}
                     />
                     );
                 })}
             </div>
 
-            <FeedbackWall scrollYProgress={scrollYProgress} />
+            <FeedbackWall scrollYProgress={scrollYProgress} animationStart={feedbackWallAnimationStart} />
         </section>
     );
 };
