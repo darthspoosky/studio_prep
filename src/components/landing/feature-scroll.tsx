@@ -146,24 +146,27 @@ const FeatureScroll = () => {
         offset: ['start start', 'end end']
     });
 
+    // Animate the main title
     const titleOpacity = useTransform(scrollYProgress, [0, 0.05, 0.4], [0, 1, 0]);
     const titleY = useTransform(scrollYProgress, [0, 0.05], ['20px', '0px']);
     
-    // Animate the cards from a spread-out, transparent state into a stacked, opaque state.
-    const cardsOpacity = useTransform(scrollYProgress, [0.05, 0.15], [0, 1]);
+    // Animate the cards container to fade in
+    const cardsOpacity = useTransform(scrollYProgress, [0.05, 0.1], [0, 1]);
 
+    // Animate the feedback section
     const feedbackStart = 0.5;
     const feedbackEnd = 0.7;
     const feedbackOpacity = useTransform(scrollYProgress, [feedbackStart, feedbackEnd], [0, 1]);
     const feedbackY = useTransform(scrollYProgress, [feedbackStart, feedbackEnd], ['100vh', '0vh']);
     
+    // Animate the horizontal scroll of the feedback wall
     const feedbackScrollStart = 0.7;
     const feedbackScrollEnd = 1.0;
     const feedbackX = useTransform(scrollYProgress, [feedbackScrollStart, feedbackScrollEnd], ['0%', '-50%']);
 
 
     return (
-        <section id="features" ref={containerRef} className="relative bg-gray-50 dark:bg-gray-900 h-[600vh]">
+        <section id="features" ref={containerRef} className="relative bg-gray-50 dark:bg-gray-900 h-[400vh]">
             <div className="sticky top-0 h-screen overflow-hidden">
 
                 <motion.div 
@@ -182,19 +185,27 @@ const FeatureScroll = () => {
                     </div>
                 </motion.div>
 
-                <motion.div style={{opacity: cardsOpacity}} className="absolute inset-0 flex items-center justify-center">
+                <motion.div style={{ opacity: cardsOpacity }} className="absolute inset-0 flex items-center justify-center">
                     {tools.map((tool, i) => {
-                        const inputRange = [0.1, 0.5];
-                        const y = useTransform(scrollYProgress, inputRange, [`${(i - 1.5) * 120}px`, `${i * 12}px`]);
-                        const scale = useTransform(scrollYProgress, inputRange, [0.8, 1 - (tools.length - 1 - i) * 0.05]);
-                        
+                        const animationRange = [0.1, 0.4];
+                        const y = useTransform(
+                            scrollYProgress,
+                            animationRange,
+                            [`${(i * 100) + 100}px`, `${i * 20}px`]
+                        );
+                        const scale = useTransform(
+                            scrollYProgress,
+                            animationRange,
+                            [1, 1 - (i * 0.05)]
+                        );
+
                         return (
                             <motion.div
                                 key={tool.title}
                                 style={{
-                                    y,
+                                    top: y,
                                     scale,
-                                    zIndex: i,
+                                    zIndex: tools.length - i,
                                 }}
                                 className="absolute h-[450px] w-full max-w-2xl"
                             >
