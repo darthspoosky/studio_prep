@@ -399,27 +399,25 @@ export default function NewspaperAnalysisPage() {
                             )}
                             {!isLoading && analysisResult && (
                               <div className="flex-1 flex flex-col">
-                                <div className="mb-4 space-y-4">
-                                  {analysisResult.summary && (
-                                    <div className="p-4 bg-primary/10 rounded-lg flex items-center gap-4">
-                                      <p className="flex-1 text-sm text-muted-foreground italic">
-                                        {analysisResult.summary}
-                                      </p>
-                                      <Button onClick={handleGenerateAudio} disabled={isGeneratingAudio} variant="outline" size="sm">
-                                        {isGeneratingAudio ? <Loader2 className="animate-spin" /> : <Volume2 />}
-                                        {isGeneratingAudio ? "Generating..." : "Listen"}
-                                      </Button>
-                                    </div>
-                                  )}
-                                  {audioSrc && (
-                                    <motion.div initial={{ opacity: 0}} animate={{ opacity: 1}}>
-                                      <audio controls src={audioSrc} className="w-full h-10" />
-                                    </motion.div>
-                                  )}
-                                </div>
+                                {analysisResult.summary && (
+                                  <div className="mb-4 p-4 bg-primary/10 rounded-lg flex items-center gap-4">
+                                    <p className="flex-1 text-sm text-muted-foreground italic">
+                                      {analysisResult.summary}
+                                    </p>
+                                    <Button onClick={handleGenerateAudio} disabled={isGeneratingAudio} variant="outline" size="sm">
+                                      {isGeneratingAudio ? <Loader2 className="animate-spin" /> : <Volume2 />}
+                                      {isGeneratingAudio ? "Generating..." : "Listen"}
+                                    </Button>
+                                  </div>
+                                )}
+                                {audioSrc && (
+                                  <motion.div initial={{ opacity: 0}} animate={{ opacity: 1}}>
+                                    <audio controls src={audioSrc} className="w-full h-10" />
+                                  </motion.div>
+                                )}
 
                                 {showTabs ? (
-                                    <Tabs defaultValue="prelims" className="w-full flex-1 flex flex-col">
+                                    <Tabs defaultValue="prelims" className="w-full flex-1 flex flex-col mt-4">
                                         <TabsList>
                                             <TabsTrigger value="prelims">Prelims Questions</TabsTrigger>
                                             {mainsContent && <TabsTrigger value="mains">Mains Questions</TabsTrigger>}
