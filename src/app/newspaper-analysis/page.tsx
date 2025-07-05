@@ -135,11 +135,11 @@ const markdownComponents = {
   
   // Premium styling for standard markdown
   h1: (props: any) => <h1 className="text-3xl font-bold font-headline mt-8 pb-2 border-b-2 border-primary/30 text-primary" {...props} />,
-  h2: (props: any) => <h2 className="text-2xl font-bold font-headline mt-6 pb-2 border-b border-primary/20" {...props} />,
-  h3: (props: any) => <h3 className="text-xl font-semibold font-headline mt-4" {...props} />,
+  h2: (props: any) => <h2 className="text-2xl font-bold font-headline mt-8 mb-4 p-4 bg-primary/5 border-l-4 border-primary rounded-r-lg" {...props} />,
+  h3: (props: any) => <h3 className="text-xl font-semibold font-headline mt-6 mb-2 text-primary/90" {...props} />,
   blockquote: (props: any) => <blockquote className="relative border-l-4 border-primary bg-primary/10 p-4 my-4 rounded-r-lg italic text-muted-foreground" {...props} />,
   p: (props: any) => <p className="leading-relaxed my-4" {...props} />,
-  ul: (props: any) => <ul className="list-disc list-outside pl-6 my-4 space-y-2" {...props} />,
+  ul: (props: any) => <ul className="list-disc list-outside pl-6 my-4 space-y-2 text-muted-foreground" {...props} />,
   ol: (props: any) => <ol className="list-decimal list-outside pl-6 my-4 space-y-2" {...props} />,
   li: (props: any) => <li className="pl-2" {...props} />,
   code: (props: any) => <code className="bg-muted text-foreground font-mono text-sm rounded-md px-1.5 py-1" {...props} />,
@@ -247,14 +247,12 @@ export default function NewspaperAnalysisPage() {
     if (!analysisResult) {
         return { prelimsContent: null, mainsContent: null };
     }
-    // When focus is questions, `analysis` contains prelims, and `mainsQuestions` has mains.
     if (inputs.analysisFocus === 'Generate Questions (Mains & Prelims)') {
         return {
             prelimsContent: analysisResult.analysis,
             mainsContent: analysisResult.mainsQuestions || null,
         };
     }
-    // For other analysis types, everything is in the `analysis` field.
     return { prelimsContent: analysisResult.analysis, mainsContent: null };
   }, [analysisResult, inputs.analysisFocus]);
 
@@ -462,8 +460,20 @@ export default function NewspaperAnalysisPage() {
                                 {showTabs ? (
                                     <Tabs defaultValue="prelims" className="w-full flex-1 flex flex-col mt-4">
                                         <TabsList>
-                                            <TabsTrigger value="prelims">Prelims Questions</TabsTrigger>
-                                            {mainsContent && <TabsTrigger value="mains">Mains Questions</TabsTrigger>}
+                                            <TabsTrigger 
+                                                value="prelims"
+                                                className="data-[state=active]:bg-blue-100 data-[state=active]:text-blue-800 dark:data-[state=active]:bg-blue-900/50 dark:data-[state=active]:text-blue-200"
+                                            >
+                                                Prelims Questions
+                                            </TabsTrigger>
+                                            {mainsContent && 
+                                                <TabsTrigger 
+                                                    value="mains"
+                                                    className="data-[state=active]:bg-purple-100 data-[state=active]:text-purple-800 dark:data-[state=active]:bg-purple-900/50 dark:data-[state=active]:text-purple-200"
+                                                >
+                                                    Mains Questions
+                                                </TabsTrigger>
+                                            }
                                         </TabsList>
                                         <TabsContent value="prelims" className="flex-1 mt-4">
                                             <ScrollArea className="h-[400px] w-full pr-4 -mr-4">
@@ -503,5 +513,3 @@ export default function NewspaperAnalysisPage() {
     </div>
   );
 }
-
-    

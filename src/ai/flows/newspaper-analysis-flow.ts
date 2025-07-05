@@ -136,7 +136,8 @@ Follow these specific instructions for the given 'analysisFocus':
         *   'Standard' questions might be 'Discuss' or 'Explain'.
         *   'Advanced' questions might be 'Critically analyze' or 'Compare and contrast'.
         *   'Expert' questions might ask for 'Elucidate' or present a complex scenario.
-    *   After EACH Mains question, add a section titled "### Guidance for Answer". Under this, use bullet points to outline the key concepts, ideal structure (Introduction, Body, Conclusion), and specific examples from the article.
+    *   **CRITICAL FORMATTING**: For EACH Mains question, you MUST format it as a markdown H2 heading (e.g., '## This is the Mains Question?').
+    *   After EACH Mains question heading, add a section titled "### Guidance for Answer". Under this, use bullet points to outline the key concepts, ideal structure (Introduction, Body, Conclusion), and specific examples from the article.
     *   **CRITICAL: Place the entire generated Mains questions markdown into the 'mainsQuestions' field of the output JSON.**
 
 2.  If 'analysisFocus' is 'Mains Analysis (Arguments, Keywords, Viewpoints)':
@@ -173,7 +174,8 @@ const verificationPrompt = ai.definePrompt({
             *   Find every \`<mcq>\` tag in the 'analysis' field. Ensure it has a closing \`</mcq>\` tag.
             *   Inside each \`<mcq>\`, ensure there are multiple \`<option>\` tags.
             *   Ensure each \`<option>\` tag is on its own separate line.
-            *   Fix any and all broken, incomplete, or improperly formatted tags.
+            *   In the 'mainsQuestions' field, ensure EVERY question is preceded by a markdown '##' heading.
+            *   Fix any and all broken, incomplete, or improperly formatted tags or markdown headings.
         *   If '{{{analysisFocus}}}' was 'Prelims Fact Finder (...)':
             *   Fix any broken custom tags (e.g., \`<person>\`, \`<place>\`, etc.).
     3.  **FACT-CHECKING:** Cross-reference the analysis with the 'Original Source Article'. Correct any factual errors or claims not supported by the source text.
