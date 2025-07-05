@@ -231,9 +231,9 @@ export default function NewspaperAnalysisPage() {
             </p>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
             {/* Left Column: Input */}
-            <Card className="glassmorphic shadow-2xl shadow-primary/10">
+            <Card className="lg:col-span-1 glassmorphic shadow-2xl shadow-primary/10">
                 <CardHeader>
                     <CardTitle>Analyze an Article</CardTitle>
                     <CardDescription>Provide an article by URL or by pasting the text directly.</CardDescription>
@@ -308,50 +308,52 @@ export default function NewspaperAnalysisPage() {
             </Card>
 
             {/* Right Column: Analysis Output */}
-            <Dialog>
-                 <Card className="relative glassmorphic shadow-2xl shadow-primary/10 lg:min-h-[620px] flex flex-col">
-                    <CardHeader>
-                        <CardTitle>AI Analysis</CardTitle>
-                        <CardDescription>The breakdown of your article will appear here.</CardDescription>
-                         {analysis && (
-                            <DialogTrigger asChild>
-                                <Button variant="ghost" size="icon" className="absolute top-4 right-4 text-muted-foreground hover:text-primary">
-                                    <Maximize className="w-5 h-5" />
-                                </Button>
-                            </DialogTrigger>
-                        )}
-                    </CardHeader>
-                    <CardContent className="flex-1 flex flex-col">
-                        {isLoading && (
-                            <div className="flex flex-col items-center justify-center text-center h-full flex-1">
-                                <Loader2 className="w-16 h-16 text-primary/50 animate-spin mb-4" />
-                                <p className="text-muted-foreground font-medium text-lg">Our AI is reading...</p>
-                                <p className="text-muted-foreground">This can take a moment for long articles.</p>
-                            </div>
-                        )}
-                        {!isLoading && !analysis && (
-                            <div className="flex flex-col items-center justify-center text-center h-full flex-1 pt-16">
-                                <Sparkles className="w-24 h-24 text-primary/30 mb-4" />
-                                <h3 className="font-semibold text-foreground text-xl">Waiting for article</h3>
-                                <p className="text-muted-foreground mt-2 max-w-sm">Submit an article on the left to see the AI-powered analysis.</p>
-                            </div>
-                        )}
-                        {!isLoading && analysis && (
-                            <ScrollArea className="h-[450px] w-full pr-4 -mr-4">
-                               <AnalysisOutput analysis={analysis} />
-                            </ScrollArea>
-                        )}
-                    </CardContent>
-                </Card>
-                <DialogContent className="max-w-5xl h-[90vh] flex flex-col">
-                    <DialogHeader>
-                        <DialogTitle>Expanded Analysis</DialogTitle>
-                    </DialogHeader>
-                    <ScrollArea className="flex-1 pr-6 -mr-6">
-                       <AnalysisOutput analysis={analysis} />
-                    </ScrollArea>
-                </DialogContent>
-            </Dialog>
+            <div className="lg:col-span-2">
+                <Dialog>
+                     <Card className="relative glassmorphic shadow-2xl shadow-primary/10 lg:min-h-[620px] flex flex-col">
+                        <CardHeader>
+                            <CardTitle>AI Analysis</CardTitle>
+                            <CardDescription>The breakdown of your article will appear here.</CardDescription>
+                             {analysis && (
+                                <DialogTrigger asChild>
+                                    <Button variant="ghost" size="icon" className="absolute top-4 right-4 text-muted-foreground hover:text-primary">
+                                        <Maximize className="w-5 h-5" />
+                                    </Button>
+                                </DialogTrigger>
+                            )}
+                        </CardHeader>
+                        <CardContent className="flex-1 flex flex-col">
+                            {isLoading && (
+                                <div className="flex flex-col items-center justify-center text-center h-full flex-1">
+                                    <Loader2 className="w-16 h-16 text-primary/50 animate-spin mb-4" />
+                                    <p className="text-muted-foreground font-medium text-lg">Our AI is reading...</p>
+                                    <p className="text-muted-foreground">This can take a moment for long articles.</p>
+                                </div>
+                            )}
+                            {!isLoading && !analysis && (
+                                <div className="flex flex-col items-center justify-center text-center h-full flex-1 pt-16">
+                                    <Sparkles className="w-24 h-24 text-primary/30 mb-4" />
+                                    <h3 className="font-semibold text-foreground text-xl">Waiting for article</h3>
+                                    <p className="text-muted-foreground mt-2 max-w-sm">Submit an article on the left to see the AI-powered analysis.</p>
+                                </div>
+                            )}
+                            {!isLoading && analysis && (
+                                <ScrollArea className="h-[450px] w-full pr-4 -mr-4">
+                                   <AnalysisOutput analysis={analysis} />
+                                </ScrollArea>
+                            )}
+                        </CardContent>
+                    </Card>
+                    <DialogContent className="max-w-5xl h-[90vh] flex flex-col">
+                        <DialogHeader>
+                            <DialogTitle>Expanded Analysis</DialogTitle>
+                        </DialogHeader>
+                        <ScrollArea className="flex-1 pr-6 -mr-6">
+                           <AnalysisOutput analysis={analysis} />
+                        </ScrollArea>
+                    </DialogContent>
+                </Dialog>
+            </div>
         </div>
       </main>
       <Footer />
