@@ -160,38 +160,66 @@ const AnalysisOutputDisplay = ({ analysis }: { analysis: string }) => (
     </ReactMarkdown>
 );
 
-const UsageStats = ({ tokens, cost }: { tokens: number; cost: number }) => {
-    return (
-        <div className="flex items-center gap-6 text-xs text-muted-foreground border-b mb-4 pb-4">
-            <TooltipProvider>
-                <Tooltip>
-                    <TooltipTrigger asChild>
-                        <div className="flex items-center gap-1.5">
-                            <Gauge className="w-3.5 h-3.5" />
-                            <span><span className="font-semibold text-foreground">{tokens.toLocaleString()}</span> tokens</span>
-                        </div>
-                    </TooltipTrigger>
-                    <TooltipContent>
-                        <p>Total tokens used by the AI Agent for this analysis.</p>
-                    </TooltipContent>
-                </Tooltip>
-            </TooltipProvider>
+const UsageStats = ({
+  totalTokens,
+  inputTokens,
+  outputTokens,
+  cost,
+}: {
+  totalTokens: number;
+  inputTokens?: number;
+  outputTokens?: number;
+  cost: number;
+}) => {
+  return (
+    <div className="flex items-center gap-6 text-xs text-muted-foreground border-b mb-4 pb-4">
+      <TooltipProvider>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <div className="flex items-center gap-1.5">
+              <Gauge className="w-3.5 h-3.5" />
+              <span>
+                <span className="font-semibold text-foreground">
+                  {totalTokens.toLocaleString()}
+                </span>{" "}
+                tokens
+              </span>
+            </div>
+          </TooltipTrigger>
+          <TooltipContent>
+            <p className="font-medium">Total tokens used by the AI Agent.</p>
+            {inputTokens !== undefined && outputTokens !== undefined && (
+              <p className="text-muted-foreground">
+                {inputTokens.toLocaleString()} input +{" "}
+                {outputTokens.toLocaleString()} output
+              </p>
+            )}
+          </TooltipContent>
+        </Tooltip>
+      </TooltipProvider>
 
-            <TooltipProvider>
-                <Tooltip>
-                    <TooltipTrigger asChild>
-                        <div className="flex items-center gap-1.5">
-                            <IndianRupee className="w-3.5 h-3.5" />
-                            <span>Cost: <span className="font-semibold text-foreground">₹{cost.toFixed(4)}</span></span>
-                        </div>
-                    </TooltipTrigger>
-                    <TooltipContent>
-                        <p>Estimated cost in INR based on Gemini Flash model pricing.</p>
-                    </TooltipContent>
-                </Tooltip>
-            </TooltipProvider>
-        </div>
-    );
+      <TooltipProvider>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <div className="flex items-center gap-1.5">
+              <IndianRupee className="w-3.5 h-3.5" />
+              <span>
+                Cost:{" "}
+                <span className="font-semibold text-foreground">
+                  ₹{cost.toFixed(4)}
+                </span>
+              </span>
+            </div>
+          </TooltipTrigger>
+          <TooltipContent>
+            <p>
+              Estimated cost in INR based on Gemini Flash model pricing.
+            </p>
+          </TooltipContent>
+        </Tooltip>
+      </TooltipProvider>
+    </div>
+  );
 };
 
 
@@ -468,7 +496,12 @@ export default function NewspaperAnalysisPage() {
                             {!isLoading && analysisResult && (
                               <div className="flex-1 flex flex-col">
                                 {analysisResult.totalTokens !== undefined && analysisResult.cost !== undefined && (
-                                    <UsageStats tokens={analysisResult.totalTokens} cost={analysisResult.cost} />
+                                    <UsageStats
+                                        totalTokens={analysisResult.totalTokens}
+                                        inputTokens={analysisResult.inputTokens}
+                                        outputTokens={analysisResult.outputTokens}
+                                        cost={analysisResult.cost}
+                                    />
                                 )}
                                 {analysisResult.summary && (
                                   <div className="mb-4 p-4 bg-primary/10 rounded-lg flex items-center gap-4">
