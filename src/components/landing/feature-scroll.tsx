@@ -58,7 +58,7 @@ const ToolCard = ({ icon, title, description, gradient, href }: { icon: React.Re
                 </CardContent>
             </div>
             <div className="p-6 pt-0">
-                <div className="text-sm font-medium text-primary group-hover:text-accent-foreground flex items-center">
+                <div className="inline-flex items-center justify-center rounded-md px-4 py-2 text-sm font-medium text-primary bg-primary/10 group-hover:bg-primary group-hover:text-primary-foreground transition-colors duration-300">
                     Start Now <MoveRight className="w-4 h-4 ml-2 transition-transform group-hover:translate-x-1" />
                 </div>
             </div>
