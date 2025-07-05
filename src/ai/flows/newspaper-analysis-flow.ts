@@ -1,4 +1,3 @@
-
 'use server';
 /**
  * @fileOverview An AI flow to analyze a newspaper article for exam preparation.
@@ -124,12 +123,12 @@ Follow these specific instructions for the given 'analysisFocus':
     *   **Prelims Questions**: Your objective is to create questions that mirror the analytical and multi-statement style of the actual UPSC Prelims exam, not simple factual recall. Generate 3-5 potential MCQs. For each MCQ, you MUST assign a difficulty score from 1 (very easy) to 10 (expert-level) and include it as an attribute.
         *   Frame questions as "statement-based" (e.g., "Consider the following statements... Which of the statements given above is/are correct?") where possible to test analytical skills.
         *   For each MCQ, you MUST wrap it in the following custom tag structure. Each option MUST be on its own line and inside its own <option> tag. Do not combine options into a single line. The 'subject' attribute must be as granular as possible.
-    *   <mcq question="The full question text here..." subject="e.g., GS Paper II - Polity & Governance" explanation="A thorough explanation of the answer." difficultyScore="7">
-    *   <option correct="true">Correct answer.</option>
-    *   <option>Incorrect answer.</option>
-    *   <option>Incorrect answer.</option>
-    *   <option>Incorrect answer.</option>
-    *   </mcq>
+    *   &lt;mcq question="The full question text here..." subject="e.g., GS Paper II - Polity &amp; Governance" explanation="A thorough explanation of the answer." difficultyScore="7"&gt;
+    *   &lt;option correct="true"&gt;Correct answer.&lt;/option&gt;
+    *   &lt;option&gt;Incorrect answer.&lt;/option&gt;
+    *   &lt;option&gt;Incorrect answer.&lt;/option&gt;
+    *   &lt;option&gt;Incorrect answer.&lt;/option&gt;
+    *   &lt;/mcq&gt;
     *   **CRITICAL: Place the entire generated Prelims questions markdown into the 'analysis' field of the output JSON.**
     *
     *   **Mains Questions**: Frame 2-3 questions that demand critical thinking, analysis, and a structured argument, reflecting the style of the UPSC Mains exam. The questions should use directive words like 'Critically analyze', 'Elucidate', 'Discuss', 'Comment', or 'Examine'.
@@ -146,10 +145,10 @@ Follow these specific instructions for the given 'analysisFocus':
     *   **CRITICAL: Place the entire generated Mains questions markdown into the 'mainsQuestions' field of the output JSON.**
 
 2.  If 'analysisFocus' is 'Mains Analysis (Arguments, Keywords, Viewpoints)':
-    *   Place the entire analysis in the 'analysis' field. Go beyond summarizing. Identify the central thesis, dissect the main arguments with supporting evidence from the text, present potential counter-arguments (even if not explicitly in the text), and extract key statistics and data. Also, analyze the author's tone and potential biases. Structure with clear headings like "## Central Theme", "### Main Arguments", "### Counter-Arguments", "### Key Statistics & Data", "### Author's Tone & Bias".
+    *   Place the entire analysis in the 'analysis' field. Go beyond summarizing. Identify the central thesis, dissect the main arguments with supporting evidence from the text, present potential counter-arguments (even if not explicitly in the text), and extract key statistics and data. Also, analyze the author's tone and potential biases. Structure with clear headings like "## Central Theme", "### Main Arguments", "### Counter-Arguments", "### Key Statistics &amp; Data", "### Author's Tone &amp; Bias".
 
 3.  If 'analysisFocus' is 'Prelims Fact Finder (Key Names, Dates, Schemes)':
-    *   Place the entire analysis in the 'analysis' field. Your goal is to extract facts that are highly relevant for the Prelims exam. When you identify an entity, you MUST wrap it in one of the following custom tags: <person>Name</person>, <place>Location</place>, <scheme>Scheme/Policy Name</scheme>, <date>Date/Time Period</date>, or <org>Organization/Committee</org>.
+    *   Place the entire analysis in the 'analysis' field. Your goal is to extract facts that are highly relevant for the Prelims exam. When you identify an entity, you MUST wrap it in one of the following custom tags: &lt;person&gt;Name&lt;/person&gt;, &lt;place&gt;Location&lt;/place&gt;, &lt;scheme&gt;Scheme/Policy Name&lt;/scheme&gt;, &lt;date&gt;Date/Time Period&lt;/date&gt;, or &lt;org&gt;Organization/Committee&lt;/org&gt;.
 
 4.  If 'analysisFocus' is 'Critical Analysis (Tone, Bias, Fact vs. Opinion)':
     *   Place the entire analysis in the 'analysis' field. Provide a deep critical analysis by identifying the author's main thesis, the evidence used to support it, any logical fallacies, underlying biases (e.g., pro-government, anti-industry), and compare the viewpoint with a neutral, objective stance. Structure with headings like "## Author's Thesis", "## Evidence Evaluation", "## Potential Biases", etc.
@@ -182,13 +181,13 @@ const verificationPrompt = ai.definePrompt({
     2.  **FORMAT & STRUCTURE VERIFICATION (TOP PRIORITY):** This is your most important task. Scrutinize the 'generatedAnalysis' markdown.
         *   If '{{{analysisFocus}}}' was 'Generate Questions (Mains & Prelims)':
             *   Check the 'analysis' field for Prelims questions and the 'mainsQuestions' field for Mains questions.
-            *   Find every '<mcq>' tag in the 'analysis' field. Ensure it has a closing '</mcq>' tag and a 'difficultyScore' attribute.
-            *   Inside each '<mcq>', ensure there are multiple '<option>' tags.
-            *   Ensure each '<option>' tag is on its own separate line.
+            *   Find every '&lt;mcq&gt;' tag in the 'analysis' field. Ensure it has a closing '&lt;/mcq&gt;' tag and a 'difficultyScore' attribute.
+            *   Inside each '&lt;mcq&gt;', ensure there are multiple '&lt;option&gt;' tags.
+            *   Ensure each '&lt;option&gt;' tag is on its own separate line.
             *   In the 'mainsQuestions' field, ensure EVERY question is preceded by a markdown '##' heading and that the heading includes the difficulty rating, like '(Difficulty: X/10)'.
             *   Fix any and all broken, incomplete, or improperly formatted tags or markdown headings.
         *   If '{{{analysisFocus}}}' was 'Prelims Fact Finder (...)':
-            *   Fix any broken custom tags (e.g., '<person>', '<place>', etc.).
+            *   Fix any broken custom tags (e.g., '&lt;person&gt;', '&lt;place&gt;', etc.).
     3.  **FACT-CHECKING:** Cross-reference the analysis with the 'Original Source Article'. Correct any factual errors or claims not supported by the source text.
     4.  **SUMMARY CHECK:** Ensure the 'summary' field is 2-3 sentences of clean, plain text and contains NO HTML or custom tags. Remove any tags you find.
 
