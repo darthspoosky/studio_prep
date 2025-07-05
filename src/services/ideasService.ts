@@ -3,12 +3,18 @@ import { collection, addDoc, onSnapshot, query, orderBy, limit, Timestamp } from
 
 export interface Idea {
   id?: string;
-  idea: string;
+  // Renamed 'idea' to 'featureRequests' for clarity
+  featureRequests: string;
   author: string;
   role: string;
   avatar: string;
   glowColor: string;
   timestamp?: Timestamp;
+  // All other survey fields are now stored, but optional for backward compatibility with initial data
+  examType?: string;
+  goal?: string;
+  studyTime?: string;
+  frustrations?: string;
 }
 
 export async function addIdea(idea: Omit<Idea, 'id'>) {

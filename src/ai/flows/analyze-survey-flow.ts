@@ -70,9 +70,9 @@ async function moderateAndStoreIdea(input: SurveyAnalysisInput) {
     const colors = ['hsl(var(--primary))', 'hsl(var(--accent))', 'hsl(200 96% 87%)', 'hsl(300 96% 87%)', 'hsl(150 96% 87%)', 'hsl(50 96% 87%)'];
     const glowColor = colors[Math.floor(Math.random() * colors.length)];
 
-    // If safe, add the idea to Firestore
+    // If safe, add the idea to Firestore, now saving all survey inputs.
     await addIdea({
-      idea: input.featureRequests,
+      ...input,
       author,
       role,
       avatar,
