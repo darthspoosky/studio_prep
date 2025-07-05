@@ -11,24 +11,65 @@ import { Textarea } from "@/components/ui/textarea";
 import Footer from "@/components/landing/footer";
 import Header from "@/components/layout/header";
 import Link from "next/link";
-import { ArrowLeft, Loader2, Bot } from "lucide-react";
+import { ArrowLeft, Loader2, Bot, Sparkles } from "lucide-react";
 import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
+import { analyzeNewspaperArticle, type NewspaperAnalysisInput } from "@/ai/flows/newspaper-analysis-flow";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 export default function NewspaperAnalysisPage() {
   const [isLoading, setIsLoading] = useState(false);
+  const [analysis, setAnalysis] = useState("");
+  const [activeTab, setActiveTab] = useState("url");
+  const [inputs, setInputs] = useState({
+    url: "",
+    text: "",
+    examType: "",
+    analysisFocus: ""
+  });
   const { toast } = useToast();
 
-  const handleAnalyze = () => {
+  const handleInputChange = (field: keyof typeof inputs, value: string) => {
+    setInputs(prev => ({ ...prev, [field]: value }));
+  };
+
+  const handleAnalyze = async () => {
+    const sourceText = activeTab === 'url' ? inputs.url : inputs.text;
+
+    if (!sourceText.trim()) {
+        toast({ variant: 'destructive', title: "Input Required", description: "Please provide an article URL or paste the text to analyze." });
+        return;
+    }
+    if (!inputs.examType) {
+        toast({ variant: 'destructive', title: "Exam Type Required", description: "Please select an exam type." });
+        return;
+    }
+    if (!inputs.analysisFocus) {
+        toast({ variant: 'destructive', title: "Analysis Focus Required", description: "Please select an analysis focus." });
+        return;
+    }
+    
     setIsLoading(true);
-    // Simulate API call while feature is in development
-    setTimeout(() => {
-      toast({
-        title: "Coming Soon!",
-        description: "Our AI is sharpening its analytical skills. This feature will be live soon!",
-      });
-      setIsLoading(false);
-    }, 1000);
+    setAnalysis("");
+
+    try {
+        const flowInput: NewspaperAnalysisInput = {
+            sourceText,
+            examType: inputs.examType,
+            analysisFocus: inputs.analysisFocus,
+        };
+        const result = await analyzeNewspaperArticle(flowInput);
+        setAnalysis(result.analysis);
+    } catch (error) {
+        console.error("Analysis error:", error);
+        toast({
+            variant: "destructive",
+            title: "Analysis Failed",
+            description: "The AI failed to analyze the article. Please check the input or try again later.",
+        });
+    } finally {
+        setIsLoading(false);
+    }
   };
 
   return (
@@ -58,7 +99,7 @@ export default function NewspaperAnalysisPage() {
                     <CardDescription>Provide an article by URL or by pasting the text directly.</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-6">
-                    <Tabs defaultValue="url" className="w-full">
+                    <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
                         <TabsList className="grid w-full grid-cols-2">
                             <TabsTrigger value="url">From URL</TabsTrigger>
                             <TabsTrigger value="text">Paste Text</TabsTrigger>
@@ -66,20 +107,20 @@ export default function NewspaperAnalysisPage() {
                         <TabsContent value="url" className="pt-4">
                             <div className="space-y-2">
                                 <Label htmlFor="url">Article URL</Label>
-                                <Input id="url" placeholder="https://www.thehindu.com/opinion/editorial/..." />
+                                <Input id="url" placeholder="https://www.thehindu.com/opinion/editorial/..." value={inputs.url} onChange={(e) => handleInputChange("url", e.target.value)} />
                             </div>
                         </TabsContent>
                         <TabsContent value="text" className="pt-4">
                             <div className="space-y-2">
                                 <Label htmlFor="article-text">Article Text</Label>
-                                <Textarea id="article-text" placeholder="Paste the full text of an editorial or news article here..." className="h-40" />
+                                <Textarea id="article-text" placeholder="Paste the full text of an editorial or news article here..." className="h-40" value={inputs.text} onChange={(e) => handleInputChange("text", e.target.value)} />
                             </div>
                         </TabsContent>
                     </Tabs>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                       <div className="space-y-2">
                           <Label htmlFor="exam-type">Exam Type</Label>
-                          <Select>
+                          <Select value={inputs.examType} onValueChange={(value) => handleInputChange("examType", value)}>
                               <SelectTrigger id="exam-type">
                                   <SelectValue placeholder="Select an exam type" />
                               </SelectTrigger>
@@ -93,17 +134,17 @@ export default function NewspaperAnalysisPage() {
                       </div>
                       <div className="space-y-2">
                           <Label htmlFor="analysis-focus">Analysis Focus</Label>
-                          <Select>
+                          <Select value={inputs.analysisFocus} onValueChange={(value) => handleInputChange("analysisFocus", value)}>
                               <SelectTrigger id="analysis-focus">
                                   <SelectValue placeholder="Select an analysis type" />
                               </SelectTrigger>
                               <SelectContent>
-                                  <SelectItem value="generate-questions">Generate Questions (Mains & Prelims)</SelectItem>
-                                  <SelectItem value="mains-analysis">Mains Analysis (Arguments, Keywords, Viewpoints)</SelectItem>
-                                  <SelectItem value="prelims-facts">Prelims Fact Finder (Key Names, Dates, Schemes)</SelectItem>
-                                  <SelectItem value="critical-analysis">Critical Analysis (Tone, Bias, Fact vs. Opinion)</SelectItem>
-                                  <SelectItem value="vocabulary">Vocabulary Builder for Editorials</SelectItem>
-                                  <SelectItem value="summary">Comprehensive Summary</SelectItem>
+                                  <SelectItem value="Generate Questions (Mains & Prelims)">Generate Questions (Mains & Prelims)</SelectItem>
+                                  <SelectItem value="Mains Analysis (Arguments, Keywords, Viewpoints)">Mains Analysis (Arguments, Keywords, Viewpoints)</SelectItem>
+                                  <SelectItem value="Prelims Fact Finder (Key Names, Dates, Schemes)">Prelims Fact Finder (Key Names, Dates, Schemes)</SelectItem>
+                                  <SelectItem value="Critical Analysis (Tone, Bias, Fact vs. Opinion)">Critical Analysis (Tone, Bias, Fact vs. Opinion)</SelectItem>
+                                  <SelectItem value="Vocabulary Builder for Editorials">Vocabulary Builder for Editorials</SelectItem>
+                                  <SelectItem value="Comprehensive Summary">Comprehensive Summary</SelectItem>
                               </SelectContent>
                           </Select>
                       </div>
@@ -111,22 +152,48 @@ export default function NewspaperAnalysisPage() {
                 </CardContent>
                 <CardFooter>
                     <Button size="lg" className="w-full" onClick={handleAnalyze} disabled={isLoading}>
-                        {isLoading && <Loader2 className="animate-spin" />}
-                        {isLoading ? "Analyzing Article..." : "Analyze Article"}
+                        {isLoading ? (
+                          <>
+                            <Loader2 className="animate-spin" />
+                            Analyzing Article...
+                          </>
+                        ) : (
+                          <>
+                            <Sparkles className="w-5 h-5" />
+                            Analyze Article
+                          </>
+                        )}
                     </Button>
                 </CardFooter>
             </Card>
 
             {/* Right Column: Analysis Output */}
-             <Card className="glassmorphic shadow-2xl shadow-primary/10 lg:min-h-[620px]">
+             <Card className="glassmorphic shadow-2xl shadow-primary/10 lg:min-h-[620px] flex flex-col">
                 <CardHeader>
                     <CardTitle>AI Analysis</CardTitle>
                     <CardDescription>The breakdown of your article will appear here.</CardDescription>
                 </CardHeader>
-                <CardContent className="flex flex-col items-center justify-center text-center h-full pt-16">
-                    <Bot className="w-24 h-24 text-primary/30 mb-4" />
-                    <h3 className="font-semibold text-foreground">Waiting for article...</h3>
-                    <p className="text-muted-foreground mt-2 text-sm">Submit an article to see the AI-powered analysis.</p>
+                <CardContent className="flex-1 flex flex-col justify-center">
+                    {isLoading && (
+                        <div className="flex flex-col items-center justify-center text-center h-full">
+                            <Loader2 className="w-16 h-16 text-primary/50 animate-spin mb-4" />
+                            <p className="text-muted-foreground">Our AI is reading the article... Please wait.</p>
+                        </div>
+                    )}
+                    {!isLoading && !analysis && (
+                        <div className="flex flex-col items-center justify-center text-center h-full pt-16">
+                            <Bot className="w-24 h-24 text-primary/30 mb-4" />
+                            <h3 className="font-semibold text-foreground">Waiting for article...</h3>
+                            <p className="text-muted-foreground mt-2 text-sm">Submit an article to see the AI-powered analysis.</p>
+                        </div>
+                    )}
+                    {!isLoading && analysis && (
+                        <ScrollArea className="h-[450px] w-full">
+                            <div className="prose prose-sm dark:prose-invert prose-p:leading-relaxed prose-headings:font-headline prose-headings:text-primary whitespace-pre-wrap p-1">
+                                {analysis}
+                            </div>
+                        </ScrollArea>
+                    )}
                 </CardContent>
             </Card>
         </div>
