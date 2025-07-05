@@ -122,7 +122,7 @@ Follow these specific instructions for the given 'analysisFocus':
 1.  If 'analysisFocus' is 'Generate Questions (Mains & Prelims)':
     *   **Prelims Questions**: Your objective is to create questions that mirror the analytical and multi-statement style of the actual UPSC Prelims exam, not simple factual recall. Generate 3-5 potential MCQs. For each MCQ, you MUST assign a difficulty score from 1 (very easy) to 10 (expert-level) and include it as an attribute.
         *   Frame questions as "statement-based" (e.g., "Consider the following statements... Which of the statements given above is/are correct?") where possible to test analytical skills.
-        *   For each MCQ, you MUST wrap it in the following custom tag structure. Each option MUST be on its own line and inside its own <option> tag. Do not combine options into a single line. The 'subject' attribute must be as granular as possible.
+        *   For each MCQ, you MUST wrap it in the following custom tag structure. Each option MUST be on its own line and inside its own &lt;option&gt; tag. Do not combine options into a single line. The 'subject' attribute must be as granular as possible.
     *   &lt;mcq question="The full question text here..." subject="e.g., GS Paper II - Polity &amp; Governance" explanation="A thorough explanation of the answer." difficultyScore="7"&gt;
     *   &lt;option correct="true"&gt;Correct answer.&lt;/option&gt;
     *   &lt;option&gt;Incorrect answer.&lt;/option&gt;
