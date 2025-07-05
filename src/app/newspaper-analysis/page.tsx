@@ -46,7 +46,7 @@ export default function NewspaperAnalysisPage() {
             </span>
             </h1>
             <p className="text-muted-foreground mt-4 max-w-2xl mx-auto text-lg">
-                Analyze news articles to improve your comprehension and critical thinking skills.
+                Go beyond summarization. Extract exam-ready insights from any news article.
             </p>
         </div>
 
@@ -83,10 +83,11 @@ export default function NewspaperAnalysisPage() {
                                 <SelectValue placeholder="Select an analysis type" />
                             </SelectTrigger>
                             <SelectContent>
-                                <SelectItem value="summary">Editorial Summary & Key Points</SelectItem>
-                                <SelectItem value="critical-analysis">Critical Analysis & Bias Detection</SelectItem>
-                                <SelectItem value="vocabulary">Vocabulary for Competitive Exams</SelectItem>
-                                <SelectItem value="fact-opinion">Fact vs. Opinion Identification</SelectItem>
+                                <SelectItem value="mains-analysis">UPSC Mains Analysis (Arguments, Keywords, Viewpoints)</SelectItem>
+                                <SelectItem value="prelims-facts">Prelims Fact Finder (Key Names, Dates, Schemes)</SelectItem>
+                                <SelectItem value="critical-analysis">Critical Analysis (Tone, Bias, Fact vs. Opinion)</SelectItem>
+                                <SelectItem value="vocabulary">Vocabulary Builder for Editorials</SelectItem>
+                                <SelectItem value="summary">Comprehensive Summary</SelectItem>
                             </SelectContent>
                         </Select>
                     </div>
