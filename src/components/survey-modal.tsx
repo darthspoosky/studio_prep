@@ -24,7 +24,8 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
-import { CheckCircle } from 'lucide-react';
+import { CheckCircle, Loader2, Sparkles } from 'lucide-react';
+import { analyzeSurvey } from '@/ai/flows/analyze-survey-flow';
 
 const formSchema = z.object({
   examType: z.string().min(1, 'Please select an exam type.'),
@@ -39,6 +40,8 @@ type SurveyModalProps = {
 
 const SurveyModal = ({ isOpen, onOpenChange }: SurveyModalProps) => {
   const [step, setStep] = useState(0);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [analysisResult, setAnalysisResult] = useState<string | null>(null);
   const { toast } = useToast();
 
   const form = useForm<z.infer<typeof formSchema>>({
@@ -66,14 +69,28 @@ const SurveyModal = ({ isOpen, onOpenChange }: SurveyModalProps) => {
     setStep((prev) => prev - 1);
   };
 
-  const onSubmit = (values: z.infer<typeof formSchema>) => {
-    console.log('Survey submitted:', values);
-    setStep((prev) => prev + 1); // Go to thank you step
+  const onSubmit = async (values: z.infer<typeof formSchema>) => {
+    setIsSubmitting(true);
+    try {
+      const result = await analyzeSurvey(values);
+      setAnalysisResult(result.personalizedMessage);
+      setStep((prev) => prev + 1); // Go to thank you step
+    } catch (error) {
+      console.error('Survey submission error:', error);
+      toast({
+        variant: 'destructive',
+        title: 'Oh no! Something went wrong.',
+        description: "We couldn't submit your survey. Please try again later.",
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
   
   const handleClose = () => {
     form.reset();
     setStep(0);
+    setAnalysisResult(null);
     onOpenChange(false);
   }
 
@@ -150,11 +167,23 @@ const SurveyModal = ({ isOpen, onOpenChange }: SurveyModalProps) => {
     },
     {
       title: 'Thank You!',
-      description: 'Your feedback is incredibly valuable. We\'re excited to build better tools for you.',
+      description: "Your feedback is making PrepTalk better for everyone.",
       content: (
-          <div className="text-center flex flex-col items-center justify-center h-48">
-              <CheckCircle className="w-16 h-16 text-green-500 mb-4" />
-              <p>We've received your submission.</p>
+          <div className="text-left flex flex-col justify-center min-h-[12rem]">
+            <div className="flex items-center justify-center text-center mb-4">
+              <CheckCircle className="w-16 h-16 text-green-500" />
+            </div>
+            <p className="text-center font-semibold text-foreground mb-4">We've received your feedback!</p>
+            {analysisResult ? (
+              <div className="mt-2 p-4 bg-primary/10 rounded-lg text-sm text-foreground">
+                 <div className="flex items-start space-x-3">
+                    <Sparkles className="w-4 h-4 mt-0.5 text-primary flex-shrink-0" />
+                    <p className="italic">{analysisResult}</p>
+                 </div>
+              </div>
+            ) : (
+              <p className="text-center text-muted-foreground">Your input is incredibly valuable as we build.</p>
+            )}
           </div>
       ),
     }
@@ -174,7 +203,7 @@ const SurveyModal = ({ isOpen, onOpenChange }: SurveyModalProps) => {
             </div>
             <DialogFooter>
               {step > 0 && step < steps.length - 1 && (
-                <Button type="button" variant="outline" onClick={handleBack}>
+                <Button type="button" variant="outline" onClick={handleBack} disabled={isSubmitting}>
                   Back
                 </Button>
               )}
@@ -184,7 +213,10 @@ const SurveyModal = ({ isOpen, onOpenChange }: SurveyModalProps) => {
                 </Button>
               )}
               {step === steps.length - 2 && (
-                <Button type="submit">Submit Feedback</Button>
+                <Button type="submit" disabled={isSubmitting}>
+                  {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                  Submit Feedback
+                </Button>
               )}
               {step === steps.length - 1 && (
                 <Button type="button" onClick={handleClose}>
