@@ -378,6 +378,7 @@ const DesktopView = () => {
 
     const feedbackOpacity = useTransform(scrollYProgress, [feedbackStart - 0.05, feedbackStart], [0, 1]);
     const feedbackY = useTransform(scrollYProgress, [feedbackStart, 1.0], ['50vh', '0vh']);
+    const feedbackPointerEvents = useTransform(feedbackOpacity, (o) => (o > 0.1 ? 'auto' : 'none'));
 
     return (
         <section id="tools" ref={containerRef} className="relative bg-gray-50 dark:bg-gray-900 h-[600vh]">
@@ -398,7 +399,7 @@ const DesktopView = () => {
                     </div>
                 </motion.div>
 
-                <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                <div className="absolute inset-0 flex items-center justify-center">
                     {tools.map((tool, i) => (
                         <AnimatedCard
                             key={tool.title}
@@ -410,7 +411,7 @@ const DesktopView = () => {
                 </div>
 
                 <motion.div
-                    style={{ y: feedbackY, opacity: feedbackOpacity, zIndex: 50 }}
+                    style={{ y: feedbackY, opacity: feedbackOpacity, zIndex: 50, pointerEvents: feedbackPointerEvents }}
                     className="absolute inset-0 bg-gray-50 dark:bg-gray-900"
                 >
                     <IdeaBoard />
