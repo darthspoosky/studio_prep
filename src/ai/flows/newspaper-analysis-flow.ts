@@ -69,8 +69,8 @@ const relevanceCheckPrompt = ai.definePrompt({
 Analyze the source text and compare it against the provided UPSC Prelims and Mains syllabus.
 1.  **Identify the single most specific, granular syllabus topic** the article relates to. For example, instead of just "GS-II", specify "GS Paper II - Governance - Role of Civil Services in a Democracy".
 2.  **Determine Relevance:**
-    *   If you can successfully tag the article to a specific syllabus topic, set \`isRelevant\` to \`true\` and populate the \`syllabusTopic\` field with the identified topic. The \`reasoning\` should briefly state the connection.
-    *   If the article is completely unrelated (e.g., sports scores, celebrity gossip, local crime, fiction) and you CANNOT tag it to a specific topic, set \`isRelevant\` to \`false\`, set \`syllabusTopic\` to \`null\`, and provide a brief one-sentence \`reasoning\` explaining why it's not relevant.
+    *   If you can successfully tag the article to a specific syllabus topic, set 'isRelevant' to 'true' and populate the 'syllabusTopic' field with the identified topic. The 'reasoning' should briefly state the connection.
+    *   If the article is completely unrelated (e.g., sports scores, celebrity gossip, local crime, fiction) and you CANNOT tag it to a specific topic, set 'isRelevant' to 'false', set 'syllabusTopic' to 'null', and provide a brief one-sentence 'reasoning' explaining why it's not relevant.
 
 IMPORTANT: You MUST write the 'reasoning' and 'syllabusTopic' (if found) in the language specified here: {{{outputLanguage}}}.
 
@@ -91,7 +91,7 @@ const analysisPrompt = ai.definePrompt({
   prompt: `You are a world-class editor and exam coach AI for Indian competitive exam aspirants, with deep expertise in the UPSC syllabus. Your analysis must be presented in a premium, highly structured, and easy-to-digest format. 
 Use markdown extensively and intelligently: leverage headings, subheadings, blockquotes for key takeaways, bold text for keywords, and tables for data comparison.
 
-IMPORTANT: Your entire response, including all analysis, questions, summaries, and explanations, MUST be in the following language: {{{outputLanguage}}}. Do not use English unless the specified language is English.
+IMPORTANT: Your entire response, including all analysis, questions, summaries, and explanations, MUST be in the following language: {{{outputLanguage}}}. The only exception is the structural heading '## Potential Mains Questions', which must ALWAYS be in English.
 
 First, your critical tasks are:
 1.  The article has already been identified as relating to the following syllabus topic: '{{{identifiedSyllabusTopic}}}'. You MUST use this exact topic and mention it clearly at the beginning of your analysis.
@@ -137,7 +137,14 @@ Follow these specific instructions for the given 'analysisFocus':
         *   'Advanced' questions might be 'Critically analyze' or 'Compare and contrast'.
         *   'Expert' questions might ask for 'Elucidate' or present a complex scenario.
     *   **CRITICAL FORMATTING**: For EACH Mains question, you MUST format it as a markdown H2 heading (e.g., '## This is the Mains Question?').
-    *   After EACH Mains question heading, add a section titled "### Guidance for Answer". Under this, use bullet points to outline the key concepts, ideal structure (Introduction, Body, Conclusion), and specific examples from the article.
+    *   After EACH Mains question heading, you MUST provide a detailed "### Guidance for Answer" section. This is critical. This guidance should be highly structured and include the following as bullet points:
+        *   **Key Concepts:** List the core theoretical concepts from the syllabus (e.g., Federalism, Judicial Review, Fiscal Policy) that are central to answering the question.
+        *   **Ideal Structure:** Provide a clear, step-by-step structure.
+            *   **Introduction:** Suggest a strong opening sentence or two.
+            *   **Body:** Break down the main arguments into 2-3 distinct paragraphs. For each paragraph, suggest the main point to cover.
+            *   **Conclusion:** Suggest a way to summarize the arguments and provide a forward-looking statement.
+        *   **Examples from Article:** Explicitly list facts, statistics, or direct quotes from the source article that MUST be used to support the answer.
+        *   **Keywords:** List 5-7 important keywords (e.g., 'Electoral Integrity', 'Voter Disenfranchisement', 'Constitutional Mandate') that should be used in the answer.
     *   **CRITICAL: Place the entire generated Mains questions markdown into the 'mainsQuestions' field of the output JSON.**
 
 2.  If 'analysisFocus' is 'Mains Analysis (Arguments, Keywords, Viewpoints)':
@@ -171,13 +178,13 @@ const verificationPrompt = ai.definePrompt({
     2.  **FORMAT & STRUCTURE VERIFICATION (TOP PRIORITY):** This is your most important task. Scrutinize the 'generatedAnalysis' markdown.
         *   If '{{{analysisFocus}}}' was 'Generate Questions (Mains & Prelims)':
             *   Check the 'analysis' field for Prelims questions and the 'mainsQuestions' field for Mains questions.
-            *   Find every \`<mcq>\` tag in the 'analysis' field. Ensure it has a closing \`</mcq>\` tag.
-            *   Inside each \`<mcq>\`, ensure there are multiple \`<option>\` tags.
-            *   Ensure each \`<option>\` tag is on its own separate line.
+            *   Find every '<mcq>' tag in the 'analysis' field. Ensure it has a closing '</mcq>' tag.
+            *   Inside each '<mcq>', ensure there are multiple '<option>' tags.
+            *   Ensure each '<option>' tag is on its own separate line.
             *   In the 'mainsQuestions' field, ensure EVERY question is preceded by a markdown '##' heading.
             *   Fix any and all broken, incomplete, or improperly formatted tags or markdown headings.
         *   If '{{{analysisFocus}}}' was 'Prelims Fact Finder (...)':
-            *   Fix any broken custom tags (e.g., \`<person>\`, \`<place>\`, etc.).
+            *   Fix any broken custom tags (e.g., '<person>', '<place>', etc.).
     3.  **FACT-CHECKING:** Cross-reference the analysis with the 'Original Source Article'. Correct any factual errors or claims not supported by the source text.
     4.  **SUMMARY CHECK:** Ensure the 'summary' field is 2-3 sentences of clean, plain text and contains NO HTML or custom tags. Remove any tags you find.
 
