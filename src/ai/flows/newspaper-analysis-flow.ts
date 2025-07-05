@@ -46,6 +46,34 @@ export async function analyzeNewspaperArticle(input: NewspaperAnalysisInput): Pr
   });
 }
 
+const RelevanceCheckOutputSchema = z.object({
+    isRelevant: z.boolean().describe('Whether the article content is relevant to the provided UPSC syllabus.'),
+    reasoning: z.string().describe('A brief explanation for why the article is or is not relevant.'),
+});
+
+const relevanceCheckPrompt = ai.definePrompt({
+    name: 'relevanceCheckPrompt',
+    input: { schema: NewspaperAnalysisSyllabusInputSchema },
+    output: { schema: RelevanceCheckOutputSchema },
+    prompt: `You are an AI assistant for a UPSC exam preparation tool. Your first task is to determine if a given article is relevant for a UPSC aspirant.
+      
+Analyze the source text and determine if its content relates to any topics in the provided UPSC Prelims or Mains syllabus.
+
+- If the article is about topics like politics, international relations, Indian economy, modern history, geography, environment, science & tech policy, social issues, etc., it is RELEVANT.
+- If the article is about topics like entertainment, celebrity gossip, sports results, fictional stories, or is purely advertising, it is NOT RELEVANT.
+
+Set 'isRelevant' to true or false. Provide a brief one-sentence reasoning.
+
+Source Text: "{{{sourceText}}}"
+
+--- PRELIMS SYLLABUS ---
+{{{prelimsSyllabus}}}
+--- MAINS SYLLABUS ---
+{{{mainsSyllabus}}}
+---
+`,
+});
+
 const analysisPrompt = ai.definePrompt({
   name: 'newspaperAnalysisPrompt',
   input: { schema: NewspaperAnalysisSyllabusInputSchema },
@@ -155,19 +183,31 @@ const analyzeNewspaperArticleFlow = ai.defineFlow(
     outputSchema: NewspaperAnalysisOutputSchema,
   },
   async (input) => {
-    // Step 1: Generate the initial analysis
+    // Step 1: Relevance Check
+    const { output: relevanceResult } = await relevanceCheckPrompt(input);
+    if (!relevanceResult) {
+        throw new Error("Relevance check failed.");
+    }
+
+    if (!relevanceResult.isRelevant) {
+      return {
+        analysis: `## Article Not Relevant\n\n**Reasoning:** ${relevanceResult.reasoning}\n\nThe provided article does not appear to be relevant to the UPSC syllabus. Please provide an article related to topics like national and international current events, government policies, economy, history, geography, or social issues.`
+      };
+    }
+
+    // Step 2: Generate the initial analysis (if relevant)
     const { output: initialOutput } = await analysisPrompt(input);
     if (!initialOutput) {
         throw new Error("Initial analysis generation failed.");
     }
 
-    // Step 2: Verify and fact-check the analysis
+    // Step 3: Verify and fact-check the analysis
     const { output: verifiedOutput } = await verificationPrompt({
         sourceText: input.sourceText,
         generatedAnalysis: initialOutput.analysis,
     });
     if (!verifiedOutput) {
-        throw new 'Error'>("Verification step failed.");
+        throw new Error("Verification step failed.");
     }
     
     return verifiedOutput;
