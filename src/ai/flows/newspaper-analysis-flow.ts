@@ -1,4 +1,3 @@
-
 'use server';
 /**
  * @fileOverview An AI flow to analyze a newspaper article for exam preparation.
@@ -551,7 +550,7 @@ const analyzeNewspaperArticleFlow = ai.defineFlow(
         return {
           analysis: `## Article Not Relevant for UPSC Preparation\n\n**Assessment**: ${relevanceResult.reasoning}\n\n**Recommendation**: Please provide articles related to:\n- Indian Polity & Governance\n- Economics & Development\n- International Relations\n- Science & Technology\n- Environment & Ecology\n- Indian History & Culture\n- Geography\n\nThese topics align with UPSC syllabus and will generate meaningful questions for your preparation.`,
           summary: "Article assessed as not relevant for UPSC preparation based on syllabus alignment.",
-          syllabusTopic: undefined,
+          syllabusTopic: null,
           qualityScore: 0,
           questionsCount: 0,
           totalTokens,
@@ -667,7 +666,7 @@ const analyzeNewspaperArticleFlow = ai.defineFlow(
 /**
  * Validates article content before processing
  */
-export function validateArticleContent(content: string): { isValid: boolean; issues: string[] } {
+function validateArticleContent(content: string): { isValid: boolean; issues: string[] } {
   const issues: string[] = [];
   
   if (content.length < 100) {
@@ -699,7 +698,7 @@ export function validateArticleContent(content: string): { isValid: boolean; iss
 /**
  * Extracts metadata from analysis for analytics
  */
-export function extractAnalysisMetadata(output: NewspaperAnalysisOutput): {
+function extractAnalysisMetadata(output: NewspaperAnalysisOutput): {
   topics: string[];
   difficulty: number;
   wordCount: number;
@@ -724,5 +723,3 @@ export function extractAnalysisMetadata(output: NewspaperAnalysisOutput): {
     questionTypes: ['MCQ'] // Can be extended for other types
   };
 }
-
-    
