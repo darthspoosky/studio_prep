@@ -46,7 +46,7 @@ const NewspaperAnalysisOutputSchema = z.object({
   inputTokens: z.number().optional().describe('Total input tokens used for the analysis.'),
   outputTokens: z.number().optional().describe('Total output tokens for the analysis.'),
   totalTokens: z.number().optional().describe('Total tokens used for the analysis.'),
-  cost: z.number().optional().describe('Estimated cost for the analysis.'),
+  cost: z.number().optional().describe('Estimated cost for the analysis in INR.'),
 });
 export type NewspaperAnalysisOutput = z.infer<typeof NewspaperAnalysisOutputSchema>;
 
@@ -219,8 +219,9 @@ const analyzeNewspaperArticleFlow = ai.defineFlow(
     let totalOutputTokens = 0;
     
     // Example pricing for Gemini Flash models.
-    const INPUT_PRICE_PER_1K_TOKENS = 0.00035;
-    const OUTPUT_PRICE_PER_1K_TOKENS = 0.00105;
+    const INPUT_PRICE_PER_1K_TOKENS_USD = 0.00035;
+    const OUTPUT_PRICE_PER_1K_TOKENS_USD = 0.00105;
+    const USD_TO_INR_RATE = 83;
 
     // Step 1: Relevance Check
     const { response: relevanceResponse, output: relevanceResult } = await relevanceCheckPrompt(input);
@@ -236,7 +237,8 @@ const analyzeNewspaperArticleFlow = ai.defineFlow(
 
     if (!relevanceResult.isRelevant || !relevanceResult.syllabusTopic) {
       const totalTokens = totalInputTokens + totalOutputTokens;
-      const cost = (totalInputTokens / 1000) * INPUT_PRICE_PER_1K_TOKENS + (totalOutputTokens / 1000) * OUTPUT_PRICE_PER_1K_TOKENS;
+      const costInUSD = (totalInputTokens / 1000) * INPUT_PRICE_PER_1K_TOKENS_USD + (totalOutputTokens / 1000) * OUTPUT_PRICE_PER_1K_TOKENS_USD;
+      const cost = costInUSD * USD_TO_INR_RATE;
       
       return {
         analysis: `## Article Not Relevant\n\n**Reasoning:** ${relevanceResult.reasoning}\n\nPlease provide an article related to subjects like Indian Polity, Governance, Economy, History, Geography, or other topics covered in the UPSC syllabus to get a meaningful analysis.`,
@@ -281,7 +283,8 @@ const analyzeNewspaperArticleFlow = ai.defineFlow(
     const cleanSummary = verifiedOutput.summary.replace(/<[^>]+>/g, '');
 
     const totalTokens = totalInputTokens + totalOutputTokens;
-    const cost = (totalInputTokens / 1000) * INPUT_PRICE_PER_1K_TOKENS + (totalOutputTokens / 1000) * OUTPUT_PRICE_PER_1K_TOKENS;
+    const costInUSD = (totalInputTokens / 1000) * INPUT_PRICE_PER_1K_TOKENS_USD + (totalOutputTokens / 1000) * OUTPUT_PRICE_PER_1K_TOKENS_USD;
+    const cost = costInUSD * USD_TO_INR_RATE;
 
     return {
         ...verifiedOutput,

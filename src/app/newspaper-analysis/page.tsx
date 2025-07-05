@@ -12,7 +12,7 @@ import { Textarea } from "@/components/ui/textarea";
 import Footer from "@/components/landing/footer";
 import Header from "@/components/layout/header";
 import Link from "next/link";
-import { ArrowLeft, Loader2, Sparkles, CheckCircle, XCircle, Circle, Info, Maximize, Volume2, Gauge, DollarSign } from "lucide-react";
+import { ArrowLeft, Loader2, Sparkles, CheckCircle, XCircle, Circle, Info, Maximize, Volume2, Gauge, IndianRupee } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { analyzeNewspaperArticle, type NewspaperAnalysisInput, type NewspaperAnalysisOutput } from "@/ai/flows/newspaper-analysis-flow";
 import { textToSpeech } from "@/ai/flows/text-to-speech-flow";
@@ -172,7 +172,7 @@ const UsageStats = ({ tokens, cost }: { tokens: number; cost: number }) => {
                         </div>
                     </TooltipTrigger>
                     <TooltipContent>
-                        <p>Total tokens used for this analysis.</p>
+                        <p>Total tokens used by the AI Agent for this analysis.</p>
                     </TooltipContent>
                 </Tooltip>
             </TooltipProvider>
@@ -181,12 +181,12 @@ const UsageStats = ({ tokens, cost }: { tokens: number; cost: number }) => {
                 <Tooltip>
                     <TooltipTrigger asChild>
                         <div className="flex items-center gap-1.5">
-                            <DollarSign className="w-3.5 h-3.5" />
-                            <span>Cost: <span className="font-semibold text-foreground">${cost.toFixed(5)}</span></span>
+                            <IndianRupee className="w-3.5 h-3.5" />
+                            <span>Cost: <span className="font-semibold text-foreground">₹{cost.toFixed(4)}</span></span>
                         </div>
                     </TooltipTrigger>
                     <TooltipContent>
-                        <p>Estimated cost based on Gemini Flash model pricing.</p>
+                        <p>Estimated cost in INR based on Gemini Flash model pricing.</p>
                     </TooltipContent>
                 </Tooltip>
             </TooltipProvider>
@@ -326,107 +326,110 @@ export default function NewspaperAnalysisPage() {
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
             {/* Left Column: Input */}
-            <Card className="lg:col-span-1 glassmorphic shadow-2xl shadow-primary/10 lg:sticky top-24">
-                <CardHeader>
-                    <CardTitle>Analyze an Article</CardTitle>
-                    <CardDescription>Provide an article by URL or by pasting the text directly.</CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-6">
-                    <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-                        <TabsList className="grid w-full grid-cols-2">
-                            <TabsTrigger value="url">From URL</TabsTrigger>
-                            <TabsTrigger value="text">Paste Text</TabsTrigger>
-                        </TabsList>
-                        <TabsContent value="url" className="pt-4">
-                            <div className="space-y-2">
-                                <Label htmlFor="url">Article URL</Label>
-                                <Input id="url" placeholder="https://www.thehindu.com/opinion/editorial/..." value={inputs.url} onChange={(e) => handleInputChange("url", e.target.value)} />
-                            </div>
-                        </TabsContent>
-                        <TabsContent value="text" className="pt-4">
-                            <div className="space-y-2">
-                                <Label htmlFor="article-text">Article Text</Label>
-                                <Textarea id="article-text" placeholder="Paste the full text of an editorial or news article here..." className="h-40" value={inputs.text} onChange={(e) => handleInputChange("text", e.target.value)} />
-                            </div>
-                        </TabsContent>
-                    </Tabs>
-                    <div className="space-y-2">
-                        <Label htmlFor="analysis-focus">Analysis Focus</Label>
-                        <Select value={inputs.analysisFocus} onValueChange={(value) => handleInputChange("analysisFocus", value)}>
-                            <SelectTrigger id="analysis-focus">
-                                <SelectValue placeholder="Select an analysis type" />
-                            </SelectTrigger>
-                            <SelectContent>
-                                <SelectItem value="Generate Questions (Mains & Prelims)">Generate Questions (Mains & Prelims)</SelectItem>
-                                <SelectItem value="Mains Analysis (Arguments, Keywords, Viewpoints)">Mains Analysis (Arguments, Keywords, Viewpoints)</SelectItem>
-                                <SelectItem value="Prelims Fact Finder (Key Names, Dates, Schemes)">Prelims Fact Finder (Key Names, Dates, Schemes)</SelectItem>
-                                <SelectItem value="Critical Analysis (Tone, Bias, Fact vs. Opinion)">Critical Analysis (Tone, Bias, Fact vs. Opinion)</SelectItem>
-                                <SelectItem value="Vocabulary Builder for Editorials">Vocabulary Builder for Editorials</SelectItem>
-                                <SelectItem value="Comprehensive Summary">Comprehensive Summary</SelectItem>
-                            </SelectContent>
-                        </Select>
-                    </div>
-                     <div className="space-y-2">
-                        <Label htmlFor="output-language">Output Language</Label>
-                        <Select value={inputs.outputLanguage} onValueChange={(value) => handleInputChange("outputLanguage", value)}>
-                            <SelectTrigger id="output-language">
-                                <SelectValue placeholder="Select a language" />
-                            </SelectTrigger>
-                            <SelectContent>
-                                <SelectItem value="English">English</SelectItem>
-                                <SelectItem value="Hindi">Hindi (हिन्दी)</SelectItem>
-                                <SelectItem value="Tamil">Tamil (தமிழ்)</SelectItem>
-                                <SelectItem value="Bengali">Bengali (বাংলা)</SelectItem>
-                                <SelectItem value="Telugu">Telugu (తెలుగు)</SelectItem>
-                            </SelectContent>
-                        </Select>
-                    </div>
-                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                      <div className="space-y-2">
-                          <Label htmlFor="exam-type">Exam Type</Label>
-                          <Select value={inputs.examType} onValueChange={(value) => handleInputChange("examType", value)}>
-                              <SelectTrigger id="exam-type">
-                                  <SelectValue placeholder="Select an exam type" />
-                              </SelectTrigger>
-                              <SelectContent>
-                                  <SelectItem value="UPSC Civil Services">UPSC Civil Services</SelectItem>
-                                  <SelectItem value="State PSC">State PSC</SelectItem>
-                                  <SelectItem value="RBI Grade B">RBI Grade B</SelectItem>
-                                  <SelectItem value="Other Competitive Exams">Other Competitive Exams</SelectItem>
-                              </SelectContent>
-                          </Select>
-                      </div>
-                      <div className="space-y-2">
-                          <Label htmlFor="difficulty">Difficulty Level</Label>
-                          <Select value={inputs.difficulty} onValueChange={(value) => handleInputChange("difficulty", value)}>
-                              <SelectTrigger id="difficulty">
-                                  <SelectValue placeholder="Select a difficulty level" />
-                              </SelectTrigger>
-                              <SelectContent>
-                                  <SelectItem value="Standard">Standard</SelectItem>
-                                  <SelectItem value="Advanced">Advanced</SelectItem>
-                                  <SelectItem value="Expert">Expert</SelectItem>
-                              </SelectContent>
-                          </Select>
-                      </div>
-                    </div>
-                </CardContent>
-                <CardFooter>
-                    <Button size="lg" className="w-full" onClick={handleAnalyze} disabled={isLoading}>
-                        {isLoading ? (
-                          <>
-                            <Loader2 className="animate-spin" />
-                            Analyzing Article...
-                          </>
-                        ) : (
-                          <>
-                            <Sparkles className="w-5 h-5" />
-                            Analyze Article
-                          </>
-                        )}
-                    </Button>
-                </CardFooter>
-            </Card>
+            <div className="lg:col-span-1 lg:sticky top-24">
+                <Card className="glassmorphic shadow-2xl shadow-primary/10">
+                    <CardHeader>
+                        <CardTitle>Analyze an Article</CardTitle>
+                        <CardDescription>Provide an article by URL or by pasting the text directly.</CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-6">
+                        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+                            <TabsList className="grid w-full grid-cols-2">
+                                <TabsTrigger value="url">From URL</TabsTrigger>
+                                <TabsTrigger value="text">Paste Text</TabsTrigger>
+                            </TabsList>
+                            <TabsContent value="url" className="pt-4">
+                                <div className="space-y-2">
+                                    <Label htmlFor="url">Article URL</Label>
+                                    <Input id="url" placeholder="https://www.thehindu.com/opinion/editorial/..." value={inputs.url} onChange={(e) => handleInputChange("url", e.target.value)} />
+                                </div>
+                            </TabsContent>
+                            <TabsContent value="text" className="pt-4">
+                                <div className="space-y-2">
+                                    <Label htmlFor="article-text">Article Text</Label>
+                                    <Textarea id="article-text" placeholder="Paste the full text of an editorial or news article here..." className="h-40" value={inputs.text} onChange={(e) => handleInputChange("text", e.target.value)} />
+                                </div>
+                            </TabsContent>
+                        </Tabs>
+                        <div className="space-y-2">
+                            <Label htmlFor="analysis-focus">Analysis Focus</Label>
+                            <Select value={inputs.analysisFocus} onValueChange={(value) => handleInputChange("analysisFocus", value)}>
+                                <SelectTrigger id="analysis-focus">
+                                    <SelectValue placeholder="Select an analysis type" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="Generate Questions (Mains & Prelims)">Generate Questions (Mains & Prelims)</SelectItem>
+                                    <SelectItem value="Mains Analysis (Arguments, Keywords, Viewpoints)">Mains Analysis (Arguments, Keywords, Viewpoints)</SelectItem>
+                                    <SelectItem value="Prelims Fact Finder (Key Names, Dates, Schemes)">Prelims Fact Finder (Key Names, Dates, Schemes)</SelectItem>
+                                    <SelectItem value="Critical Analysis (Tone, Bias, Fact vs. Opinion)">Critical Analysis (Tone, Bias, Fact vs. Opinion)</SelectItem>
+                                    <SelectItem value="Vocabulary Builder for Editorials">Vocabulary Builder for Editorials</SelectItem>
+                                    <SelectItem value="Comprehensive Summary">Comprehensive Summary</SelectItem>
+                                </SelectContent>
+                            </Select>
+                        </div>
+                         <div className="space-y-2">
+                            <Label htmlFor="output-language">Output Language</Label>
+                            <Select value={inputs.outputLanguage} onValueChange={(value) => handleInputChange("outputLanguage", value)}>
+                                <SelectTrigger id="output-language">
+                                    <SelectValue placeholder="Select a language" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="English">English</SelectItem>
+                                    <SelectItem value="Hindi">Hindi (हिन्दी)</SelectItem>
+                                    <SelectItem value="Tamil">Tamil (தமிழ்)</SelectItem>
+                                    <SelectItem value="Bengali">Bengali (বাংলা)</SelectItem>
+                                    <SelectItem value="Telugu">Telugu (తెలుగు)</SelectItem>
+                                </SelectContent>
+                            </Select>
+                        </div>
+                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                          <div className="space-y-2">
+                              <Label htmlFor="exam-type">Exam Type</Label>
+                              <Select value={inputs.examType} onValueChange={(value) => handleInputChange("examType", value)}>
+                                  <SelectTrigger id="exam-type">
+                                      <SelectValue placeholder="Select an exam type" />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                      <SelectItem value="UPSC Civil Services">UPSC Civil Services</SelectItem>
+                                      <SelectItem value="State PSC">State PSC</SelectItem>
+                                      <SelectItem value="RBI Grade B">RBI Grade B</SelectItem>
+                                      <SelectItem value="Other Competitive Exams">Other Competitive Exams</SelectItem>
+                                  </SelectContent>
+                              </Select>
+                          </div>
+                          <div className="space-y-2">
+                              <Label htmlFor="difficulty">Difficulty Level</Label>
+                              <Select value={inputs.difficulty} onValueChange={(value) => handleInputChange("difficulty", value)}>
+                                  <SelectTrigger id="difficulty">
+                                      <SelectValue placeholder="Select a difficulty level" />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                      <SelectItem value="Standard">Standard</SelectItem>
+                                      <SelectItem value="Advanced">Advanced</SelectItem>
+                                      <SelectItem value="Expert">Expert</SelectItem>
+                                  </SelectContent>
+                              </Select>
+                          </div>
+                        </div>
+                    </CardContent>
+                    <CardFooter>
+                        <Button size="lg" className="w-full" onClick={handleAnalyze} disabled={isLoading}>
+                            {isLoading ? (
+                              <>
+                                <Loader2 className="animate-spin" />
+                                Analyzing Article...
+                              </>
+                            ) : (
+                              <>
+                                <Sparkles className="w-5 h-5" />
+                                Analyze Article
+                              </>
+                            )}
+                        </Button>
+                    </CardFooter>
+                </Card>
+            </div>
+
 
             {/* Right Column: Analysis Output */}
             <div className="lg:col-span-2">
@@ -540,6 +543,7 @@ export default function NewspaperAnalysisPage() {
                         </DialogHeader>
                         <ScrollArea className="flex-1 pr-6 -mr-6">
                            <AnalysisOutputDisplay analysis={analysisResult?.analysis || ""} />
+                           {analysisResult?.mainsQuestions && <AnalysisOutputDisplay analysis={analysisResult.mainsQuestions} />}
                         </ScrollArea>
                     </DialogContent>
                 </Dialog>
@@ -550,5 +554,3 @@ export default function NewspaperAnalysisPage() {
     </div>
   );
 }
-
-    
