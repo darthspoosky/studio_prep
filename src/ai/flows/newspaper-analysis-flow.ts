@@ -225,8 +225,10 @@ const analyzeNewspaperArticleFlow = ai.defineFlow(
     // Step 1: Relevance Check
     const { response: relevanceResponse, output: relevanceResult } = await relevanceCheckPrompt(input);
     
-    totalInputTokens += relevanceResponse.usage?.inputTokens || 0;
-    totalOutputTokens += relevanceResponse.usage?.outputTokens || 0;
+    if (relevanceResponse?.usage) {
+      totalInputTokens += relevanceResponse.usage.inputTokens || 0;
+      totalOutputTokens += relevanceResponse.usage.outputTokens || 0;
+    }
     
     if (!relevanceResult) {
         throw new Error("Relevance check failed.");
@@ -254,8 +256,10 @@ const analyzeNewspaperArticleFlow = ai.defineFlow(
     if (!initialOutput) {
         throw new Error("Initial analysis generation failed.");
     }
-    totalInputTokens += analysisResponse.usage?.inputTokens || 0;
-    totalOutputTokens += analysisResponse.usage?.outputTokens || 0;
+    if (analysisResponse?.usage) {
+        totalInputTokens += analysisResponse.usage.inputTokens || 0;
+        totalOutputTokens += analysisResponse.usage.outputTokens || 0;
+    }
 
 
     // Step 3: Verify and fact-check the analysis
@@ -268,8 +272,10 @@ const analyzeNewspaperArticleFlow = ai.defineFlow(
     if (!verifiedOutput) {
         throw new Error("Verification step failed.");
     }
-    totalInputTokens += verificationResponse.usage?.inputTokens || 0;
-    totalOutputTokens += verificationResponse.usage?.outputTokens || 0;
+    if (verificationResponse?.usage) {
+        totalInputTokens += verificationResponse.usage.inputTokens || 0;
+        totalOutputTokens += verificationResponse.usage.outputTokens || 0;
+    }
     
     // Step 4: Final sanitization of the summary to ensure it's clean for TTS
     const cleanSummary = verifiedOutput.summary.replace(/<[^>]+>/g, '');
