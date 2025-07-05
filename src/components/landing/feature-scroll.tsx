@@ -182,20 +182,18 @@ const FeatureScroll = () => {
 
                 <div className="absolute inset-0 flex items-center justify-center">
                     {tools.map((tool, i) => {
-                        const isLastCard = i === tools.length - 1;
-                        
                         const showcaseDurationPerCard = (showcaseEnd - 0.05) / tools.length;
                         const showcaseStartTime = 0.05 + i * showcaseDurationPerCard;
                         const showcaseEndTime = showcaseStartTime + showcaseDurationPerCard;
+                        
+                        const isLastCard = i === tools.length - 1;
 
-                        // Opacity during showcase
+                        // Opacity
                         const showcaseOpacity = useTransform(
                             scrollYProgress,
                             [showcaseStartTime, showcaseStartTime + 0.02, showcaseEndTime - 0.02, showcaseEndTime],
-                            [0, 1, 1, isLastCard ? 1 : 0]
+                            [0, 1, 1, 0]
                         );
-
-                        // Opacity during stacking
                         const stackingOpacity = useTransform(
                             scrollYProgress,
                             [stackingStart - 0.05, stackingStart],
@@ -203,8 +201,15 @@ const FeatureScroll = () => {
                         );
 
                         const opacity = useTransform(scrollYProgress, (p) => {
-                            if (p < showcaseEndTime) return showcaseOpacity.get();
-                            return isLastCard ? 1 : stackingOpacity.get();
+                            if (isLastCard) {
+                                return useTransform(
+                                    scrollYProgress,
+                                    [showcaseStartTime, showcaseStartTime + 0.02, stackingEnd],
+                                    [0, 1, 1]
+                                ).get();
+                            }
+                            if (p < stackingStart) return showcaseOpacity.get();
+                            return stackingOpacity.get();
                         });
 
                         // Y position
@@ -213,15 +218,15 @@ const FeatureScroll = () => {
                             [showcaseStartTime, showcaseEndTime],
                             ["4rem", "0rem"]
                         );
-                        const finalStackY = (tools.length - 1 - i) * 20;
+                        const finalStackY = i * 30; // Increased offset and positive for downward stacking
                         const stackingY = useTransform(
                             scrollYProgress,
                             [stackingStart, stackingEnd],
-                            [0, -finalStackY]
+                            [0, finalStackY]
                         );
                         const y = useTransform(scrollYProgress, (p) => {
-                            if (p < showcaseEndTime) return showcaseY.get();
-                            return stackingY.get();
+                           if (p < stackingStart) return showcaseY.get();
+                           return stackingY.get();
                         });
                         
                         // Scale
@@ -230,14 +235,15 @@ const FeatureScroll = () => {
                             [showcaseStartTime, showcaseEndTime],
                             [0.9, 1]
                         );
-                        const finalStackScale = 1 - (tools.length - 1 - i) * 0.05;
+                        
+                        const finalStackScale = 1 - i * 0.05;
                         const stackingScale = useTransform(
                             scrollYProgress,
                             [stackingStart, stackingEnd],
                             [1, finalStackScale]
                         );
                          const scale = useTransform(scrollYProgress, (p) => {
-                            if (p < showcaseEndTime) return showcaseScale.get();
+                            if (p < stackingStart) return showcaseScale.get();
                             return stackingScale.get();
                         });
 
@@ -248,7 +254,7 @@ const FeatureScroll = () => {
                                     opacity,
                                     scale,
                                     y,
-                                    zIndex: i,
+                                    zIndex: tools.length - 1 - i,
                                 }}
                                 className="absolute h-[450px] w-full max-w-2xl"
                             >
