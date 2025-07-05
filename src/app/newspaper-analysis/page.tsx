@@ -164,7 +164,7 @@ export default function NewspaperAnalysisPage() {
   const [inputs, setInputs] = useState({
     url: "",
     text: "",
-    examType: "upsc", // Default to UPSC
+    examType: "UPSC Civil Services", // Default to UPSC
     analysisFocus: ""
   });
   const { toast } = useToast();
@@ -265,10 +265,10 @@ export default function NewspaperAnalysisPage() {
                                   <SelectValue placeholder="Select an exam type" />
                               </SelectTrigger>
                               <SelectContent>
-                                  <SelectItem value="upsc">UPSC Civil Services</SelectItem>
-                                  <SelectItem value="state-psc">State PSC</SelectItem>
-                                  <SelectItem value="rbi-grade-b">RBI Grade B</SelectItem>
-                                  <SelectItem value="other">Other Competitive Exams</SelectItem>
+                                  <SelectItem value="UPSC Civil Services">UPSC Civil Services</SelectItem>
+                                  <SelectItem value="State PSC">State PSC</SelectItem>
+                                  <SelectItem value="RBI Grade B">RBI Grade B</SelectItem>
+                                  <SelectItem value="Other Competitive Exams">Other Competitive Exams</SelectItem>
                               </SelectContent>
                           </Select>
                       </div>
