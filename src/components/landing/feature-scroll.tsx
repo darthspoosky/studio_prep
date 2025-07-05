@@ -181,7 +181,7 @@ const RealtimeIdeaMarquee = () => {
 
 const MobileView = () => {
     return (
-        <section id="features-mobile" className="bg-gray-50 dark:bg-gray-900 py-24 sm:py-32">
+        <section id="tools" className="bg-gray-50 dark:bg-gray-900 py-24 sm:py-32">
             <div className="container mx-auto px-4">
                 {/* Core Tools Section */}
                 <div className="text-center">
@@ -377,7 +377,7 @@ const DesktopView = () => {
     const feedbackY = useTransform(scrollYProgress, [feedbackStart, 1.0], ['50vh', '0vh']);
 
     return (
-        <section id="features" ref={containerRef} className="relative bg-gray-50 dark:bg-gray-900 h-[600vh]">
+        <section id="tools" ref={containerRef} className="relative bg-gray-50 dark:bg-gray-900 h-[600vh]">
             <div className="sticky top-0 h-screen overflow-hidden">
                 <motion.div 
                     style={{ opacity: titleOpacity, y: titleY }}
