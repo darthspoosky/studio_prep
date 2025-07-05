@@ -160,7 +160,6 @@ const AnalysisOutputDisplay = ({ analysis }: { analysis: string }) => (
     </ReactMarkdown>
 );
 
-const MAINS_HEADING = '## Potential Mains Questions';
 
 export default function NewspaperAnalysisPage() {
   const [isLoading, setIsLoading] = useState(false);
@@ -245,18 +244,21 @@ export default function NewspaperAnalysisPage() {
   };
 
   const { prelimsContent, mainsContent } = useMemo(() => {
-    if (!analysisResult || inputs.analysisFocus !== 'Generate Questions (Mains & Prelims)') {
+    if (!analysisResult) {
         return { prelimsContent: null, mainsContent: null };
     }
-
-    const parts = analysisResult.analysis.split(MAINS_HEADING);
-    return {
-        prelimsContent: parts[0],
-        mainsContent: parts.length > 1 ? `${MAINS_HEADING}\n${parts[1]}` : null
-    };
+    // When focus is questions, `analysis` contains prelims, and `mainsQuestions` has mains.
+    if (inputs.analysisFocus === 'Generate Questions (Mains & Prelims)') {
+        return {
+            prelimsContent: analysisResult.analysis,
+            mainsContent: analysisResult.mainsQuestions || null,
+        };
+    }
+    // For other analysis types, everything is in the `analysis` field.
+    return { prelimsContent: analysisResult.analysis, mainsContent: null };
   }, [analysisResult, inputs.analysisFocus]);
 
-  const showTabs = !!prelimsContent;
+  const showTabs = inputs.analysisFocus === 'Generate Questions (Mains & Prelims)' && !!prelimsContent;
   
   const audioButton = (
     <Button 
@@ -292,7 +294,7 @@ export default function NewspaperAnalysisPage() {
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
             {/* Left Column: Input */}
-            <Card className="lg:col-span-1 glassmorphic shadow-2xl shadow-primary/10 sticky top-24">
+            <Card className="lg:col-span-1 glassmorphic shadow-2xl shadow-primary/10 lg:sticky top-24">
                 <CardHeader>
                     <CardTitle>Analyze an Article</CardTitle>
                     <CardDescription>Provide an article by URL or by pasting the text directly.</CardDescription>
@@ -501,3 +503,5 @@ export default function NewspaperAnalysisPage() {
     </div>
   );
 }
+
+    

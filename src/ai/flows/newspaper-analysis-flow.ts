@@ -40,7 +40,8 @@ const NewspaperAnalysisWithTopicInputSchema = NewspaperAnalysisSyllabusInputSche
 });
 
 const NewspaperAnalysisOutputSchema = z.object({
-  analysis: z.string().describe('The detailed, markdown-formatted analysis of the article.'),
+  analysis: z.string().describe('The detailed, markdown-formatted analysis. For question generation, this contains ONLY Prelims questions. For all other focuses, it contains the full analysis.'),
+  mainsQuestions: z.string().optional().describe('The detailed, markdown-formatted Mains questions. This is ONLY populated when "Generate Questions" is the focus.'),
   summary: z.string().describe('A concise, 2-3 sentence summary of the article, suitable for text-to-speech conversion.'),
 });
 export type NewspaperAnalysisOutput = z.infer<typeof NewspaperAnalysisOutputSchema>;
@@ -113,61 +114,49 @@ Here is the UPSC Mains Syllabus for your reference:
 {{{mainsSyllabus}}}
 --- MAINS SYLLABUS END ---
 
-Based on the 'analysisFocus', generate a detailed, well-structured response in markdown format for the 'analysis' field.
+Based on the 'analysisFocus', generate a detailed, well-structured response.
 
 Follow these specific instructions for the given 'analysisFocus':
 
 1.  If 'analysisFocus' is 'Generate Questions (Mains & Prelims)':
-    *   Create a section titled "## Potential Prelims Questions". Under it, generate 3-5 potential Prelims-style MCQs based on the provided Prelims syllabus pattern and the requested '{{{difficulty}}}'.
+    *   **Prelims Questions**: Generate 3-5 potential Prelims-style MCQs based on the provided Prelims syllabus pattern and the requested '{{{difficulty}}}'.
         *   'Standard' difficulty should focus on direct recall of facts from the article.
         *   'Advanced' difficulty should require connecting multiple facts or understanding nuanced implications.
-        *   'Expert' difficulty should involve analytical skills, application of concepts, or 'statement-based' questions (e.g., "Consider the following statements...").
-    *   For each MCQ, you MUST wrap it in the following custom tag structure. Each option MUST be on its own line and inside its own <option> tag. Do not combine options into a single line.
-    *   <mcq question="The full question text here..." subject="e.g., GS Paper II - Polity & Governance - Federal Structure" explanation="A detailed explanation for why the correct answer is correct and the others are incorrect. This must be thorough.">
-    *   <option correct="true">The correct answer option.</option>
-    *   <option>An incorrect answer option.</option>
-    *   <option>Another incorrect answer option.</option>
-    *   <option>A final incorrect answer option.</option>
+        *   'Expert' difficulty should involve analytical skills, application of concepts, or 'statement-based' questions.
+    *   For each MCQ, you MUST wrap it in the following custom tag structure. Each option MUST be on its own line and inside its own <option> tag. Do not combine options into a single line. The 'subject' attribute must be as granular as possible.
+    *   <mcq question="The full question text here..." subject="e.g., GS Paper II - Polity & Governance" explanation="A thorough explanation of the answer.">
+    *   <option correct="true">Correct answer.</option>
+    *   <option>Incorrect answer.</option>
+    *   <option>Incorrect answer.</option>
+    *   <option>Incorrect answer.</option>
     *   </mcq>
-    *   Ensure you identify the most relevant GS paper or subject AT THE MOST GRANULAR LEVEL POSSIBLE using the syllabus in the 'subject' attribute.
-    *   Create another section starting with the EXACT, UNTRANSLATED markdown: "## Potential Mains Questions". Under it, generate 2-3 potential Mains-style questions based on the Mains syllabus and the requested '{{{difficulty}}}'.
+    *   **CRITICAL: Place the entire generated Prelims questions markdown into the 'analysis' field of the output JSON.**
+    *
+    *   **Mains Questions**: Generate 2-3 potential Mains-style questions based on the Mains syllabus and the requested '{{{difficulty}}}'.
         *   'Standard' questions might be 'Discuss' or 'Explain'.
         *   'Advanced' questions might be 'Critically analyze' or 'Compare and contrast'.
         *   'Expert' questions might ask for 'Elucidate' or present a complex scenario.
-    *   After EACH Mains question, add a section titled "### Guidance for Answer". Under this, use bullet points to outline the key concepts, ideal structure (Introduction, Body, Conclusion), and specific examples from the article that should be included for a high-scoring response, referencing Mains syllabus topics where relevant.
+    *   After EACH Mains question, add a section titled "### Guidance for Answer". Under this, use bullet points to outline the key concepts, ideal structure (Introduction, Body, Conclusion), and specific examples from the article.
+    *   **CRITICAL: Place the entire generated Mains questions markdown into the 'mainsQuestions' field of the output JSON.**
 
 2.  If 'analysisFocus' is 'Mains Analysis (Arguments, Keywords, Viewpoints)':
-    *   Start with a "## Central Theme" heading and identify the core Mains syllabus topic.
-    *   Use headings like "### Main Arguments", "### Counter-Arguments", "### Key Statistics & Data", and "### Important Keywords" to structure your analysis.
-    *   Present arguments and viewpoints as bullet points.
-    *   Use blockquotes for particularly impactful statements or phrases from the article.
+    *   Place the entire analysis in the 'analysis' field. Start with "## Central Theme", then use headings like "### Main Arguments", "### Counter-Arguments", "### Key Statistics & Data", etc.
 
 3.  If 'analysisFocus' is 'Prelims Fact Finder (Key Names, Dates, Schemes)':
-    *   Scour the article for specific, factual information relevant for Prelims.
-    *   When you identify an entity, you MUST wrap it in one of the following custom tags: <person>Name</person>, <place>Location</place>, <scheme>Scheme/Policy Name</scheme>, <date>Date/Time Period</date>, or <org>Organization/Committee</org>.
-    *   Present these facts under clear headings for each category (e.g., "### Key People", "### Locations Mentioned", "### Government Schemes").
+    *   Place the entire analysis in the 'analysis' field. When you identify an entity, you MUST wrap it in one of the following custom tags: <person>Name</person>, <place>Location</place>, <scheme>Scheme/Policy Name</scheme>, <date>Date/Time Period</date>, or <org>Organization/Committee</org>.
 
-4.  If 'analysisFocus' is 'Critical Analysis (Tone, Bias, Fact vs. Opinion)':
-    *   Use headings: "### Author's Tone", "### Assessment of Bias", "### Fact vs. Opinion", and "### Objective of the Article".
-    *   Under "Fact vs. Opinion", use bullet points to list examples of each, clearly labeled.
+4.  For any other 'analysisFocus', generate the appropriate, detailed markdown response and place it entirely within the 'analysis' field. Ensure the `mainsQuestions` field is not included in the output JSON.
 
-5.  If 'analysisFocus' is 'Vocabulary Builder for Editorials':
-    *   Create a section for each of the 5-7 advanced vocabulary words.
-    *   Use a heading for each word. Under it, use bold labels for "Definition:", "Contextual Meaning:", and "Example Sentence:".
-
-6.  If 'analysisFocus' is 'Comprehensive Summary':
-    *   Provide a concise summary (approx. 150-200 words) under the heading "## Executive Summary".
-    *   Follow it with a "### Key Takeaways" section, using a bulleted list for the 3-4 most important points, linking each to a relevant syllabus topic.
-
-Remember to generate the separate, concise 2-3 sentence 'summary' field first, then generate the detailed 'analysis' field based on the focus.
+Remember to generate the separate, concise 2-3 sentence 'summary' field first, then generate the detailed 'analysis' and 'mainsQuestions' fields based on the focus.
 `,
 });
 
 
 const VerificationInputSchema = z.object({
     sourceText: z.string().describe('The original article content.'),
-    generatedAnalysisString: z.string().describe('The AI-generated analysis and summary object as a JSON string to be verified.'),
+    generatedAnalysisString: z.string().describe('The AI-generated analysis object as a JSON string to be verified.'),
     outputLanguage: z.string().describe('The language for the analysis output, e.g., "Hindi".'),
+    analysisFocus: z.string().describe('The original analysis focus requested.'),
 });
 
 const verificationPrompt = ai.definePrompt({
@@ -177,16 +166,20 @@ const verificationPrompt = ai.definePrompt({
     prompt: `You are a meticulous Final Quality Control Editor for an AI application. Your job is to ruthlessly check and fix an AI-generated analysis before it is shown to a user. Errors in the output can break the application's UI, so precision is your top priority.
 
     **CRITICAL INSTRUCTIONS:**
-    1.  **COHERENCY CHECK**: First, ensure the entire analysis is about the SINGLE 'Original Source Article' provided. If the generated analysis mentions multiple unrelated topics or seems to combine different articles, you MUST rewrite it to focus only on the provided source text.
-    2.  **FORMAT & STRUCTURE VERIFICATION (TOP PRIORITY):** This is your most important task. Scrutinize the 'generatedAnalysis.analysis' markdown. The UI depends on perfect structure.
-        *   Find every \`<mcq>\` tag. Ensure it has a closing \`</mcq>\` tag.
-        *   Inside each \`<mcq>\`, ensure there are multiple \`<option>\` tags.
-        *   Ensure each \`<option>\` tag is on its own separate line.
-        *   Fix any and all broken, incomplete, or improperly formatted custom tags (e.g., \`<person>\`, \`<place>\`, etc.).
+    1.  **COHERENCY CHECK**: First, ensure the entire analysis is about the SINGLE 'Original Source Article' provided. If the generated analysis seems to combine different articles, you MUST rewrite it to focus only on the provided source text.
+    2.  **FORMAT & STRUCTURE VERIFICATION (TOP PRIORITY):** This is your most important task. Scrutinize the 'generatedAnalysis' markdown.
+        *   If '{{{analysisFocus}}}' was 'Generate Questions (Mains & Prelims)':
+            *   Check the 'analysis' field for Prelims questions and the 'mainsQuestions' field for Mains questions.
+            *   Find every \`<mcq>\` tag in the 'analysis' field. Ensure it has a closing \`</mcq>\` tag.
+            *   Inside each \`<mcq>\`, ensure there are multiple \`<option>\` tags.
+            *   Ensure each \`<option>\` tag is on its own separate line.
+            *   Fix any and all broken, incomplete, or improperly formatted tags.
+        *   If '{{{analysisFocus}}}' was 'Prelims Fact Finder (...)':
+            *   Fix any broken custom tags (e.g., \`<person>\`, \`<place>\`, etc.).
     3.  **FACT-CHECKING:** Cross-reference the analysis with the 'Original Source Article'. Correct any factual errors or claims not supported by the source text.
     4.  **SUMMARY CHECK:** Ensure the 'summary' field is 2-3 sentences of clean, plain text and contains NO HTML or custom tags. Remove any tags you find.
 
-    After your review, output the final, corrected, and verified analysis object containing both 'analysis' and 'summary' fields.
+    After your review, output the final, corrected, and verified analysis object.
 
     **Original Source Article:**
     ---
@@ -236,6 +229,7 @@ const analyzeNewspaperArticleFlow = ai.defineFlow(
         sourceText: input.sourceText,
         generatedAnalysisString: JSON.stringify(initialOutput),
         outputLanguage: input.outputLanguage,
+        analysisFocus: input.analysisFocus,
     });
     if (!verifiedOutput) {
         throw new Error("Verification step failed.");
@@ -250,3 +244,5 @@ const analyzeNewspaperArticleFlow = ai.defineFlow(
     };
   }
 );
+
+    
