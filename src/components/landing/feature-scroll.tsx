@@ -285,7 +285,7 @@ const AnimatedCard = ({
     return i === tools.length - 1 ? lastCardOpacity.get() : opacity.get();
   });
   
-  // Disable pointer events when card is not visible
+  // Disable pointer events when card is not visible to allow clicks on cards underneath.
   const pointerEvents = useTransform(finalOpacity, (o) => (o > 0.1 ? 'auto' : 'none'));
 
   const zIndex = useTransform(scrollYProgress, (p) => {
@@ -398,7 +398,7 @@ const DesktopView = () => {
                     </div>
                 </motion.div>
 
-                <div className="absolute inset-0 flex items-center justify-center">
+                <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
                     {tools.map((tool, i) => (
                         <AnimatedCard
                             key={tool.title}
