@@ -96,7 +96,7 @@ const analyzeNewspaperArticleFlow = ai.defineFlow(
     outputSchema: NewspaperAnalysisOutputSchema,
   },
   async (input) => {
-    const { output } = await analyzeNewspaperArticlePrompt(input);
+    const { output } = await analysisPrompt(input);
     return output!;
   }
 );
