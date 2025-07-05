@@ -126,7 +126,7 @@ Follow these specific instructions for the given 'analysisFocus':
     *   <option>A final incorrect answer option.</option>
     *   </mcq>
     *   Ensure you identify the most relevant GS paper or subject AT THE MOST GRANULAR LEVEL POSSIBLE using the syllabus in the 'subject' attribute.
-    *   Create another section titled "## Potential Mains Questions". Under it, generate 2-3 potential Mains-style questions based on the Mains syllabus and the requested '{{{difficulty}}}'.
+    *   Create another section starting with the EXACT, UNTRANSLATED markdown: "## Potential Mains Questions". Under it, generate 2-3 potential Mains-style questions based on the Mains syllabus and the requested '{{{difficulty}}}'.
         *   'Standard' questions might be 'Discuss' or 'Explain'.
         *   'Advanced' questions might be 'Critically analyze' or 'Compare and contrast'.
         *   'Expert' questions might ask for 'Elucidate' or present a complex scenario.
@@ -239,3 +239,4 @@ const analyzeNewspaperArticleFlow = ai.defineFlow(
     };
   }
 );
+
