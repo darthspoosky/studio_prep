@@ -115,6 +115,39 @@ Begin the analysis now.
 `,
 });
 
+
+const VerificationInputSchema = z.object({
+    sourceText: z.string().describe('The original article content.'),
+    generatedAnalysis: z.string().describe('The AI-generated analysis to be verified.'),
+});
+
+const verificationPrompt = ai.definePrompt({
+    name: 'newspaperVerificationPrompt',
+    input: { schema: VerificationInputSchema },
+    output: { schema: NewspaperAnalysisOutputSchema },
+    prompt: `You are a meticulous editor and final reviewer for an AI-powered exam preparation tool. Your job is to perform a final check on an AI-generated analysis before it is shown to a student.
+
+    **CRITICAL INSTRUCTIONS:**
+    1.  **FACT-CHECKING:** Scrutinize the 'Generated Analysis' against the 'Original Source Article'. Correct any factual errors, misinterpretations, or claims that are not supported by the source text. Your primary source of truth is the provided article.
+    2.  **FORMAT & STRUCTURE VERIFICATION:** Ensure the entire output strictly adheres to the required custom tag format (e.g., \`<mcq question="..." ...>\`, \`<option correct="true">\`, \`<person>\`, etc.). Fix any broken or improperly formatted tags. The structure must be perfect for UI rendering.
+    3.  **IMPROVE CLARITY & INSIGHTS:** If possible, enhance the analysis for clarity without introducing new, unverified information. Ensure the syllabus tagging is as precise as possible.
+
+    After your review, output the final, corrected, and verified analysis. The output must ONLY be the corrected markdown content and nothing else.
+
+    **Original Source Article:**
+    ---
+    {{{sourceText}}}
+    ---
+
+    **Generated Analysis to Verify and Correct:**
+    ---
+    {{{generatedAnalysis}}}
+    ---
+
+    Return the final, polished analysis now.`,
+});
+
+
 const analyzeNewspaperArticleFlow = ai.defineFlow(
   {
     name: 'analyzeNewspaperArticleFlow',
@@ -122,7 +155,21 @@ const analyzeNewspaperArticleFlow = ai.defineFlow(
     outputSchema: NewspaperAnalysisOutputSchema,
   },
   async (input) => {
-    const { output } = await analysisPrompt(input);
-    return output!;
+    // Step 1: Generate the initial analysis
+    const { output: initialOutput } = await analysisPrompt(input);
+    if (!initialOutput) {
+        throw new Error("Initial analysis generation failed.");
+    }
+
+    // Step 2: Verify and fact-check the analysis
+    const { output: verifiedOutput } = await verificationPrompt({
+        sourceText: input.sourceText,
+        generatedAnalysis: initialOutput.analysis,
+    });
+    if (!verifiedOutput) {
+        throw new 'Error'>("Verification step failed.");
+    }
+    
+    return verifiedOutput;
   }
 );
