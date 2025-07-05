@@ -146,23 +146,18 @@ const FeatureScroll = () => {
         offset: ['start start', 'end end']
     });
 
-    const titleOpacity = useTransform(scrollYProgress, [0, 0.05, 0.5], [0, 1, 0]);
+    const titleOpacity = useTransform(scrollYProgress, [0, 0.05, 0.7], [0, 1, 0]);
     const titleY = useTransform(scrollYProgress, [0, 0.05], ['20px', '0px']);
     
-    const cardsOpacity = useTransform(scrollYProgress, [0, 0.1, 0.5, 0.6], [0, 1, 1, 0]);
-
-    const feedbackStart = 0.5;
-    const feedbackEnd = 0.7;
-    const feedbackOpacity = useTransform(scrollYProgress, [feedbackStart, feedbackEnd], [0, 1]);
-    const feedbackY = useTransform(scrollYProgress, [feedbackStart, feedbackEnd], ['100vh', '0vh']);
-    
-    const feedbackScrollStart = 0.7;
-    const feedbackScrollEnd = 1.0;
-    const feedbackX = useTransform(scrollYProgress, [feedbackScrollStart, feedbackScrollEnd], ['0%', '-50%']);
+    const feedbackStart = 0.7;
+    const feedbackEnd = 1.0;
+    const feedbackOpacity = useTransform(scrollYProgress, [feedbackStart, feedbackStart + 0.1], [0, 1]);
+    const feedbackY = useTransform(scrollYProgress, [feedbackStart, feedbackEnd], ['50vh', '0vh']);
+    const feedbackX = useTransform(scrollYProgress, [feedbackStart + 0.1, feedbackEnd], ['0%', '-50%']);
 
 
     return (
-        <section id="features" ref={containerRef} className="relative bg-gray-50 dark:bg-gray-900 h-[400vh]">
+        <section id="features" ref={containerRef} className="relative bg-gray-50 dark:bg-gray-900 h-[500vh]">
             <div className="sticky top-0 h-screen overflow-hidden">
 
                 <motion.div 
@@ -181,27 +176,40 @@ const FeatureScroll = () => {
                     </div>
                 </motion.div>
 
-                <motion.div style={{ opacity: cardsOpacity }} className="absolute inset-0 flex items-center justify-center">
+                <div className="absolute inset-0 flex items-center justify-center">
                     {tools.map((tool, i) => {
-                        const N = tools.length - 1;
-                        const y = useTransform(
+                        const cardSegmentLength = 0.7 / tools.length;
+                        const start = 0.05 + i * cardSegmentLength;
+                        const end = start + cardSegmentLength;
+                        
+                        const holdStart = start + cardSegmentLength * 0.25;
+                        const holdEnd = end - cardSegmentLength * 0.25;
+
+                        const opacity = useTransform(
                             scrollYProgress,
-                            [0.1, 0.5],
-                            [`${(i) * 120}px`, `${(N - i) * -20}px`]
+                            [start, holdStart, holdEnd, end],
+                            [0, 1, 1, 0]
                         );
+                        
                         const scale = useTransform(
                             scrollYProgress,
-                            [0.1, 0.5],
-                            [1, 1 - (N - i) * 0.05]
+                            [start, holdStart, holdEnd, end],
+                            [0.9, 1, 1, 0.9]
+                        );
+
+                        const y = useTransform(
+                            scrollYProgress,
+                             [start, holdStart, holdEnd, end],
+                            ["2rem", "0rem", "0rem", "-2rem"]
                         );
 
                         return (
                             <motion.div
                                 key={tool.title}
                                 style={{
-                                    y,
+                                    opacity,
                                     scale,
-                                    zIndex: i,
+                                    y
                                 }}
                                 className="absolute h-[450px] w-full max-w-2xl"
                             >
@@ -209,7 +217,7 @@ const FeatureScroll = () => {
                             </motion.div>
                         );
                     })}
-                </motion.div>
+                </div>
 
                 <motion.div
                     style={{ y: feedbackY, opacity: feedbackOpacity, zIndex: 50 }}
