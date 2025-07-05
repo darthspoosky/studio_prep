@@ -25,6 +25,7 @@ const NewspaperAnalysisInputSchema = z.object({
     .describe(
       'The specific type of analysis requested by the user, e.g., "Generate Questions (Mains & Prelims)".'
     ),
+  difficulty: z.string().describe('The difficulty level for question generation: Standard, Advanced, or Expert.'),
 });
 export type NewspaperAnalysisInput = z.infer<typeof NewspaperAnalysisInputSchema>;
 
@@ -35,6 +36,7 @@ const NewspaperAnalysisSyllabusInputSchema = NewspaperAnalysisInputSchema.extend
 
 const NewspaperAnalysisOutputSchema = z.object({
   analysis: z.string().describe('The detailed, markdown-formatted analysis of the article.'),
+  summary: z.string().describe('A concise, 2-3 sentence summary of the article, suitable for text-to-speech conversion.'),
 });
 export type NewspaperAnalysisOutput = z.infer<typeof NewspaperAnalysisOutputSchema>;
 
@@ -81,10 +83,13 @@ const analysisPrompt = ai.definePrompt({
   prompt: `You are a world-class editor and exam coach AI for Indian competitive exam aspirants, with deep expertise in the UPSC syllabus. Your analysis must be presented in a premium, highly structured, and easy-to-digest format. 
 Use markdown extensively and intelligently: leverage headings, subheadings, blockquotes for key takeaways, bold text for keywords, and tables for data comparison.
 
-Your first and most critical task is to read the provided article and cross-reference its content with the UPSC syllabus documents provided below to identify the most specific, granular syllabus topic it relates to. Mention this topic clearly at the beginning of your analysis.
+First, your critical tasks are:
+1.  Read the provided article and cross-reference its content with the UPSC syllabus documents below to identify the most specific, granular syllabus topic it relates to. Mention this topic clearly at the beginning of your analysis.
+2.  Generate a concise, 2-3 sentence summary of the article's core message. This summary should be plain text and suitable for a text-to-speech engine. Place this in the 'summary' field.
 
 The user is preparing for the '{{{examType}}}' exam.
 The requested analysis focus is: '{{{analysisFocus}}}'.
+The requested difficulty for question generation is: '{{{difficulty}}}'.
 
 Here is the source material to analyze:
 "{{{sourceText}}}"
@@ -99,12 +104,15 @@ Here is the UPSC Mains Syllabus for your reference:
 {{{mainsSyllabus}}}
 --- MAINS SYLLABUS END ---
 
-Based on the 'analysisFocus', generate a detailed, well-structured response in markdown format.
+Based on the 'analysisFocus', generate a detailed, well-structured response in markdown format for the 'analysis' field.
 
 Follow these specific instructions for the given 'analysisFocus':
 
 1.  If 'analysisFocus' is 'Generate Questions (Mains & Prelims)':
-    *   Create a section titled "## Potential Prelims Questions". Under it, generate 3-5 potential Prelims-style MCQs based on the provided Prelims syllabus pattern.
+    *   Create a section titled "## Potential Prelims Questions". Under it, generate 3-5 potential Prelims-style MCQs based on the provided Prelims syllabus pattern and the requested '{{{difficulty}}}'.
+        *   'Standard' difficulty should focus on direct recall of facts from the article.
+        *   'Advanced' difficulty should require connecting multiple facts or understanding nuanced implications.
+        *   'Expert' difficulty should involve analytical skills, application of concepts, or 'statement-based' questions (e.g., "Consider the following statements...").
     *   For each MCQ, you MUST wrap it in the following custom tag structure, including a detailed explanation:
     *   <mcq question="The full question text here..." subject="e.g., GS Paper II - Polity & Governance - Federal Structure" explanation="A detailed explanation for why the correct answer is correct and the others are incorrect. This must be thorough.">
     *   <option correct="true">The correct answer option.</option>
@@ -113,7 +121,10 @@ Follow these specific instructions for the given 'analysisFocus':
     *   <option>A final incorrect answer option.</option>
     *   </mcq>
     *   Ensure you identify the most relevant GS paper or subject AT THE MOST GRANULAR LEVEL POSSIBLE using the syllabus in the 'subject' attribute.
-    *   Create another section titled "## Potential Mains Questions". Under it, generate 2-3 potential Mains-style questions that require analytical and critical thinking, based on the Mains syllabus.
+    *   Create another section titled "## Potential Mains Questions". Under it, generate 2-3 potential Mains-style questions based on the Mains syllabus and the requested '{{{difficulty}}}'.
+        *   'Standard' questions might be 'Discuss' or 'Explain'.
+        *   'Advanced' questions might be 'Critically analyze' or 'Compare and contrast'.
+        *   'Expert' questions might ask for 'Elucidate' or present a complex scenario.
     *   After EACH Mains question, add a section titled "### Guidance for Answer". Under this, use bullet points to outline the key concepts, ideal structure (Introduction, Body, Conclusion), and specific examples from the article that should be included for a high-scoring response, referencing Mains syllabus topics where relevant.
 
 2.  If 'analysisFocus' is 'Mains Analysis (Arguments, Keywords, Viewpoints)':
@@ -139,14 +150,14 @@ Follow these specific instructions for the given 'analysisFocus':
     *   Provide a concise summary (approx. 150-200 words) under the heading "## Executive Summary".
     *   Follow it with a "### Key Takeaways" section, using a bulleted list for the 3-4 most important points, linking each to a relevant syllabus topic.
 
-Begin the analysis now.
+Remember to generate the separate, concise 2-3 sentence 'summary' field first, then generate the detailed 'analysis' field based on the focus.
 `,
 });
 
 
 const VerificationInputSchema = z.object({
     sourceText: z.string().describe('The original article content.'),
-    generatedAnalysis: z.string().describe('The AI-generated analysis to be verified.'),
+    generatedAnalysis: NewspaperAnalysisOutputSchema.describe('The AI-generated analysis and summary object to be verified.'),
 });
 
 const verificationPrompt = ai.definePrompt({
@@ -156,23 +167,24 @@ const verificationPrompt = ai.definePrompt({
     prompt: `You are a meticulous editor and final reviewer for an AI-powered exam preparation tool. Your job is to perform a final check on an AI-generated analysis before it is shown to a student.
 
     **CRITICAL INSTRUCTIONS:**
-    1.  **FACT-CHECKING:** Scrutinize the 'Generated Analysis' against the 'Original Source Article'. Correct any factual errors, misinterpretations, or claims that are not supported by the source text. Your primary source of truth is the provided article.
-    2.  **FORMAT & STRUCTURE VERIFICATION:** Ensure the entire output strictly adheres to the required custom tag format (e.g., \`<mcq question="..." ...>\`, \`<option correct="true">\`, \`<person>\`, etc.). Fix any broken or improperly formatted tags. The structure must be perfect for UI rendering.
+    1.  **FACT-CHECKING:** Scrutinize the 'generatedAnalysis.analysis' markdown and the 'generatedAnalysis.summary' against the 'Original Source Article'. Correct any factual errors, misinterpretations, or claims that are not supported by the source text. Your primary source of truth is the provided article.
+    2.  **FORMAT & STRUCTURE VERIFICATION:** Ensure the entire 'analysis' output strictly adheres to the required custom tag format (e.g., \`<mcq question="..." ...>\`, \`<option correct="true">\`, \`<person>\`, etc.). Fix any broken or improperly formatted tags. The structure must be perfect for UI rendering.
     3.  **IMPROVE CLARITY & INSIGHTS:** If possible, enhance the analysis for clarity without introducing new, unverified information. Ensure the syllabus tagging is as precise as possible.
+    4.  **SUMMARY CHECK:** Ensure the 'summary' field is a concise, plain-text summary of 2-3 sentences and accurately reflects the article's main point.
 
-    After your review, output the final, corrected, and verified analysis. The output must ONLY be the corrected markdown content and nothing else.
+    After your review, output the final, corrected, and verified analysis object containing both 'analysis' and 'summary' fields.
 
     **Original Source Article:**
     ---
     {{{sourceText}}}
     ---
 
-    **Generated Analysis to Verify and Correct:**
-    ---
-    {{{generatedAnalysis}}}
+    **Generated Analysis Object to Verify and Correct:**
+    ---json
+    {{{jsonStringify generatedAnalysis}}}
     ---
 
-    Return the final, polished analysis now.`,
+    Return the final, polished analysis object now.`,
 });
 
 
@@ -191,7 +203,8 @@ const analyzeNewspaperArticleFlow = ai.defineFlow(
 
     if (!relevanceResult.isRelevant) {
       return {
-        analysis: `## Article Not Relevant\n\n**Reasoning:** ${relevanceResult.reasoning}\n\nThe provided article does not appear to be relevant to the UPSC syllabus. Please provide an article related to topics like national and international current events, government policies, economy, history, geography, or social issues.`
+        analysis: `## Article Not Relevant\n\n**Reasoning:** ${relevanceResult.reasoning}\n\nThe provided article does not appear to be relevant to the UPSC syllabus. Please provide an article related to topics like national and international current events, government policies, economy, history, geography, or social issues.`,
+        summary: ""
       };
     }
 
@@ -204,7 +217,7 @@ const analyzeNewspaperArticleFlow = ai.defineFlow(
     // Step 3: Verify and fact-check the analysis
     const { output: verifiedOutput } = await verificationPrompt({
         sourceText: input.sourceText,
-        generatedAnalysis: initialOutput.analysis,
+        generatedAnalysis: initialOutput,
     });
     if (!verifiedOutput) {
         throw new Error("Verification step failed.");

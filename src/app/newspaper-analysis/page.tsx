@@ -12,9 +12,10 @@ import { Textarea } from "@/components/ui/textarea";
 import Footer from "@/components/landing/footer";
 import Header from "@/components/layout/header";
 import Link from "next/link";
-import { ArrowLeft, Loader2, Sparkles, CheckCircle, XCircle, Circle, Info, Maximize } from "lucide-react";
+import { ArrowLeft, Loader2, Sparkles, CheckCircle, XCircle, Circle, Info, Maximize, Volume2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { analyzeNewspaperArticle, type NewspaperAnalysisInput } from "@/ai/flows/newspaper-analysis-flow";
+import { analyzeNewspaperArticle, type NewspaperAnalysisInput, type NewspaperAnalysisOutput } from "@/ai/flows/newspaper-analysis-flow";
+import { textToSpeech } from "@/ai/flows/text-to-speech-flow";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
@@ -146,7 +147,7 @@ const markdownComponents = {
   td: (props: any) => <td className="border-r px-4 py-2 text-left [&[align=center]]:text-center [&[align=right]]:text-right" {...props} />,
 };
 
-const AnalysisOutput = ({ analysis }: { analysis: string }) => (
+const AnalysisOutputDisplay = ({ analysis }: { analysis: string }) => (
     <ReactMarkdown
         remarkPlugins={[remarkGfm]}
         rehypePlugins={[rehypeRaw]}
@@ -159,13 +160,16 @@ const AnalysisOutput = ({ analysis }: { analysis: string }) => (
 
 export default function NewspaperAnalysisPage() {
   const [isLoading, setIsLoading] = useState(false);
-  const [analysis, setAnalysis] = useState("");
+  const [isGeneratingAudio, setIsGeneratingAudio] = useState(false);
+  const [analysisResult, setAnalysisResult] = useState<NewspaperAnalysisOutput | null>(null);
+  const [audioSrc, setAudioSrc] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState("url");
   const [inputs, setInputs] = useState({
     url: "",
     text: "",
-    examType: "UPSC Civil Services", // Default to UPSC
-    analysisFocus: ""
+    examType: "UPSC Civil Services",
+    analysisFocus: "Generate Questions (Mains & Prelims)",
+    difficulty: "Standard"
   });
   const { toast } = useToast();
 
@@ -190,16 +194,18 @@ export default function NewspaperAnalysisPage() {
     }
     
     setIsLoading(true);
-    setAnalysis("");
+    setAnalysisResult(null);
+    setAudioSrc(null);
 
     try {
         const flowInput: NewspaperAnalysisInput = {
             sourceText,
             examType: inputs.examType,
             analysisFocus: inputs.analysisFocus,
+            difficulty: inputs.difficulty,
         };
         const result = await analyzeNewspaperArticle(flowInput);
-        setAnalysis(result.analysis);
+        setAnalysisResult(result);
     } catch (error) {
         console.error("Analysis error:", error);
         toast({
@@ -211,6 +217,27 @@ export default function NewspaperAnalysisPage() {
         setIsLoading(false);
     }
   };
+
+  const handleGenerateAudio = async () => {
+    if (!analysisResult?.summary) return;
+
+    setIsGeneratingAudio(true);
+    setAudioSrc(null);
+    try {
+      const { audio } = await textToSpeech(analysisResult.summary);
+      setAudioSrc(audio);
+    } catch (error) {
+      console.error("Audio generation error:", error);
+      toast({
+          variant: "destructive",
+          title: "Audio Failed",
+          description: "Could not generate an audio summary for this article.",
+      });
+    } finally {
+      setIsGeneratingAudio(false);
+    }
+  };
+
 
   return (
     <div className="flex flex-col min-h-screen bg-gray-50 dark:bg-gray-900">
@@ -233,7 +260,7 @@ export default function NewspaperAnalysisPage() {
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
             {/* Left Column: Input */}
-            <Card className="lg:col-span-1 glassmorphic shadow-2xl shadow-primary/10">
+            <Card className="lg:col-span-1 glassmorphic shadow-2xl shadow-primary/10 sticky top-24">
                 <CardHeader>
                     <CardTitle>Analyze an Article</CardTitle>
                     <CardDescription>Provide an article by URL or by pasting the text directly.</CardDescription>
@@ -257,7 +284,23 @@ export default function NewspaperAnalysisPage() {
                             </div>
                         </TabsContent>
                     </Tabs>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="space-y-2">
+                        <Label htmlFor="analysis-focus">Analysis Focus</Label>
+                        <Select value={inputs.analysisFocus} onValueChange={(value) => handleInputChange("analysisFocus", value)}>
+                            <SelectTrigger id="analysis-focus">
+                                <SelectValue placeholder="Select an analysis type" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="Generate Questions (Mains & Prelims)">Generate Questions (Mains & Prelims)</SelectItem>
+                                <SelectItem value="Mains Analysis (Arguments, Keywords, Viewpoints)">Mains Analysis (Arguments, Keywords, Viewpoints)</SelectItem>
+                                <SelectItem value="Prelims Fact Finder (Key Names, Dates, Schemes)">Prelims Fact Finder (Key Names, Dates, Schemes)</SelectItem>
+                                <SelectItem value="Critical Analysis (Tone, Bias, Fact vs. Opinion)">Critical Analysis (Tone, Bias, Fact vs. Opinion)</SelectItem>
+                                <SelectItem value="Vocabulary Builder for Editorials">Vocabulary Builder for Editorials</SelectItem>
+                                <SelectItem value="Comprehensive Summary">Comprehensive Summary</SelectItem>
+                            </SelectContent>
+                        </Select>
+                    </div>
+                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                       <div className="space-y-2">
                           <Label htmlFor="exam-type">Exam Type</Label>
                           <Select value={inputs.examType} onValueChange={(value) => handleInputChange("examType", value)}>
@@ -273,18 +316,15 @@ export default function NewspaperAnalysisPage() {
                           </Select>
                       </div>
                       <div className="space-y-2">
-                          <Label htmlFor="analysis-focus">Analysis Focus</Label>
-                          <Select value={inputs.analysisFocus} onValueChange={(value) => handleInputChange("analysisFocus", value)}>
-                              <SelectTrigger id="analysis-focus">
-                                  <SelectValue placeholder="Select an analysis type" />
+                          <Label htmlFor="difficulty">Difficulty Level</Label>
+                          <Select value={inputs.difficulty} onValueChange={(value) => handleInputChange("difficulty", value)}>
+                              <SelectTrigger id="difficulty">
+                                  <SelectValue placeholder="Select a difficulty level" />
                               </SelectTrigger>
                               <SelectContent>
-                                  <SelectItem value="Generate Questions (Mains & Prelims)">Generate Questions (Mains & Prelims)</SelectItem>
-                                  <SelectItem value="Mains Analysis (Arguments, Keywords, Viewpoints)">Mains Analysis (Arguments, Keywords, Viewpoints)</SelectItem>
-                                  <SelectItem value="Prelims Fact Finder (Key Names, Dates, Schemes)">Prelims Fact Finder (Key Names, Dates, Schemes)</SelectItem>
-                                  <SelectItem value="Critical Analysis (Tone, Bias, Fact vs. Opinion)">Critical Analysis (Tone, Bias, Fact vs. Opinion)</SelectItem>
-                                  <SelectItem value="Vocabulary Builder for Editorials">Vocabulary Builder for Editorials</SelectItem>
-                                  <SelectItem value="Comprehensive Summary">Comprehensive Summary</SelectItem>
+                                  <SelectItem value="Standard">Standard</SelectItem>
+                                  <SelectItem value="Advanced">Advanced</SelectItem>
+                                  <SelectItem value="Expert">Expert</SelectItem>
                               </SelectContent>
                           </Select>
                       </div>
@@ -312,35 +352,59 @@ export default function NewspaperAnalysisPage() {
                 <Dialog>
                      <Card className="relative glassmorphic shadow-2xl shadow-primary/10 lg:min-h-[620px] flex flex-col">
                         <CardHeader>
-                            <CardTitle>AI Analysis</CardTitle>
-                            <CardDescription>The breakdown of your article will appear here.</CardDescription>
-                             {analysis && (
-                                <DialogTrigger asChild>
-                                    <Button variant="ghost" size="icon" className="absolute top-4 right-4 text-muted-foreground hover:text-primary">
-                                        <Maximize className="w-5 h-5" />
-                                    </Button>
-                                </DialogTrigger>
-                            )}
+                            <div className="flex justify-between items-start">
+                                <div>
+                                    <CardTitle>AI Analysis</CardTitle>
+                                    <CardDescription>The breakdown of your article will appear here.</CardDescription>
+                                </div>
+                                {analysisResult?.analysis && (
+                                    <DialogTrigger asChild>
+                                        <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-primary -mr-2 -mt-2 flex-shrink-0">
+                                            <Maximize className="w-5 h-5" />
+                                        </Button>
+                                    </DialogTrigger>
+                                )}
+                            </div>
                         </CardHeader>
                         <CardContent className="flex-1 flex flex-col">
                             {isLoading && (
-                                <div className="flex flex-col items-center justify-center text-center h-full flex-1">
+                                <div className="flex flex-col items-center justify-center text-center h-full flex-1 p-8">
                                     <Loader2 className="w-16 h-16 text-primary/50 animate-spin mb-4" />
                                     <p className="text-muted-foreground font-medium text-lg">Our AI is reading...</p>
                                     <p className="text-muted-foreground">This can take a moment for long articles.</p>
                                 </div>
                             )}
-                            {!isLoading && !analysis && (
-                                <div className="flex flex-col items-center justify-center text-center h-full flex-1 pt-16">
+                            {!isLoading && !analysisResult && (
+                                <div className="flex flex-col items-center justify-center text-center h-full flex-1 p-8">
                                     <Sparkles className="w-24 h-24 text-primary/30 mb-4" />
                                     <h3 className="font-semibold text-foreground text-xl">Waiting for article</h3>
                                     <p className="text-muted-foreground mt-2 max-w-sm">Submit an article on the left to see the AI-powered analysis.</p>
                                 </div>
                             )}
-                            {!isLoading && analysis && (
+                            {!isLoading && analysisResult && (
+                              <>
+                                <div className="mb-4 space-y-4">
+                                  {analysisResult.summary && (
+                                    <div className="p-4 bg-primary/10 rounded-lg flex items-center gap-4">
+                                      <p className="flex-1 text-sm text-muted-foreground italic">
+                                        {analysisResult.summary}
+                                      </p>
+                                      <Button onClick={handleGenerateAudio} disabled={isGeneratingAudio} variant="outline" size="sm">
+                                        {isGeneratingAudio ? <Loader2 className="animate-spin" /> : <Volume2 />}
+                                        {isGeneratingAudio ? "Generating..." : "Listen"}
+                                      </Button>
+                                    </div>
+                                  )}
+                                  {audioSrc && (
+                                    <motion.div initial={{ opacity: 0}} animate={{ opacity: 1}}>
+                                      <audio controls src={audioSrc} className="w-full h-10" />
+                                    </motion.div>
+                                  )}
+                                </div>
                                 <ScrollArea className="h-[450px] w-full pr-4 -mr-4">
-                                   <AnalysisOutput analysis={analysis} />
+                                   <AnalysisOutputDisplay analysis={analysisResult.analysis} />
                                 </ScrollArea>
+                              </>
                             )}
                         </CardContent>
                     </Card>
@@ -349,7 +413,7 @@ export default function NewspaperAnalysisPage() {
                             <DialogTitle>Expanded Analysis</DialogTitle>
                         </DialogHeader>
                         <ScrollArea className="flex-1 pr-6 -mr-6">
-                           <AnalysisOutput analysis={analysis} />
+                           <AnalysisOutputDisplay analysis={analysisResult?.analysis || ""} />
                         </ScrollArea>
                     </DialogContent>
                 </Dialog>
