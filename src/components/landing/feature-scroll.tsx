@@ -4,7 +4,7 @@ import React, { useRef } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import Link from 'next/link';
 import { Mic, FileQuestion, PenLine, MoveRight, Newspaper } from 'lucide-react';
-import { motion, useScroll, useTransform, type MotionValue } from 'framer-motion';
+import { motion, useScroll, useTransform, type MotionValue, AnimatePresence } from 'framer-motion';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from "@/components/ui/carousel";
@@ -190,8 +190,8 @@ const MobileView = () => {
                     </p>
                 </div>
 
-                <div className="relative mt-12 flex flex-col justify-center overflow-hidden py-12">
-                    <div className="flex flex-col gap-8 -rotate-3 py-10">
+                <div className="relative mt-12 flex flex-col justify-center overflow-hidden">
+                    <div className="flex flex-col gap-8 -rotate-3 p-10">
                         <motion.div 
                             className="flex gap-8"
                             animate={{ x: ['0%', '-100%'] }}
@@ -336,7 +336,7 @@ const IdeaBoard = () => {
                 </p>
             </div>
             
-            <div className="flex flex-col gap-8 -rotate-3 py-10">
+            <div className="flex flex-col gap-8 -rotate-3 p-10">
                 <motion.div 
                     className="flex gap-8"
                     animate={{ x: ['0%', '-100%'] }}
