@@ -50,7 +50,15 @@ Based on the 'analysisFocus', generate a detailed, well-structured response in m
 Follow these specific instructions for the given 'analysisFocus':
 
 1.  If 'analysisFocus' is 'Generate Questions (Mains & Prelims)':
-    *   Create a section titled "Potential Prelims Questions". Under it, generate 3-5 potential Prelims-style questions (MCQs without the options) based on the factual content.
+    *   Create a section titled "Potential Prelims Questions". Under it, generate 3-5 potential Prelims-style MCQs with four options each.
+    *   For each MCQ, you MUST wrap it in the following custom tag structure:
+    *   <mcq question="The full question text here..." subject="e.g., GS Paper II - Polity & Governance">
+    *   <option correct="true">The correct answer option.</option>
+    *   <option>An incorrect answer option.</option>
+    *   <option>Another incorrect answer option.</option>
+    *   <option>A final incorrect answer option.</option>
+    *   </mcq>
+    *   Ensure you identify the most relevant GS paper or subject at a granular level in the 'subject' attribute.
     *   Create another section titled "Potential Mains Questions". Under it, generate 2-3 potential Mains-style questions that require analytical and critical thinking.
 
 2.  If 'analysisFocus' is 'Mains Analysis (Arguments, Keywords, Viewpoints)':

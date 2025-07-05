@@ -1,6 +1,7 @@
 
 "use client";
 
+import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -11,14 +12,91 @@ import { Textarea } from "@/components/ui/textarea";
 import Footer from "@/components/landing/footer";
 import Header from "@/components/layout/header";
 import Link from "next/link";
-import { ArrowLeft, Loader2, Bot, Sparkles } from "lucide-react";
-import { useState } from "react";
+import { ArrowLeft, Loader2, Sparkles, CheckCircle, XCircle, Circle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { analyzeNewspaperArticle, type NewspaperAnalysisInput } from "@/ai/flows/newspaper-analysis-flow";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import rehypeRaw from "rehype-raw";
+import { Badge } from "@/components/ui/badge";
+import { cn } from "@/lib/utils";
+
+
+const MCQ = ({ question, subject, children }: { question: string, subject: string, children: React.ReactNode }) => {
+  const [selected, setSelected] = useState<string | null>(null);
+  const [isAnswered, setIsAnswered] = useState(false);
+
+  const options = React.Children.toArray(children).filter(
+    (child): child is React.ReactElement<{ children: string, correct?: string }> =>
+      React.isValidElement(child) && typeof child.props.children === 'string'
+  );
+
+  const handleSelect = (optionValue: string) => {
+    if (isAnswered) return;
+    setSelected(optionValue);
+    setIsAnswered(true);
+  };
+  
+  const hasSelectedCorrect = options.some(o => o.props.children === selected && o.props.correct === 'true');
+
+  return (
+    <div className="my-6 p-4 border rounded-lg bg-background/50 shadow-sm">
+      <p className="font-semibold leading-relaxed text-foreground">{question}</p>
+      {subject && <Badge variant="secondary" className="mb-4 mt-2 font-normal">{subject}</Badge>}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-4">
+        {options.map((option, index) => {
+          const optionValue = option.props.children;
+          const isCorrect = option.props.correct === 'true';
+          const isSelected = selected === optionValue;
+          
+          let icon;
+          if (isAnswered) {
+              if (isCorrect) {
+                  icon = <CheckCircle className="w-4 h-4 text-green-600 dark:text-green-400 flex-shrink-0"/>;
+              } else if (isSelected) {
+                  icon = <XCircle className="w-4 h-4 text-red-600 dark:text-red-400 flex-shrink-0"/>;
+              } else {
+                  icon = <Circle className="w-4 h-4 text-muted-foreground/50 flex-shrink-0"/>;
+              }
+          } else {
+              icon = <Circle className="w-4 h-4 text-muted-foreground flex-shrink-0"/>;
+          }
+          
+          return (
+            <Button
+              key={index}
+              variant="outline"
+              onClick={() => handleSelect(optionValue)}
+              disabled={isAnswered}
+              className={cn(
+                "justify-start text-left h-auto py-2 px-3 whitespace-normal w-full items-center gap-2 transition-colors duration-200",
+                isAnswered && {
+                  "border-green-400 bg-green-50 text-green-900 hover:bg-green-100 dark:bg-green-900/30 dark:border-green-600 dark:text-green-100 dark:hover:bg-green-900/40": isCorrect,
+                  "border-red-400 bg-red-50 text-red-900 hover:bg-red-100 dark:bg-red-900/30 dark:border-red-600 dark:text-red-100 dark:hover:bg-red-900/40": isSelected && !isCorrect,
+                  "opacity-70": !isSelected && !isCorrect
+                }
+              )}
+            >
+              {icon}
+              <span>{optionValue}</span>
+            </Button>
+          );
+        })}
+      </div>
+      {isAnswered && !hasSelectedCorrect && (
+          <p className="text-xs text-muted-foreground mt-3">
+              You selected an incorrect answer. The correct answer is highlighted in green.
+          </p>
+      )}
+      {isAnswered && hasSelectedCorrect && (
+          <p className="text-xs text-green-600 dark:text-green-400 mt-3 font-medium">
+              Correct! Well done.
+          </p>
+      )}
+    </div>
+  );
+};
 
 const markdownComponents = {
   // Custom tag renderers
@@ -27,6 +105,7 @@ const markdownComponents = {
   scheme: (props: any) => <span className="entity-tag entity-scheme">{props.children}</span>,
   date: (props: any) => <span className="entity-tag entity-date">{props.children}</span>,
   org: (props: any) => <span className="entity-tag entity-org">{props.children}</span>,
+  mcq: (props: any) => <MCQ {...props} />,
   
   // Premium styling for standard markdown
   h1: (props: any) => <h1 className="text-2xl font-bold font-headline mt-6 pb-2 border-b-2 border-primary/30 text-primary" {...props} />,
@@ -210,7 +289,7 @@ export default function NewspaperAnalysisPage() {
                     )}
                     {!isLoading && !analysis && (
                         <div className="flex flex-col items-center justify-center text-center h-full flex-1 pt-16">
-                            <Bot className="w-24 h-24 text-primary/30 mb-4" />
+                            <Sparkles className="w-24 h-24 text-primary/30 mb-4" />
                             <h3 className="font-semibold text-foreground text-xl">Waiting for article</h3>
                             <p className="text-muted-foreground mt-2 max-w-sm">Submit an article on the left to see the AI-powered analysis.</p>
                         </div>
