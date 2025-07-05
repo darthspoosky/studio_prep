@@ -90,7 +90,7 @@ IMPORTANT: Your entire response, including all analysis, questions, summaries, a
 
 First, your critical tasks are:
 1.  Read the provided article and cross-reference its content with the UPSC syllabus documents below to identify the most specific, granular syllabus topic it relates to. Mention this topic clearly at the beginning of your analysis.
-2.  Generate a concise, 2-3 sentence summary of the article's core message. This summary should be plain text and suitable for a text-to-speech engine. Place this in the 'summary' field.
+2.  Generate a concise, 2-3 sentence summary of the article's core message. CRITICAL: The summary MUST NOT contain any HTML, XML, or custom tags. It must be pure, clean, plain text suitable for a text-to-speech engine. Place this in the 'summary' field.
 
 The user is preparing for the '{{{examType}}}' exam.
 The requested analysis focus is: '{{{analysisFocus}}}'.
@@ -176,7 +176,7 @@ const verificationPrompt = ai.definePrompt({
     1.  **FACT-CHECKING:** Scrutinize the 'generatedAnalysis.analysis' markdown and the 'generatedAnalysis.summary' against the 'Original Source Article'. Correct any factual errors, misinterpretations, or claims that are not supported by the source text. Your primary source of truth is the provided article.
     2.  **FORMAT & STRUCTURE VERIFICATION:** Ensure the entire 'analysis' output strictly adheres to the required custom tag format (e.g., \`<mcq question="..." ...>\`, \`<option correct="true">\`, \`<person>\`, etc.). Fix any broken or improperly formatted tags. The structure must be perfect for UI rendering.
     3.  **IMPROVE CLARITY & INSIGHTS:** If possible, enhance the analysis for clarity without introducing new, unverified information. Ensure the syllabus tagging is as precise as possible.
-    4.  **SUMMARY CHECK:** Ensure the 'summary' field is a concise, plain-text summary of 2-3 sentences and accurately reflects the article's main point.
+    4.  **SUMMARY CHECK:** Ensure the 'summary' field is a concise, plain-text summary of 2-3 sentences, accurately reflects the article's main point, and contains NO HTML or custom tags.
 
     After your review, output the final, corrected, and verified analysis object containing both 'analysis' and 'summary' fields.
 
@@ -230,6 +230,12 @@ const analyzeNewspaperArticleFlow = ai.defineFlow(
         throw new Error("Verification step failed.");
     }
     
-    return verifiedOutput;
+    // Step 4: Final sanitization of the summary to ensure it's clean for TTS
+    const cleanSummary = verifiedOutput.summary.replace(/<[^>]+>/g, '');
+
+    return {
+        ...verifiedOutput,
+        summary: cleanSummary,
+    };
   }
 );
