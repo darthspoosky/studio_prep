@@ -44,7 +44,6 @@ const Hero = () => {
             
             {/* Top-right flow */}
             <FloatingIcon icon={<PenLine className="w-7 h-7 text-white" />} className="top-[15%] right-[10%]" animation="animate-hero-float" delay="0.5s" gradient="from-emerald-500 to-teal-500" />
-            <FloatingIcon icon={<Mic className="w-5 h-5 text-white" />} className="top-[40%] right-[20%]" animation="animate-hero-float-alt" delay="1.5s" gradient="from-purple-500 to-indigo-500" />
 
             {/* Bottom-left flow */}
             <FloatingIcon icon={<Users className="w-7 h-7 text-white" />} className="bottom-[15%] left-[20%]" animation="animate-hero-float-alt" delay="0.2s" gradient="from-primary to-accent" />
@@ -52,9 +51,10 @@ const Hero = () => {
             {/* Bottom-right flow */}
             <FloatingIcon icon={<Bot className="w-5 h-5 text-white" />} className="bottom-[10%] right-[15%]" animation="animate-hero-float" delay="1.2s" gradient="from-lime-400 to-green-500" />
 
-            {/* Added icons */}
+            {/* Center icons */}
             <FloatingIcon icon={<BookOpen className="w-6 h-6 text-white" />} className="bottom-[25%] right-[45%]" animation="animate-hero-float" delay="0.8s" gradient="from-red-500 to-pink-500" />
             <FloatingIcon icon={<Target className="w-6 h-6 text-white" />} className="top-[20%] left-[48%]" animation="animate-hero-float-alt" delay="0.4s" gradient="from-blue-500 to-indigo-500" />
+            <FloatingIcon icon={<Mic className="w-5 h-5 text-white" />} className="bottom-[10%] left-[48%]" animation="animate-hero-float-alt" delay="1.5s" gradient="from-purple-500 to-indigo-500" />
         </div>
     </section>
   );
