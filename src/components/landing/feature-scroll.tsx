@@ -64,46 +64,52 @@ const ToolCard = ({ icon, title, description, gradient, href }: { icon: React.Re
     </Link>
 );
 
-const testimonials = [
+const ideas = [
   {
-    quote: "PrepTalk's AI bot is a game-changer for my interview practice. The feedback is so insightful!",
-    name: 'Alex Johnson',
-    handle: 'Software Engineer',
-    avatar: 'AJ',
+    idea: "An AI that creates a personalized study schedule based on my weak areas would be amazing.",
+    author: 'Priya S.',
+    role: 'Beta Tester',
+    avatar: 'PS',
+    glowColor: 'hsl(var(--primary))',
   },
   {
-    quote: 'The daily quizzes are the perfect way to start my study sessions. Short, sharp, and relevant.',
-    name: 'Maria Garcia',
-    handle: 'Pre-Med Student',
-    avatar: 'MG',
-  },
-  {
-    quote: "I finally feel confident about my writing skills for the GRE. The prompts are fantastic.",
-    name: 'David Chen',
-    handle: 'Graduate Applicant',
-    avatar: 'DC',
-  },
-  {
-    quote: "The community feedback feature is brilliant. It's like having thousands of study partners.",
-    name: 'Samantha Lee',
-    handle: 'SAT Taker',
-    avatar: 'SL',
-  },
-  {
-    quote: 'An indispensable tool. The mock interviews helped me land my dream internship.',
-    name: 'Ben Carter',
-    handle: 'MBA Candidate',
+    idea: "What if we could upload our own practice essays and get instant feedback on structure and grammar?",
+    author: 'Ben C.',
+    role: 'Early Adopter',
     avatar: 'BC',
+    glowColor: 'hsl(var(--accent))',
   },
   {
-    quote: 'The AI-powered writing practice has drastically improved my essays. A must-have!',
-    name: 'Priya Patel',
-    handle: 'Law Student',
-    avatar: 'PP',
+    idea: "I'd love a 'cram session' mode that drills you on the topics you struggle with most, right before an exam.",
+    author: 'Maria G.',
+    role: 'Student Voice',
+    avatar: 'MG',
+    glowColor: 'hsl(200 96% 87%)',
+  },
+  {
+    idea: "Could the mock interviewer simulate different personality types, like a friendly or a very strict one?",
+    author: 'Alex J.',
+    role: 'Power User',
+    avatar: 'AJ',
+    glowColor: 'hsl(300 96% 87%)',
+  },
+  {
+    idea: "Gamify the daily quizzes! Leaderboards, points, and streaks would make studying much more fun.",
+    author: 'Samantha L.',
+    role: 'Beta Tester',
+    avatar: 'SL',
+    glowColor: 'hsl(150 96% 87%)',
+  },
+  {
+    idea: "A feature to connect with other students studying for the same exam would be great for motivation.",
+    author: 'David C.',
+    role: 'Community Member',
+    avatar: 'DC',
+    glowColor: 'hsl(50 96% 87%)',
   },
 ];
 
-const duplicatedTestimonials = [...testimonials, ...testimonials];
+const duplicatedIdeas = [...ideas, ...ideas];
 
 const MobileView = () => {
     return (
@@ -142,31 +148,31 @@ const MobileView = () => {
                     </Carousel>
                 </div>
 
-                {/* Community Feedback Section */}
+                {/* Idea Board Section */}
                 <div className="text-center mt-24">
                      <h2 className="font-headline text-3xl font-bold tracking-tight">
                         <span className="animate-gradient-anim bg-[length:200%_auto] bg-gradient-to-r from-primary via-accent to-pink-500 bg-clip-text text-transparent">
-                            From the PrepTalk Community
+                            Our Idea Board
                         </span>
                     </h2>
                     <p className="mt-3 max-w-2xl mx-auto text-lg text-muted-foreground">
-                        See what our users are saying about their prep journey with us.
+                        Shaped by the community, built for your success. Here are some of the ideas that inspire our next features.
                     </p>
                 </div>
 
                 <div className="mt-12 grid grid-cols-1 gap-8">
-                    {testimonials.map((testimonial, index) => (
+                    {ideas.map((item, index) => (
                         <Card key={index} className="w-full shrink-0 glassmorphic">
                             <CardContent className="pt-6 flex flex-col h-full">
-                                <p className="mb-4 text-foreground flex-grow">"{testimonial.quote}"</p>
+                                <p className="mb-4 text-foreground flex-grow">"{item.idea}"</p>
                                 <div className="flex items-center mt-auto">
                                     <Avatar>
                                         <AvatarImage data-ai-hint="person" src={`https://placehold.co/40x40.png`} />
-                                        <AvatarFallback>{testimonial.avatar}</AvatarFallback>
+                                        <AvatarFallback>{item.avatar}</AvatarFallback>
                                     </Avatar>
                                     <div className="ml-4 text-left">
-                                        <p className="font-semibold text-foreground">{testimonial.name}</p>
-                                        <p className="text-sm text-muted-foreground">{testimonial.handle}</p>
+                                        <p className="font-semibold text-foreground">{item.author}</p>
+                                        <p className="text-sm text-muted-foreground">{item.role}</p>
                                     </div>
                                 </div>
                             </CardContent>
@@ -237,7 +243,6 @@ const AnimatedCard = ({
     return stackingOpacity.get();
   });
 
-  // --- Y Position (translateY for performance) ---
   const showcaseY = useTransform(scrollYProgress, [showcaseStartTime, showcaseEndTime], ["4rem", "0rem"]);
   
   const finalStackY = (i) * 30;
@@ -253,7 +258,6 @@ const AnimatedCard = ({
     return stackingY.get();
   });
 
-  // --- Scale ---
   const showcaseScale = useTransform(scrollYProgress, [showcaseStartTime, showcaseEndTime], [0.95, 1]);
   
   const finalStackScale = 1 - (tools.length - 1 - i) * 0.05;
@@ -284,39 +288,70 @@ const AnimatedCard = ({
   );
 };
 
-const FeedbackWall = ({ scrollYProgress }: { scrollYProgress: MotionValue<number> }) => {
+const IdeaCard = ({ idea, author, role, avatar, glowColor }: (typeof ideas)[0]) => (
+    <motion.div
+        whileHover={{
+            scale: 1.05,
+            y: -8,
+            boxShadow: `0 0 30px 5px ${glowColor}`,
+            zIndex: 50
+        }}
+        transition={{ type: 'spring', stiffness: 300 }}
+        className="relative w-[350px] lg:w-[400px] shrink-0"
+    >
+        <Card className="w-full h-full glassmorphic">
+            <CardContent className="pt-6 flex flex-col h-full">
+                <p className="mb-4 text-foreground flex-grow text-base md:text-lg">"{idea}"</p>
+                <div className="flex items-center mt-auto">
+                    <Avatar>
+                        <AvatarImage data-ai-hint="person" src={`https://placehold.co/40x40.png`} />
+                        <AvatarFallback>{avatar}</AvatarFallback>
+                    </Avatar>
+                    <div className="ml-4 text-left">
+                        <p className="font-semibold text-foreground">{author}</p>
+                        <p className="text-sm text-muted-foreground">{role}</p>
+                    </div>
+                </div>
+            </CardContent>
+        </Card>
+    </motion.div>
+);
+
+
+const IdeaBoard = () => {
     return (
         <div className="relative h-screen flex flex-col justify-center overflow-hidden">
             <div className="container mx-auto px-4 text-center mb-16">
                 <h2 className="font-headline text-3xl md:text-4xl font-bold tracking-tight">
                     <span className="animate-gradient-anim bg-[length:200%_auto] bg-gradient-to-r from-primary via-accent to-pink-500 bg-clip-text text-transparent">
-                        From the PrepTalk Community
+                        Our Idea Board
                     </span>
                 </h2>
                 <p className="mt-3 max-w-2xl mx-auto text-lg text-muted-foreground">
-                    See what our users are saying about their prep journey with us.
+                    Shaped by the community, built for your success. Here are some of the ideas that inspire our next features.
                 </p>
             </div>
-
-            <motion.div style={{ x: scrollYProgress }} className="flex gap-8 pl-8">
-                {duplicatedTestimonials.map((testimonial, index) => (
-                    <Card key={index} className="w-[400px] lg:w-[450px] shrink-0 glassmorphic">
-                        <CardContent className="pt-6 flex flex-col h-full">
-                            <p className="mb-4 text-foreground flex-grow text-base md:text-lg">"{testimonial.quote}"</p>
-                            <div className="flex items-center mt-auto">
-                                <Avatar>
-                                    <AvatarImage data-ai-hint="person" src={`https://placehold.co/40x40.png`} />
-                                    <AvatarFallback>{testimonial.avatar}</AvatarFallback>
-                                </Avatar>
-                                <div className="ml-4 text-left">
-                                    <p className="font-semibold text-foreground">{testimonial.name}</p>
-                                    <p className="text-sm text-muted-foreground">{testimonial.handle}</p>
-                                </div>
-                            </div>
-                        </CardContent>
-                    </Card>
-                ))}
-            </motion.div>
+            
+            <div className="flex flex-col gap-8 -rotate-3">
+                <motion.div 
+                    className="flex gap-8"
+                    animate={{ x: ['0%', '-100%'] }}
+                    transition={{ ease: 'linear', duration: 40, repeat: Infinity }}
+                >
+                    {duplicatedIdeas.map((item, index) => (
+                        <IdeaCard key={`row1-${index}`} {...item} />
+                    ))}
+                </motion.div>
+                <motion.div 
+                    className="flex gap-8"
+                    animate={{ x: ['-100%', '0%'] }}
+                    transition={{ ease: 'linear', duration: 40, repeat: Infinity }}
+                >
+                    {duplicatedIdeas.map((item, index) => (
+                        <IdeaCard key={`row2-${index}`} {...item} />
+                    ))}
+                </motion.div>
+            </div>
         </div>
     );
 };
@@ -336,7 +371,6 @@ const DesktopView = () => {
 
     const feedbackOpacity = useTransform(scrollYProgress, [feedbackStart - 0.05, feedbackStart], [0, 1]);
     const feedbackY = useTransform(scrollYProgress, [feedbackStart, 1.0], ['50vh', '0vh']);
-    const feedbackX = useTransform(scrollYProgress, [feedbackStart, 1.0], ['0%', '-50%']);
 
     return (
         <section id="features" ref={containerRef} className="relative bg-gray-50 dark:bg-gray-900 h-[600vh]">
@@ -372,7 +406,7 @@ const DesktopView = () => {
                     style={{ y: feedbackY, opacity: feedbackOpacity, zIndex: 50 }}
                     className="absolute inset-0 bg-gray-50 dark:bg-gray-900"
                 >
-                    <FeedbackWall scrollYProgress={feedbackX} />
+                    <IdeaBoard />
                 </motion.div>
             </div>
         </section>
