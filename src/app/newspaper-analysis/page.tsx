@@ -161,8 +161,6 @@ const AnalysisOutputDisplay = ({ analysis }: { analysis: string }) => (
 );
 
 const UsageStats = ({ tokens, cost }: { tokens: number; cost: number }) => {
-    if (tokens === 0) return null;
-
     return (
         <div className="flex items-center gap-6 text-xs text-muted-foreground border-b mb-4 pb-4">
             <TooltipProvider>
@@ -552,3 +550,5 @@ export default function NewspaperAnalysisPage() {
     </div>
   );
 }
+
+    
