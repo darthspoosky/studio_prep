@@ -174,13 +174,17 @@ const verificationPrompt = ai.definePrompt({
     name: 'newspaperVerificationPrompt',
     input: { schema: VerificationInputSchema },
     output: { schema: NewspaperAnalysisOutputSchema },
-    prompt: `You are a meticulous editor and final reviewer for an AI-powered exam preparation tool. Your job is to perform a final check on an AI-generated analysis before it is shown to a student.
+    prompt: `You are a meticulous Final Quality Control Editor for an AI application. Your job is to ruthlessly check and fix an AI-generated analysis before it is shown to a user. Errors in the output can break the application's UI, so precision is your top priority.
 
     **CRITICAL INSTRUCTIONS:**
-    1.  **FACT-CHECKING:** Scrutinize the 'generatedAnalysis.analysis' markdown and the 'generatedAnalysis.summary' against the 'Original Source Article'. Correct any factual errors, misinterpretations, or claims that are not supported by the source text. Your primary source of truth is the provided article.
-    2.  **FORMAT & STRUCTURE VERIFICATION:** Ensure the entire 'analysis' output strictly adheres to the required custom tag format (e.g., \`<mcq question="..." ...>\`, \`<option correct="true">\`, \`<person>\`, etc.). Fix any broken or improperly formatted tags. The structure must be perfect for UI rendering.
-    3.  **IMPROVE CLARITY & INSIGHTS:** If possible, enhance the analysis for clarity without introducing new, unverified information. Ensure the syllabus tagging is as precise as possible.
-    4.  **SUMMARY CHECK:** Ensure the 'summary' field is a concise, plain-text summary of 2-3 sentences, accurately reflects the article's main point, and contains NO HTML or custom tags.
+    1.  **COHERENCY CHECK**: First, ensure the entire analysis is about the SINGLE 'Original Source Article' provided. If the generated analysis mentions multiple unrelated topics or seems to combine different articles, you MUST rewrite it to focus only on the provided source text.
+    2.  **FORMAT & STRUCTURE VERIFICATION (TOP PRIORITY):** This is your most important task. Scrutinize the 'generatedAnalysis.analysis' markdown. The UI depends on perfect structure.
+        *   Find every \`<mcq>\` tag. Ensure it has a closing \`</mcq>\` tag.
+        *   Inside each \`<mcq>\`, ensure there are multiple \`<option>\` tags.
+        *   Ensure each \`<option>\` tag is on its own separate line.
+        *   Fix any and all broken, incomplete, or improperly formatted custom tags (e.g., \`<person>\`, \`<place>\`, etc.).
+    3.  **FACT-CHECKING:** Cross-reference the analysis with the 'Original Source Article'. Correct any factual errors or claims not supported by the source text.
+    4.  **SUMMARY CHECK:** Ensure the 'summary' field is 2-3 sentences of clean, plain text and contains NO HTML or custom tags. Remove any tags you find.
 
     After your review, output the final, corrected, and verified analysis object containing both 'analysis' and 'summary' fields.
 
@@ -246,4 +250,3 @@ const analyzeNewspaperArticleFlow = ai.defineFlow(
     };
   }
 );
-
