@@ -256,8 +256,21 @@ const AnimatedCard = ({
   const showcaseStartTime = 0.05 + i * showcaseDurationPerCard;
   const showcaseEndTime = showcaseStartTime + showcaseDurationPerCard;
   
-  const isLastCard = i === tools.length - 1;
-
+  // Default opacity behavior: fade in, stay, fade out for showcase. Then fade back in for stacking.
+  const opacity = useTransform(
+    scrollYProgress,
+    [
+      showcaseStartTime,
+      showcaseStartTime + 0.02,
+      showcaseEndTime - 0.02,
+      showcaseEndTime,
+      stackingStart,
+      stackingStart + 0.05
+    ],
+    [0, 1, 1, 0, 0, 1]
+  );
+  
+  // Last card stays visible after its showcase until the stacking is complete.
   const lastCardOpacity = useTransform(
     scrollYProgress,
     [
@@ -267,32 +280,21 @@ const AnimatedCard = ({
     ],
     [0, 1, 1]
   );
-  
-  const showcaseOpacity = useTransform(
-    scrollYProgress,
-    [
-      showcaseStartTime,
-      showcaseStartTime + 0.02,
-      showcaseEndTime - 0.02,
-      showcaseEndTime,
-    ],
-    [0, 1, 1, 0]
-  );
-  
-  const stackingOpacity = useTransform(
-    scrollYProgress,
-    [stackingStart, stackingStart + 0.05],
-    [0, 1]
-  );
 
-  const opacity = useTransform(scrollYProgress, (p) => {
-    if (isLastCard) {
-      return lastCardOpacity.get();
+  const finalOpacity = useTransform(scrollYProgress, p => {
+    return i === tools.length - 1 ? lastCardOpacity.get() : opacity.get();
+  });
+  
+  // Disable pointer events when card is not visible
+  const pointerEvents = useTransform(finalOpacity, (o) => (o > 0.1 ? 'auto' : 'none'));
+
+  const zIndex = useTransform(scrollYProgress, (p) => {
+    // Bring the currently showcased card to the front
+    if (p >= showcaseStartTime && p < showcaseEndTime) {
+      return tools.length;
     }
-    if (p < stackingStart) {
-      return showcaseOpacity.get();
-    }
-    return stackingOpacity.get();
+    // Otherwise, use natural stacking order
+    return i;
   });
 
   const showcaseY = useTransform(scrollYProgress, [showcaseStartTime, showcaseEndTime], ["4rem", "0rem"]);
@@ -328,10 +330,11 @@ const AnimatedCard = ({
   return (
     <motion.div
       style={{
-        opacity,
+        opacity: finalOpacity,
         scale,
         translateY: y,
-        zIndex: i,
+        zIndex,
+        pointerEvents,
       }}
       className="absolute h-[450px] w-full max-w-2xl"
     >
