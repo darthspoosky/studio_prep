@@ -76,20 +76,37 @@ export default function NewspaperAnalysisPage() {
                             </div>
                         </TabsContent>
                     </Tabs>
-                    <div className="space-y-2">
-                        <Label htmlFor="analysis-focus">Analysis Focus</Label>
-                        <Select>
-                            <SelectTrigger id="analysis-focus">
-                                <SelectValue placeholder="Select an analysis type" />
-                            </SelectTrigger>
-                            <SelectContent>
-                                <SelectItem value="mains-analysis">UPSC Mains Analysis (Arguments, Keywords, Viewpoints)</SelectItem>
-                                <SelectItem value="prelims-facts">Prelims Fact Finder (Key Names, Dates, Schemes)</SelectItem>
-                                <SelectItem value="critical-analysis">Critical Analysis (Tone, Bias, Fact vs. Opinion)</SelectItem>
-                                <SelectItem value="vocabulary">Vocabulary Builder for Editorials</SelectItem>
-                                <SelectItem value="summary">Comprehensive Summary</SelectItem>
-                            </SelectContent>
-                        </Select>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <div className="space-y-2">
+                          <Label htmlFor="exam-type">Exam Type</Label>
+                          <Select>
+                              <SelectTrigger id="exam-type">
+                                  <SelectValue placeholder="Select an exam type" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                  <SelectItem value="upsc">UPSC Civil Services</SelectItem>
+                                  <SelectItem value="state-psc">State PSC</SelectItem>
+                                  <SelectItem value="rbi-grade-b">RBI Grade B</SelectItem>
+                                  <SelectItem value="other">Other Competitive Exams</SelectItem>
+                              </SelectContent>
+                          </Select>
+                      </div>
+                      <div className="space-y-2">
+                          <Label htmlFor="analysis-focus">Analysis Focus</Label>
+                          <Select>
+                              <SelectTrigger id="analysis-focus">
+                                  <SelectValue placeholder="Select an analysis type" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                  <SelectItem value="generate-questions">Generate Questions (Mains & Prelims)</SelectItem>
+                                  <SelectItem value="mains-analysis">Mains Analysis (Arguments, Keywords, Viewpoints)</SelectItem>
+                                  <SelectItem value="prelims-facts">Prelims Fact Finder (Key Names, Dates, Schemes)</SelectItem>
+                                  <SelectItem value="critical-analysis">Critical Analysis (Tone, Bias, Fact vs. Opinion)</SelectItem>
+                                  <SelectItem value="vocabulary">Vocabulary Builder for Editorials</SelectItem>
+                                  <SelectItem value="summary">Comprehensive Summary</SelectItem>
+                              </SelectContent>
+                          </Select>
+                      </div>
                     </div>
                 </CardContent>
                 <CardFooter>
@@ -101,7 +118,7 @@ export default function NewspaperAnalysisPage() {
             </Card>
 
             {/* Right Column: Analysis Output */}
-             <Card className="glassmorphic shadow-2xl shadow-primary/10 lg:min-h-[580px]">
+             <Card className="glassmorphic shadow-2xl shadow-primary/10 lg:min-h-[620px]">
                 <CardHeader>
                     <CardTitle>AI Analysis</CardTitle>
                     <CardDescription>The breakdown of your article will appear here.</CardDescription>
