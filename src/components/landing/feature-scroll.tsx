@@ -6,6 +6,8 @@ import Link from 'next/link';
 import { Mic, FileQuestion, PenLine, MoveRight, Newspaper } from 'lucide-react';
 import { motion, useScroll, useTransform, type MotionValue } from 'framer-motion';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { useIsMobile } from '@/hooks/use-mobile';
+import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from "@/components/ui/carousel";
 
 const tools = [
     {
@@ -103,42 +105,80 @@ const testimonials = [
 
 const duplicatedTestimonials = [...testimonials, ...testimonials];
 
-const FeedbackWall = ({ scrollYProgress }: { scrollYProgress: MotionValue<number> }) => {
+const MobileView = () => {
     return (
-        <div className="relative h-screen flex flex-col justify-center overflow-hidden">
-            <div className="container mx-auto px-4 text-center mb-16">
-                <h2 className="font-headline text-3xl md:text-4xl font-bold tracking-tight">
-                    <span className="animate-gradient-anim bg-[length:200%_auto] bg-gradient-to-r from-primary via-accent to-pink-500 bg-clip-text text-transparent">
-                        From the PrepTalk Community
-                    </span>
-                </h2>
-                <p className="mt-3 max-w-2xl mx-auto text-lg text-muted-foreground">
-                    See what our users are saying about their prep journey with us.
-                </p>
-            </div>
+        <section id="features-mobile" className="bg-gray-50 dark:bg-gray-900 py-24 sm:py-32">
+            <div className="container mx-auto px-4">
+                {/* Core Tools Section */}
+                <div className="text-center">
+                    <h2 className="font-headline text-3xl font-bold tracking-tight">
+                        <span className="animate-gradient-anim bg-[length:200%_auto] bg-gradient-to-r from-primary via-accent to-pink-500 bg-clip-text text-transparent">
+                            Our Core Tools
+                        </span>
+                    </h2>
+                    <p className="mt-3 max-w-2xl mx-auto text-lg text-muted-foreground">
+                        Everything you need to get exam-ready, all in one place.
+                    </p>
+                </div>
 
-            <motion.div style={{ x: scrollYProgress }} className="flex gap-8 pl-8">
-                {duplicatedTestimonials.map((testimonial, index) => (
-                    <Card key={index} className="w-[400px] lg:w-[450px] shrink-0 glassmorphic">
-                        <CardContent className="pt-6 flex flex-col h-full">
-                            <p className="mb-4 text-foreground flex-grow text-base md:text-lg">"{testimonial.quote}"</p>
-                            <div className="flex items-center mt-auto">
-                                <Avatar>
-                                    <AvatarImage data-ai-hint="person" src={`https://placehold.co/40x40.png`} />
-                                    <AvatarFallback>{testimonial.avatar}</AvatarFallback>
-                                </Avatar>
-                                <div className="ml-4 text-left">
-                                    <p className="font-semibold text-foreground">{testimonial.name}</p>
-                                    <p className="text-sm text-muted-foreground">{testimonial.handle}</p>
+                <div className="mt-12">
+                     <Carousel
+                        opts={{
+                            align: "start",
+                        }}
+                        className="w-full max-w-xs mx-auto"
+                    >
+                        <CarouselContent>
+                            {tools.map((tool, index) => (
+                                <CarouselItem key={index}>
+                                    <div className="p-1 h-[450px]">
+                                        <ToolCard {...tool} />
+                                    </div>
+                                </CarouselItem>
+                            ))}
+                        </CarouselContent>
+                        <CarouselPrevious className="hidden sm:inline-flex" />
+                        <CarouselNext className="hidden sm:inline-flex" />
+                    </Carousel>
+                </div>
+
+                {/* Community Feedback Section */}
+                <div className="text-center mt-24">
+                     <h2 className="font-headline text-3xl font-bold tracking-tight">
+                        <span className="animate-gradient-anim bg-[length:200%_auto] bg-gradient-to-r from-primary via-accent to-pink-500 bg-clip-text text-transparent">
+                            From the PrepTalk Community
+                        </span>
+                    </h2>
+                    <p className="mt-3 max-w-2xl mx-auto text-lg text-muted-foreground">
+                        See what our users are saying about their prep journey with us.
+                    </p>
+                </div>
+
+                <div className="mt-12 grid grid-cols-1 gap-8">
+                    {testimonials.map((testimonial, index) => (
+                        <Card key={index} className="w-full shrink-0 glassmorphic">
+                            <CardContent className="pt-6 flex flex-col h-full">
+                                <p className="mb-4 text-foreground flex-grow">"{testimonial.quote}"</p>
+                                <div className="flex items-center mt-auto">
+                                    <Avatar>
+                                        <AvatarImage data-ai-hint="person" src={`https://placehold.co/40x40.png`} />
+                                        <AvatarFallback>{testimonial.avatar}</AvatarFallback>
+                                    </Avatar>
+                                    <div className="ml-4 text-left">
+                                        <p className="font-semibold text-foreground">{testimonial.name}</p>
+                                        <p className="text-sm text-muted-foreground">{testimonial.handle}</p>
+                                    </div>
                                 </div>
-                            </div>
-                        </CardContent>
-                    </Card>
-                ))}
-            </motion.div>
-        </div>
+                            </CardContent>
+                        </Card>
+                    ))}
+                </div>
+            </div>
+        </section>
     );
 };
+
+// --- Desktop Components ---
 
 // Animation ranges
 const showcaseEnd = 0.55;
@@ -244,8 +284,45 @@ const AnimatedCard = ({
   );
 };
 
+const FeedbackWall = ({ scrollYProgress }: { scrollYProgress: MotionValue<number> }) => {
+    return (
+        <div className="relative h-screen flex flex-col justify-center overflow-hidden">
+            <div className="container mx-auto px-4 text-center mb-16">
+                <h2 className="font-headline text-3xl md:text-4xl font-bold tracking-tight">
+                    <span className="animate-gradient-anim bg-[length:200%_auto] bg-gradient-to-r from-primary via-accent to-pink-500 bg-clip-text text-transparent">
+                        From the PrepTalk Community
+                    </span>
+                </h2>
+                <p className="mt-3 max-w-2xl mx-auto text-lg text-muted-foreground">
+                    See what our users are saying about their prep journey with us.
+                </p>
+            </div>
 
-const FeatureScroll = () => {
+            <motion.div style={{ x: scrollYProgress }} className="flex gap-8 pl-8">
+                {duplicatedTestimonials.map((testimonial, index) => (
+                    <Card key={index} className="w-[400px] lg:w-[450px] shrink-0 glassmorphic">
+                        <CardContent className="pt-6 flex flex-col h-full">
+                            <p className="mb-4 text-foreground flex-grow text-base md:text-lg">"{testimonial.quote}"</p>
+                            <div className="flex items-center mt-auto">
+                                <Avatar>
+                                    <AvatarImage data-ai-hint="person" src={`https://placehold.co/40x40.png`} />
+                                    <AvatarFallback>{testimonial.avatar}</AvatarFallback>
+                                </Avatar>
+                                <div className="ml-4 text-left">
+                                    <p className="font-semibold text-foreground">{testimonial.name}</p>
+                                    <p className="text-sm text-muted-foreground">{testimonial.handle}</p>
+                                </div>
+                            </div>
+                        </CardContent>
+                    </Card>
+                ))}
+            </motion.div>
+        </div>
+    );
+};
+
+
+const DesktopView = () => {
     const containerRef = useRef<HTMLDivElement>(null);
     const { scrollYProgress } = useScroll({
         target: containerRef,
@@ -261,11 +338,9 @@ const FeatureScroll = () => {
     const feedbackY = useTransform(scrollYProgress, [feedbackStart, 1.0], ['50vh', '0vh']);
     const feedbackX = useTransform(scrollYProgress, [feedbackStart, 1.0], ['0%', '-50%']);
 
-
     return (
         <section id="features" ref={containerRef} className="relative bg-gray-50 dark:bg-gray-900 h-[600vh]">
             <div className="sticky top-0 h-screen overflow-hidden">
-
                 <motion.div 
                     style={{ opacity: titleOpacity, y: titleY }}
                     className="absolute inset-x-0 top-16 z-30"
@@ -302,6 +377,17 @@ const FeatureScroll = () => {
             </div>
         </section>
     );
+};
+
+const FeatureScroll = () => {
+    const isMobile = useIsMobile();
+    
+    // Avoid rendering on the server or during hydration mismatch
+    if (isMobile === undefined) {
+        return null; 
+    }
+
+    return isMobile ? <MobileView /> : <DesktopView />;
 };
 
 export default FeatureScroll;
