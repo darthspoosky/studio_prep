@@ -111,6 +111,36 @@ const ideas = [
 
 const duplicatedIdeas = [...ideas, ...ideas];
 
+const IdeaCard = ({ idea, author, role, avatar, glowColor }: (typeof ideas)[0]) => (
+    <motion.div
+        whileHover={{
+            scale: 1.05,
+            y: -8,
+            boxShadow: `0 0 30px 5px ${glowColor}`,
+            zIndex: 50
+        }}
+        transition={{ type: 'spring', stiffness: 300 }}
+        className="relative w-[300px] sm:w-[350px] lg:w-[400px] shrink-0"
+    >
+        <Card className="w-full h-full glassmorphic">
+            <CardContent className="pt-6 flex flex-col h-full">
+                <p className="mb-4 text-foreground flex-grow text-base md:text-lg">"{idea}"</p>
+                <div className="flex items-center mt-auto">
+                    <Avatar>
+                        <AvatarImage data-ai-hint="person" src={`https://placehold.co/40x40.png`} />
+                        <AvatarFallback>{avatar}</AvatarFallback>
+                    </Avatar>
+                    <div className="ml-4 text-left">
+                        <p className="font-semibold text-foreground">{author}</p>
+                        <p className="text-sm text-muted-foreground">{role}</p>
+                    </div>
+                </div>
+            </CardContent>
+        </Card>
+    </motion.div>
+);
+
+
 const MobileView = () => {
     return (
         <section id="features-mobile" className="bg-gray-50 dark:bg-gray-900 py-24 sm:py-32">
@@ -160,24 +190,27 @@ const MobileView = () => {
                     </p>
                 </div>
 
-                <div className="mt-12 grid grid-cols-1 gap-8">
-                    {ideas.map((item, index) => (
-                        <Card key={index} className="w-full shrink-0 glassmorphic">
-                            <CardContent className="pt-6 flex flex-col h-full">
-                                <p className="mb-4 text-foreground flex-grow">"{item.idea}"</p>
-                                <div className="flex items-center mt-auto">
-                                    <Avatar>
-                                        <AvatarImage data-ai-hint="person" src={`https://placehold.co/40x40.png`} />
-                                        <AvatarFallback>{item.avatar}</AvatarFallback>
-                                    </Avatar>
-                                    <div className="ml-4 text-left">
-                                        <p className="font-semibold text-foreground">{item.author}</p>
-                                        <p className="text-sm text-muted-foreground">{item.role}</p>
-                                    </div>
-                                </div>
-                            </CardContent>
-                        </Card>
-                    ))}
+                <div className="relative mt-12 flex flex-col justify-center overflow-hidden py-12">
+                    <div className="flex flex-col gap-8 -rotate-3">
+                        <motion.div 
+                            className="flex gap-8"
+                            animate={{ x: ['0%', '-100%'] }}
+                            transition={{ ease: 'linear', duration: 40, repeat: Infinity }}
+                        >
+                            {duplicatedIdeas.map((item, index) => (
+                                <IdeaCard key={`mobile-row1-${index}`} {...item} />
+                            ))}
+                        </motion.div>
+                        <motion.div 
+                            className="flex gap-8"
+                            animate={{ x: ['-100%', '0%'] }}
+                            transition={{ ease: 'linear', duration: 40, repeat: Infinity }}
+                        >
+                            {duplicatedIdeas.map((item, index) => (
+                                <IdeaCard key={`mobile-row2-${index}`} {...item} />
+                            ))}
+                        </motion.div>
+                    </div>
                 </div>
             </div>
         </section>
@@ -287,35 +320,6 @@ const AnimatedCard = ({
     </motion.div>
   );
 };
-
-const IdeaCard = ({ idea, author, role, avatar, glowColor }: (typeof ideas)[0]) => (
-    <motion.div
-        whileHover={{
-            scale: 1.05,
-            y: -8,
-            boxShadow: `0 0 30px 5px ${glowColor}`,
-            zIndex: 50
-        }}
-        transition={{ type: 'spring', stiffness: 300 }}
-        className="relative w-[350px] lg:w-[400px] shrink-0"
-    >
-        <Card className="w-full h-full glassmorphic">
-            <CardContent className="pt-6 flex flex-col h-full">
-                <p className="mb-4 text-foreground flex-grow text-base md:text-lg">"{idea}"</p>
-                <div className="flex items-center mt-auto">
-                    <Avatar>
-                        <AvatarImage data-ai-hint="person" src={`https://placehold.co/40x40.png`} />
-                        <AvatarFallback>{avatar}</AvatarFallback>
-                    </Avatar>
-                    <div className="ml-4 text-left">
-                        <p className="font-semibold text-foreground">{author}</p>
-                        <p className="text-sm text-muted-foreground">{role}</p>
-                    </div>
-                </div>
-            </CardContent>
-        </Card>
-    </motion.div>
-);
 
 
 const IdeaBoard = () => {
