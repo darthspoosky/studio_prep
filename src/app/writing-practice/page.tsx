@@ -1,3 +1,4 @@
+
 "use client";
 
 import { Button } from "@/components/ui/button";
@@ -33,7 +34,7 @@ export default function WritingPracticePage() {
       <Header />
       <main className="flex-1 container mx-auto px-4 py-24 sm:py-32">
         <div className="max-w-4xl mx-auto">
-            <Link href="/" className="inline-flex items-center text-sm text-muted-foreground hover:text-primary transition-colors mb-8">
+            <Link href="/#tools" className="inline-flex items-center text-sm text-muted-foreground hover:text-primary transition-colors mb-8">
                 <ArrowLeft className="mr-2 h-4 w-4" />
                 Back to Home
             </Link>

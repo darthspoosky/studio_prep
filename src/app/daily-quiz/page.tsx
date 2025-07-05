@@ -1,3 +1,4 @@
+
 "use client";
 
 import { Button } from "@/components/ui/button";
@@ -7,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import Footer from "@/components/landing/footer";
 import Header from "@/components/layout/header";
 import Link from "next/link";
-import { ArrowLeft, Loader2, Target, BarChart, Flame } from "lucide-react";
+import { ArrowLeft, Loader2, Target, Flame } from "lucide-react";
 import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { Progress } from "@/components/ui/progress";
@@ -32,7 +33,7 @@ export default function DailyQuizPage() {
     <div className="flex flex-col min-h-screen bg-gray-50 dark:bg-gray-900">
       <Header />
       <main className="flex-1 container mx-auto px-4 py-24 sm:py-32">
-        <Link href="/" className="inline-flex items-center text-sm text-muted-foreground hover:text-primary transition-colors mb-8">
+        <Link href="/#tools" className="inline-flex items-center text-sm text-muted-foreground hover:text-primary transition-colors mb-8">
             <ArrowLeft className="mr-2 h-4 w-4" />
             Back to Home
         </Link>
