@@ -245,7 +245,7 @@ This file will serve as the knowledge base for our AI to understand the Mains cu
     - Types of Resources – Financial, Human, Natural etc.
     - Need for Resource Mobilisation
     - Role of Savings & Investment
-    - Government Resources – Tax & Non-Tax ( or Fiscal & Monetary Policy)
+    - GovernmentResources – Tax & Non-Tax ( or Fiscal & Monetary Policy)
     - Banking Sector & NBFCs
     - Capital Market
     - External Sources – FDI, ODA etc.
@@ -339,9 +339,9 @@ This file will serve as the knowledge base for our AI to understand the Mains cu
     - Foreign Investment Models:
         - FDI
         - FII, etc.
-- Sector Specific Investment Models
-- Cluster Based Investment Models
-- Investment Models Followed by India
+    - Sector Specific Investment Models
+    - Cluster Based Investment Models
+    - Investment Models Followed by India
 
 ---
 #### AGRICULTURE
@@ -580,5 +580,15 @@ This file will serve as the knowledge base for our AI to understand the Mains cu
 - Security & Intelligence Agencies – IB. R&WA, etc.
 
 ### **Paper-V: General Studies–IV** (Ethics, Integrity and Aptitude)
+
+- **Attitude and approach to issues relating to integrity, probity in public life and problem solving approach to various issues and conflicts faced in dealing with society.** (Case study approach may be used).
+- **Ethics and Human Interface:** Essence, Determinants and Consequences of Ethics in Human Actions; Dimensions of Ethics; Ethics in Private and Public Relationships. Human Values - Lessons from the Lives and Teachings of Great Leaders, Reformers and Administrators; Role of Family Society and Educational Institutions in Inculcating Values.
+- **Attitude:** Content, Structure, Function; its Influence and Relation with Thought and Behaviour; Moral and Political Attitudes; Social Influence and Persuasion.
+- **Aptitude and Foundational Values for Civil Service:** Integrity, Impartiality and Non-partisanship, Objectivity, Dedication to Public Service, Empathy, Tolerance and Compassion towards the weaker-sections.
+- **Emotional Intelligence:** Concepts, and their Utilities and Application in Administration and Governance.
+- **Contributions of Moral Thinkers and Philosophers from India and World.**
+- **Public/Civil Service Values and Ethics in Public Administration:** Status and Problems; Ethical Concerns and Dilemmas in Government and Private Institutions; Laws, Rules, Regulations and Conscience as Sources of Ethical Guidance; Accountability and Ethical Governance; Strengthening of Ethical and Moral Values in Governance; Ethical Issues in International Relations and Funding; Corporate Governance.
+- **Probity in Governance:** Concept of Public Service; Philosophical Basis of Governance and Probity; Information Sharing and Transparency in Government, Right to Information, Codes of Ethics, Codes of Conduct, Citizen’s Charters, Work Culture, Quality of Service Delivery, Utilization of Public Funds, Challenges of Corruption.
+- **Case Studies on above issues.**
 
 ### **Paper-VI & VII: Optional Subject Papers I & II**
