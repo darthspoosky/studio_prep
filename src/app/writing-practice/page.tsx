@@ -8,7 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import Footer from "@/components/landing/footer";
 import Header from "@/components/layout/header";
 import Link from "next/link";
-import { ArrowLeft, Loader2 } from "lucide-react";
+import { ArrowLeft, Loader2, Sparkles } from "lucide-react";
 import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
 
@@ -32,7 +32,7 @@ export default function WritingPracticePage() {
     <div className="flex flex-col min-h-screen bg-gray-50 dark:bg-gray-900">
       <Header />
       <main className="flex-1 container mx-auto px-4 py-24 sm:py-32">
-        <div className="max-w-2xl mx-auto">
+        <div className="max-w-4xl mx-auto">
             <Link href="/" className="inline-flex items-center text-sm text-muted-foreground hover:text-primary transition-colors mb-8">
                 <ArrowLeft className="mr-2 h-4 w-4" />
                 Back to Home
@@ -57,7 +57,7 @@ export default function WritingPracticePage() {
                     <div className="space-y-2">
                         <Label htmlFor="essay-type">Writing Task Type</Label>
                         <Select>
-                            <SelectTrigger id="essay-type">
+                            <SelectTrigger id="essay-type" className="md:w-1/2">
                                 <SelectValue placeholder="Select a writing task type" />
                             </SelectTrigger>
                             <SelectContent>
@@ -71,12 +71,16 @@ export default function WritingPracticePage() {
                     </div>
                     <div className="space-y-2">
                         <Label htmlFor="essay-text">Your Essay</Label>
-                        <Textarea id="essay-text" placeholder="Paste your full essay, précis, or report here..." className="h-64" />
+                        <Textarea id="essay-text" placeholder="Paste your full essay, précis, or report here..." className="h-96 bg-background/50 dark:bg-background/20 focus:bg-background" />
                     </div>
                 </CardContent>
                 <CardFooter>
-                    <Button size="lg" className="w-full" onClick={handleFeedback} disabled={isLoading}>
-                        {isLoading && <Loader2 className="animate-spin" />}
+                    <Button size="lg" onClick={handleFeedback} disabled={isLoading}>
+                        {isLoading ? (
+                            <Loader2 className="animate-spin" />
+                        ) : (
+                            <Sparkles className="w-5 h-5" />
+                        )}
                         {isLoading ? "Getting Feedback..." : "Get Feedback"}
                     </Button>
                 </CardFooter>
