@@ -1,14 +1,15 @@
 
 "use client";
 
-import React, { useRef } from 'react';
+import React, { useRef, useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import Link from 'next/link';
 import { Mic, FileQuestion, PenLine, MoveRight, Newspaper } from 'lucide-react';
-import { motion, useScroll, useTransform, type MotionValue, AnimatePresence } from 'framer-motion';
+import { motion, useScroll, useTransform, type MotionValue } from 'framer-motion';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from "@/components/ui/carousel";
+import { onIdeasUpdate, type Idea } from '@/services/ideasService';
 
 const tools = [
     {
@@ -65,7 +66,7 @@ const ToolCard = ({ icon, title, description, gradient, href }: { icon: React.Re
     </Link>
 );
 
-const ideas = [
+const initialIdeas: Idea[] = [
   {
     idea: "An AI that creates a personalized study schedule based on my weak areas would be amazing.",
     author: 'Priya S.',
@@ -110,9 +111,7 @@ const ideas = [
   },
 ];
 
-const duplicatedIdeas = [...ideas, ...ideas];
-
-const IdeaCard = ({ idea, author, role, avatar, glowColor }: (typeof ideas)[0]) => (
+const IdeaCard = ({ idea, author, role, avatar, glowColor }: Idea) => (
     <motion.div
         whileHover={{
             scale: 1.05,
@@ -140,6 +139,44 @@ const IdeaCard = ({ idea, author, role, avatar, glowColor }: (typeof ideas)[0]) 
         </Card>
     </motion.div>
 );
+
+const RealtimeIdeaMarquee = () => {
+    const [ideas, setIdeas] = useState<Idea[]>(initialIdeas);
+
+    useEffect(() => {
+        const unsubscribe = onIdeasUpdate((newIdeasFromDb) => {
+            const newIdeasMap = new Map(newIdeasFromDb.map(i => [i.id, i]));
+            const filteredInitialIdeas = initialIdeas.filter(i => !newIdeasMap.has(i.idea));
+            setIdeas([...newIdeasFromDb, ...filteredInitialIdeas].slice(0, 20));
+        });
+        return () => unsubscribe();
+    }, []);
+
+    const duplicatedIdeas = ideas.length > 0 ? [...ideas, ...ideas] : [];
+
+    return (
+        <div className="flex flex-col gap-8 -rotate-3 p-16">
+            <motion.div 
+                className="flex gap-8"
+                animate={{ x: ['0%', '-100%'] }}
+                transition={{ ease: 'linear', duration: 40, repeat: Infinity }}
+            >
+                {duplicatedIdeas.map((item, index) => (
+                    <IdeaCard key={`marquee-1-${item.id || index}`} {...item} />
+                ))}
+            </motion.div>
+            <motion.div 
+                className="flex gap-8"
+                animate={{ x: ['-100%', '0%'] }}
+                transition={{ ease: 'linear', duration: 40, repeat: Infinity }}
+            >
+                {duplicatedIdeas.map((item, index) => (
+                    <IdeaCard key={`marquee-2-${item.id || index}`} {...item} />
+                ))}
+            </motion.div>
+        </div>
+    );
+};
 
 
 const MobileView = () => {
@@ -192,26 +229,7 @@ const MobileView = () => {
                 </div>
 
                 <div className="relative mt-12 flex flex-col justify-center overflow-hidden">
-                    <div className="flex flex-col gap-8 -rotate-3 p-16">
-                        <motion.div 
-                            className="flex gap-8"
-                            animate={{ x: ['0%', '-100%'] }}
-                            transition={{ ease: 'linear', duration: 40, repeat: Infinity }}
-                        >
-                            {duplicatedIdeas.map((item, index) => (
-                                <IdeaCard key={`mobile-row1-${index}`} {...item} />
-                            ))}
-                        </motion.div>
-                        <motion.div 
-                            className="flex gap-8"
-                            animate={{ x: ['-100%', '0%'] }}
-                            transition={{ ease: 'linear', duration: 40, repeat: Infinity }}
-                        >
-                            {duplicatedIdeas.map((item, index) => (
-                                <IdeaCard key={`mobile-row2-${index}`} {...item} />
-                            ))}
-                        </motion.div>
-                    </div>
+                    <RealtimeIdeaMarquee />
                 </div>
             </div>
         </section>
@@ -337,26 +355,7 @@ const IdeaBoard = () => {
                 </p>
             </div>
             
-            <div className="flex flex-col gap-8 -rotate-3 p-16">
-                <motion.div 
-                    className="flex gap-8"
-                    animate={{ x: ['0%', '-100%'] }}
-                    transition={{ ease: 'linear', duration: 40, repeat: Infinity }}
-                >
-                    {duplicatedIdeas.map((item, index) => (
-                        <IdeaCard key={`row1-${index}`} {...item} />
-                    ))}
-                </motion.div>
-                <motion.div 
-                    className="flex gap-8"
-                    animate={{ x: ['-100%', '0%'] }}
-                    transition={{ ease: 'linear', duration: 40, repeat: Infinity }}
-                >
-                    {duplicatedIdeas.map((item, index) => (
-                        <IdeaCard key={`row2-${index}`} {...item} />
-                    ))}
-                </motion.div>
-            </div>
+            <RealtimeIdeaMarquee />
         </div>
     );
 };
@@ -430,4 +429,3 @@ const FeatureScroll = () => {
 };
 
 export default FeatureScroll;
-

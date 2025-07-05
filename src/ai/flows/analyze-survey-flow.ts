@@ -1,6 +1,6 @@
 'use server';
 /**
- * @fileOverview An AI flow to analyze user survey feedback.
+ * @fileOverview An AI flow to analyze user survey feedback and store valid ideas.
  *
  * - analyzeSurvey - A function that handles the survey analysis.
  * - SurveyAnalysisInput - The input type for the analyzeSurvey function.
@@ -9,6 +9,7 @@
 
 import { ai } from '@/ai/genkit';
 import { z } from 'zod';
+import { addIdea } from '@/services/ideasService';
 
 const SurveyAnalysisInputSchema = z.object({
   examType: z.string().describe('The type of exam the user is studying for.'),
@@ -27,7 +28,62 @@ const SurveyAnalysisOutputSchema = z.object({
 export type SurveyAnalysisOutput = z.infer<typeof SurveyAnalysisOutputSchema>;
 
 export async function analyzeSurvey(input: SurveyAnalysisInput): Promise<SurveyAnalysisOutput> {
-  return await analyzeSurveyFlow(input);
+  const analysisPromise = analyzeSurveyFlow(input);
+
+  // Don't wait for moderation to finish, but let it run in the background.
+  // This makes the UI feel faster for the user.
+  moderateAndStoreIdea(input).catch(console.error);
+  
+  return await analysisPromise;
+}
+
+async function moderateAndStoreIdea(input: SurveyAnalysisInput) {
+  try {
+    const { response } = await ai.generate({
+      // We pass the user-generated content directly as the prompt.
+      // The safety settings will then evaluate this content.
+      prompt: input.featureRequests,
+      config: {
+        // Use strict safety settings to block harmful content.
+        // The model will refuse to generate text if the prompt is unsafe.
+        safetySettings: [
+          { category: 'HARM_CATEGORY_HATE_SPEECH', threshold: 'BLOCK_MEDIUM_AND_ABOVE' },
+          { category: 'HARM_CATEGORY_DANGEROUS_CONTENT', threshold: 'BLOCK_MEDIUM_AND_ABOVE' },
+          { category: 'HARM_CATEGORY_HARASSMENT', threshold: 'BLOCK_MEDIUM_AND_ABOVE' },
+          { category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT', threshold: 'BLOCK_MEDIUM_AND_ABOVE' },
+        ],
+      },
+    });
+
+    // The response is blocked if the content violates safety settings.
+    if (response.blocked) {
+      console.log('Idea rejected by content safety filter:', input.featureRequests);
+      return;
+    }
+    
+    // Generate a persona for the Idea Wall
+    const role = `${input.examType} Student`;
+    const author = `${input.goal.split(' ')[0]} Aspirant`;
+    const avatar = author.split(' ').map(n => n[0]).join('') || 'U';
+    
+    // Simple way to cycle through a few colors
+    const colors = ['hsl(var(--primary))', 'hsl(var(--accent))', 'hsl(200 96% 87%)', 'hsl(300 96% 87%)', 'hsl(150 96% 87%)', 'hsl(50 96% 87%)'];
+    const glowColor = colors[Math.floor(Math.random() * colors.length)];
+
+    // If safe, add the idea to Firestore
+    await addIdea({
+      idea: input.featureRequests,
+      author,
+      role,
+      avatar,
+      glowColor,
+    });
+    
+    console.log('Idea stored successfully:', input.featureRequests);
+
+  } catch (error) {
+    console.error('Error in moderateAndStoreIdea:', error);
+  }
 }
 
 const surveyAnalysisPrompt = ai.definePrompt({
