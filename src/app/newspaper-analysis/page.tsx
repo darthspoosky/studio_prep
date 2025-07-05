@@ -27,9 +27,31 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 
-const MCQ = ({ question, subject, explanation, children }: { question: string, subject: string, explanation: string, children: React.ReactNode }) => {
+const DifficultyGauge = ({ score }: { score: number }) => {
+    if (isNaN(score) || score < 1 || score > 10) return null;
+    const percentage = score * 10;
+
+    const label = score <= 3 ? 'Easy' : score <= 7 ? 'Medium' : 'Hard';
+
+    return (
+        <div className="flex items-center gap-2 mb-2">
+            <span className="text-xs font-semibold text-muted-foreground uppercase">Difficulty: {label}</span>
+            <div className="w-20 h-2 bg-muted rounded-full overflow-hidden">
+                <div 
+                    className="h-full bg-gradient-to-r from-green-400 via-yellow-400 to-red-500"
+                    style={{ width: `${percentage}%` }}
+                />
+            </div>
+            <span className="text-xs font-bold text-foreground">{score}/10</span>
+        </div>
+    );
+};
+
+
+const MCQ = ({ question, subject, explanation, children, difficultyScore }: { question: string, subject: string, explanation: string, children: React.ReactNode, difficultyScore?: string }) => {
   const [selected, setSelected] = useState<string | null>(null);
   const [isAnswered, setIsAnswered] = useState(false);
+  const score = difficultyScore ? parseInt(difficultyScore, 10) : null;
 
   const options = React.Children.toArray(children).filter(
     (child): child is React.ReactElement<{ children: string, correct?: string }> =>
@@ -46,6 +68,7 @@ const MCQ = ({ question, subject, explanation, children }: { question: string, s
 
   return (
     <div className="my-6 p-4 border rounded-lg bg-background/50 shadow-sm">
+      {score && <DifficultyGauge score={score} />}
       <p className="font-semibold leading-relaxed text-foreground">{question}</p>
       {subject && <Badge variant="secondary" className="mb-4 mt-2 font-normal">{subject}</Badge>}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-4">
@@ -135,7 +158,21 @@ const markdownComponents = {
   
   // Premium styling for standard markdown
   h1: (props: any) => <h1 className="text-3xl font-bold font-headline mt-8 pb-2 border-b-2 border-primary/30 text-primary" {...props} />,
-  h2: (props: any) => <h2 className="text-2xl font-bold font-headline mt-8 mb-4 p-4 bg-primary/5 border-l-4 border-primary rounded-r-lg" {...props} />,
+  h2: (props: any) => {
+    const content = React.Children.toArray(props.children).join('');
+    const difficultyRegex = / \(Difficulty: (\d{1,2})\/10\)$/;
+    const match = content.match(difficultyRegex);
+    
+    const title = match ? content.replace(difficultyRegex, '') : content;
+    const score = match ? parseInt(match[1], 10) : null;
+
+    return (
+      <div className="text-2xl font-bold font-headline mt-8 mb-4 p-4 bg-primary/5 border-l-4 border-primary rounded-r-lg">
+          <h2 {...props}>{title}</h2>
+          {score && <div className="mt-2"><DifficultyGauge score={score} /></div>}
+      </div>
+    );
+  },
   h3: (props: any) => <h3 className="text-xl font-semibold font-headline mt-6 mb-2 text-primary/90" {...props} />,
   blockquote: (props: any) => <blockquote className="relative border-l-4 border-primary bg-primary/10 p-4 my-4 rounded-r-lg italic text-muted-foreground" {...props} />,
   p: (props: any) => <p className="leading-relaxed my-4" {...props} />,
@@ -234,7 +271,6 @@ export default function NewspaperAnalysisPage() {
     text: "",
     examType: "UPSC Civil Services",
     analysisFocus: "Generate Questions (Mains & Prelims)",
-    difficulty: "Standard",
     outputLanguage: "English",
   });
   const { toast } = useToast();
@@ -264,11 +300,10 @@ export default function NewspaperAnalysisPage() {
     setAudioSrc(null);
 
     try {
-        const flowInput: NewspaperAnalysisInput = {
+        const flowInput: Omit<NewspaperAnalysisInput, 'difficulty'> = {
             sourceText,
             examType: inputs.examType,
             analysisFocus: inputs.analysisFocus,
-            difficulty: inputs.difficulty,
             outputLanguage: inputs.outputLanguage,
         };
         const result = await analyzeNewspaperArticle(flowInput);
@@ -410,34 +445,19 @@ export default function NewspaperAnalysisPage() {
                                 </SelectContent>
                             </Select>
                         </div>
-                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                          <div className="space-y-2">
-                              <Label htmlFor="exam-type">Exam Type</Label>
-                              <Select value={inputs.examType} onValueChange={(value) => handleInputChange("examType", value)}>
-                                  <SelectTrigger id="exam-type">
-                                      <SelectValue placeholder="Select an exam type" />
-                                  </SelectTrigger>
-                                  <SelectContent>
-                                      <SelectItem value="UPSC Civil Services">UPSC Civil Services</SelectItem>
-                                      <SelectItem value="State PSC">State PSC</SelectItem>
-                                      <SelectItem value="RBI Grade B">RBI Grade B</SelectItem>
-                                      <SelectItem value="Other Competitive Exams">Other Competitive Exams</SelectItem>
-                                  </SelectContent>
-                              </Select>
-                          </div>
-                          <div className="space-y-2">
-                              <Label htmlFor="difficulty">Difficulty Level</Label>
-                              <Select value={inputs.difficulty} onValueChange={(value) => handleInputChange("difficulty", value)}>
-                                  <SelectTrigger id="difficulty">
-                                      <SelectValue placeholder="Select a difficulty level" />
-                                  </SelectTrigger>
-                                  <SelectContent>
-                                      <SelectItem value="Standard">Standard</SelectItem>
-                                      <SelectItem value="Advanced">Advanced</SelectItem>
-                                      <SelectItem value="Expert">Expert</SelectItem>
-                                  </SelectContent>
-                              </Select>
-                          </div>
+                         <div className="space-y-2">
+                            <Label htmlFor="exam-type">Exam Type</Label>
+                            <Select value={inputs.examType} onValueChange={(value) => handleInputChange("examType", value)}>
+                                <SelectTrigger id="exam-type">
+                                    <SelectValue placeholder="Select an exam type" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="UPSC Civil Services">UPSC Civil Services</SelectItem>
+                                    <SelectItem value="State PSC">State PSC</SelectItem>
+                                    <SelectItem value="RBI Grade B">RBI Grade B</SelectItem>
+                                    <SelectItem value="Other Competitive Exams">Other Competitive Exams</SelectItem>
+                                </SelectContent>
+                            </Select>
                         </div>
                     </CardContent>
                     <CardFooter>

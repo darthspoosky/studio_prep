@@ -25,7 +25,6 @@ const NewspaperAnalysisInputSchema = z.object({
     .describe(
       'The specific type of analysis requested by the user, e.g., "Generate Questions (Mains & Prelims)".'
     ),
-  difficulty: z.string().describe('The difficulty level for question generation: Standard, Advanced, or Expert.'),
   outputLanguage: z.string().describe('The language for the analysis output, e.g., "Hindi".'),
 });
 export type NewspaperAnalysisInput = z.infer<typeof NewspaperAnalysisInputSchema>;
@@ -103,7 +102,6 @@ First, your critical tasks are:
 
 The user is preparing for the '{{{examType}}}' exam.
 The requested analysis focus is: '{{{analysisFocus}}}'.
-The requested difficulty for question generation is: '{{{difficulty}}}'.
 
 Here is the source material to analyze:
 "{{{sourceText}}}"
@@ -123,12 +121,10 @@ Based on the 'analysisFocus', generate a detailed, well-structured response.
 Follow these specific instructions for the given 'analysisFocus':
 
 1.  If 'analysisFocus' is 'Generate Questions (Mains & Prelims)':
-    *   **Prelims Questions**: Your objective is to create questions that mirror the analytical and multi-statement style of the actual UPSC Prelims exam, not simple factual recall. Generate 3-5 potential MCQs based on the requested '{{{difficulty}}}'.
-        *   'Standard' difficulty should test a solid understanding of the core concepts presented in the article.
-        *   'Advanced' difficulty should require connecting multiple facts from the article or linking the article's content to static syllabus knowledge. Frame these as "statement-based" questions (e.g., "Consider the following statements... Which of the statements given above is/are correct?").
-        *   'Expert' difficulty should involve deep analytical skills, application of concepts to new situations, or questions that test the candidate's ability to identify subtle nuances and implications.
-    *   For each MCQ, you MUST wrap it in the following custom tag structure. Each option MUST be on its own line and inside its own <option> tag. Do not combine options into a single line. The 'subject' attribute must be as granular as possible.
-    *   <mcq question="The full question text here..." subject="e.g., GS Paper II - Polity & Governance" explanation="A thorough explanation of the answer.">
+    *   **Prelims Questions**: Your objective is to create questions that mirror the analytical and multi-statement style of the actual UPSC Prelims exam, not simple factual recall. Generate 3-5 potential MCQs. For each MCQ, you MUST assign a difficulty score from 1 (very easy) to 10 (expert-level) and include it as an attribute.
+        *   Frame questions as "statement-based" (e.g., "Consider the following statements... Which of the statements given above is/are correct?") where possible to test analytical skills.
+        *   For each MCQ, you MUST wrap it in the following custom tag structure. Each option MUST be on its own line and inside its own <option> tag. Do not combine options into a single line. The 'subject' attribute must be as granular as possible.
+    *   <mcq question="The full question text here..." subject="e.g., GS Paper II - Polity & Governance" explanation="A thorough explanation of the answer." difficultyScore="7">
     *   <option correct="true">Correct answer.</option>
     *   <option>Incorrect answer.</option>
     *   <option>Incorrect answer.</option>
@@ -137,10 +133,8 @@ Follow these specific instructions for the given 'analysisFocus':
     *   **CRITICAL: Place the entire generated Prelims questions markdown into the 'analysis' field of the output JSON.**
     *
     *   **Mains Questions**: Frame 2-3 questions that demand critical thinking, analysis, and a structured argument, reflecting the style of the UPSC Mains exam. The questions should use directive words like 'Critically analyze', 'Elucidate', 'Discuss', 'Comment', or 'Examine'.
-        *   'Standard' questions should require a thorough explanation and discussion of a topic (e.g., 'Discuss the implications of...').
-        *   'Advanced' questions should demand critical analysis, comparison, or evaluation (e.g., 'Critically analyze the pros and cons of...').
-        *   'Expert' questions should ask for nuanced elucidation or present a complex, multi-dimensional scenario requiring a synthesized answer.
-    *   **CRITICAL FORMATTING**: For EACH Mains question, you MUST format it as a markdown H2 heading (e.g., '## This is the Mains Question?').
+    *   For each Mains question, you MUST rate its difficulty on a scale of 1-10 and include it in the heading.
+    *   **CRITICAL FORMATTING**: For EACH Mains question, you MUST format it as a markdown H2 heading and append the difficulty. For example: '## This is the Mains Question? (Difficulty: 8/10)'.
     *   After EACH Mains question heading, you MUST provide a detailed "### Guidance for Answer" section. This is critical. This guidance should be highly structured and include the following as bullet points:
         *   **Key Concepts:** List the core theoretical concepts from the syllabus (e.g., Federalism, Judicial Review, Fiscal Policy) that are central to answering the question.
         *   **Ideal Structure:** Provide a clear, step-by-step structure.
@@ -188,10 +182,10 @@ const verificationPrompt = ai.definePrompt({
     2.  **FORMAT & STRUCTURE VERIFICATION (TOP PRIORITY):** This is your most important task. Scrutinize the 'generatedAnalysis' markdown.
         *   If '{{{analysisFocus}}}' was 'Generate Questions (Mains & Prelims)':
             *   Check the 'analysis' field for Prelims questions and the 'mainsQuestions' field for Mains questions.
-            *   Find every '<mcq>' tag in the 'analysis' field. Ensure it has a closing '</mcq>' tag.
+            *   Find every '<mcq>' tag in the 'analysis' field. Ensure it has a closing '</mcq>' tag and a 'difficultyScore' attribute.
             *   Inside each '<mcq>', ensure there are multiple '<option>' tags.
             *   Ensure each '<option>' tag is on its own separate line.
-            *   In the 'mainsQuestions' field, ensure EVERY question is preceded by a markdown '##' heading.
+            *   In the 'mainsQuestions' field, ensure EVERY question is preceded by a markdown '##' heading and that the heading includes the difficulty rating, like '(Difficulty: X/10)'.
             *   Fix any and all broken, incomplete, or improperly formatted tags or markdown headings.
         *   If '{{{analysisFocus}}}' was 'Prelims Fact Finder (...)':
             *   Fix any broken custom tags (e.g., '<person>', '<place>', etc.).
