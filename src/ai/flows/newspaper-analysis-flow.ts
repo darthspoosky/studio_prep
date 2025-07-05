@@ -113,7 +113,7 @@ Follow these specific instructions for the given 'analysisFocus':
         *   'Standard' difficulty should focus on direct recall of facts from the article.
         *   'Advanced' difficulty should require connecting multiple facts or understanding nuanced implications.
         *   'Expert' difficulty should involve analytical skills, application of concepts, or 'statement-based' questions (e.g., "Consider the following statements...").
-    *   For each MCQ, you MUST wrap it in the following custom tag structure, including a detailed explanation:
+    *   For each MCQ, you MUST wrap it in the following custom tag structure. Each option MUST be on its own line and inside its own <option> tag. Do not combine options into a single line.
     *   <mcq question="The full question text here..." subject="e.g., GS Paper II - Polity & Governance - Federal Structure" explanation="A detailed explanation for why the correct answer is correct and the others are incorrect. This must be thorough.">
     *   <option correct="true">The correct answer option.</option>
     *   <option>An incorrect answer option.</option>
@@ -157,7 +157,7 @@ Remember to generate the separate, concise 2-3 sentence 'summary' field first, t
 
 const VerificationInputSchema = z.object({
     sourceText: z.string().describe('The original article content.'),
-    generatedAnalysis: NewspaperAnalysisOutputSchema.describe('The AI-generated analysis and summary object to be verified.'),
+    generatedAnalysisString: z.string().describe('The AI-generated analysis and summary object as a JSON string to be verified.'),
 });
 
 const verificationPrompt = ai.definePrompt({
@@ -179,9 +179,9 @@ const verificationPrompt = ai.definePrompt({
     {{{sourceText}}}
     ---
 
-    **Generated Analysis Object to Verify and Correct:**
+    **Generated Analysis Object to Verify and Correct (as a JSON string):**
     ---json
-    {{{jsonStringify generatedAnalysis}}}
+    {{{generatedAnalysisString}}}
     ---
 
     Return the final, polished analysis object now.`,
@@ -217,7 +217,7 @@ const analyzeNewspaperArticleFlow = ai.defineFlow(
     // Step 3: Verify and fact-check the analysis
     const { output: verifiedOutput } = await verificationPrompt({
         sourceText: input.sourceText,
-        generatedAnalysis: initialOutput,
+        generatedAnalysisString: JSON.stringify(initialOutput),
     });
     if (!verifiedOutput) {
         throw new Error("Verification step failed.");

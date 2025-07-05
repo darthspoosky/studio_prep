@@ -1,7 +1,7 @@
 
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -158,6 +158,8 @@ const AnalysisOutputDisplay = ({ analysis }: { analysis: string }) => (
     </ReactMarkdown>
 );
 
+const MAINS_HEADING = '## Potential Mains Questions';
+
 export default function NewspaperAnalysisPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [isGeneratingAudio, setIsGeneratingAudio] = useState(false);
@@ -237,6 +239,20 @@ export default function NewspaperAnalysisPage() {
       setIsGeneratingAudio(false);
     }
   };
+
+  const { prelimsContent, mainsContent } = useMemo(() => {
+    if (!analysisResult || inputs.analysisFocus !== 'Generate Questions (Mains & Prelims)') {
+        return { prelimsContent: null, mainsContent: null };
+    }
+
+    const parts = analysisResult.analysis.split(MAINS_HEADING);
+    return {
+        prelimsContent: parts[0],
+        mainsContent: parts.length > 1 ? `${MAINS_HEADING}\n${parts[1]}` : null
+    };
+  }, [analysisResult, inputs.analysisFocus]);
+
+  const showTabs = !!prelimsContent;
 
 
   return (
@@ -366,7 +382,7 @@ export default function NewspaperAnalysisPage() {
                                 )}
                             </div>
                         </CardHeader>
-                        <CardContent className="flex-1 flex flex-col">
+                        <div className="flex-1 flex flex-col px-6 pb-6 pt-0">
                             {isLoading && (
                                 <div className="flex flex-col items-center justify-center text-center h-full flex-1 p-8">
                                     <Loader2 className="w-16 h-16 text-primary/50 animate-spin mb-4" />
@@ -382,7 +398,7 @@ export default function NewspaperAnalysisPage() {
                                 </div>
                             )}
                             {!isLoading && analysisResult && (
-                              <>
+                              <div className="flex-1 flex flex-col">
                                 <div className="mb-4 space-y-4">
                                   {analysisResult.summary && (
                                     <div className="p-4 bg-primary/10 rounded-lg flex items-center gap-4">
@@ -401,12 +417,34 @@ export default function NewspaperAnalysisPage() {
                                     </motion.div>
                                   )}
                                 </div>
-                                <ScrollArea className="h-[450px] w-full pr-4 -mr-4">
-                                   <AnalysisOutputDisplay analysis={analysisResult.analysis} />
-                                </ScrollArea>
-                              </>
+
+                                {showTabs ? (
+                                    <Tabs defaultValue="prelims" className="w-full flex-1 flex flex-col">
+                                        <TabsList>
+                                            <TabsTrigger value="prelims">Prelims Questions</TabsTrigger>
+                                            {mainsContent && <TabsTrigger value="mains">Mains Questions</TabsTrigger>}
+                                        </TabsList>
+                                        <TabsContent value="prelims" className="flex-1 mt-4">
+                                            <ScrollArea className="h-[400px] w-full pr-4 -mr-4">
+                                                <AnalysisOutputDisplay analysis={prelimsContent || ''} />
+                                            </ScrollArea>
+                                        </TabsContent>
+                                        {mainsContent && (
+                                            <TabsContent value="mains" className="flex-1 mt-4">
+                                                <ScrollArea className="h-[400px] w-full pr-4 -mr-4">
+                                                    <AnalysisOutputDisplay analysis={mainsContent} />
+                                                </ScrollArea>
+                                            </TabsContent>
+                                        )}
+                                    </Tabs>
+                                ) : (
+                                    <ScrollArea className="h-[450px] w-full pr-4 -mr-4">
+                                        <AnalysisOutputDisplay analysis={analysisResult.analysis} />
+                                    </ScrollArea>
+                                )}
+                              </div>
                             )}
-                        </CardContent>
+                        </div>
                     </Card>
                     <DialogContent className="max-w-5xl h-[90vh] flex flex-col">
                         <DialogHeader>
