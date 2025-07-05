@@ -162,7 +162,7 @@ const RealtimeIdeaMarquee = () => {
                 transition={{ ease: 'linear', duration: 40, repeat: Infinity }}
             >
                 {duplicatedIdeas.map((item, index) => (
-                    <IdeaCard key={`marquee-1-${item.id || item.featureRequests}`} {...item} />
+                    <IdeaCard key={`marquee-1-${item.id || item.featureRequests}-${index}`} {...item} />
                 ))}
             </motion.div>
             <motion.div 
@@ -171,7 +171,7 @@ const RealtimeIdeaMarquee = () => {
                 transition={{ ease: 'linear', duration: 40, repeat: Infinity }}
             >
                 {duplicatedIdeas.map((item, index) => (
-                    <IdeaCard key={`marquee-2-${item.id || item.featureRequests}`} {...item} />
+                    <IdeaCard key={`marquee-2-${item.id || item.featureRequests}-${index}`} {...item} />
                 ))}
             </motion.div>
         </div>
