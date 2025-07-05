@@ -111,7 +111,7 @@ const SurveyModal = ({ isOpen, onOpenChange }: SurveyModalProps) => {
                   defaultValue={field.value}
                   className="flex flex-col space-y-1"
                 >
-                  {['SAT/ACT', 'GRE/GMAT', 'MCAT', 'Professional Certification', 'Other'].map((exam) => (
+                  {['UPSC Civil Services', 'RBI Grade B / SEBI', 'CAT / MBA Entrance', 'Bank PO / Clerk', 'SSC CGL / CHSL', 'Other'].map((exam) => (
                     <FormItem key={exam} className="flex items-center space-x-3 space-y-0">
                       <FormControl>
                         <RadioGroupItem value={exam} />
@@ -138,7 +138,7 @@ const SurveyModal = ({ isOpen, onOpenChange }: SurveyModalProps) => {
           render={({ field }) => (
             <FormItem>
               <FormControl>
-                <Textarea placeholder="e.g., Finding good practice questions, staying motivated..." {...field} rows={5}/>
+                <Textarea placeholder="e.g., Covering the vast syllabus, current affairs, writing practice for mains..." {...field} rows={5}/>
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -157,7 +157,7 @@ const SurveyModal = ({ isOpen, onOpenChange }: SurveyModalProps) => {
           render={({ field }) => (
             <FormItem>
               <FormControl>
-                <Textarea placeholder="e.g., A tool to automatically create flashcards, a study schedule planner..." {...field} rows={5}/>
+                <Textarea placeholder="e.g., Daily current affairs analysis, mock interview practice, essay feedback..." {...field} rows={5}/>
               </FormControl>
               <FormMessage />
             </FormItem>
