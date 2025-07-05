@@ -297,7 +297,7 @@ const AnimatedCard = ({
 
   const showcaseY = useTransform(scrollYProgress, [showcaseStartTime, showcaseEndTime], ["4rem", "0rem"]);
   
-  const finalStackY = (i) * 30;
+  const finalStackY = (i - (tools.length - 1)) * 15;
 
   const stackingY = useTransform(
     scrollYProgress,
@@ -331,7 +331,7 @@ const AnimatedCard = ({
         opacity,
         scale,
         translateY: y,
-        zIndex: tools.length - i,
+        zIndex: i,
       }}
       className="absolute h-[450px] w-full max-w-2xl"
     >
