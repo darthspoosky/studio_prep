@@ -191,7 +191,7 @@ const MobileView = () => {
                 </div>
 
                 <div className="relative mt-12 flex flex-col justify-center overflow-hidden py-12">
-                    <div className="flex flex-col gap-8 -rotate-3">
+                    <div className="flex flex-col gap-8 -rotate-3 py-10">
                         <motion.div 
                             className="flex gap-8"
                             animate={{ x: ['0%', '-100%'] }}
@@ -336,7 +336,7 @@ const IdeaBoard = () => {
                 </p>
             </div>
             
-            <div className="flex flex-col gap-8 -rotate-3">
+            <div className="flex flex-col gap-8 -rotate-3 py-10">
                 <motion.div 
                     className="flex gap-8"
                     animate={{ x: ['0%', '-100%'] }}
