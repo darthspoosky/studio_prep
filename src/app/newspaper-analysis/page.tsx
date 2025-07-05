@@ -18,6 +18,31 @@ import { analyzeNewspaperArticle, type NewspaperAnalysisInput } from "@/ai/flows
 import { ScrollArea } from "@/components/ui/scroll-area";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
+import rehypeRaw from "rehype-raw";
+
+const markdownComponents = {
+  // Custom tag renderers
+  person: (props: any) => <span className="entity-tag entity-person">{props.children}</span>,
+  place: (props: any) => <span className="entity-tag entity-place">{props.children}</span>,
+  scheme: (props: any) => <span className="entity-tag entity-scheme">{props.children}</span>,
+  date: (props: any) => <span className="entity-tag entity-date">{props.children}</span>,
+  org: (props: any) => <span className="entity-tag entity-org">{props.children}</span>,
+  
+  // Premium styling for standard markdown
+  h1: (props: any) => <h1 className="text-2xl font-bold font-headline mt-6 pb-2 border-b-2 border-primary/30 text-primary" {...props} />,
+  h2: (props: any) => <h2 className="text-xl font-bold font-headline mt-6 pb-2 border-b border-primary/20" {...props} />,
+  h3: (props: any) => <h3 className="text-lg font-semibold font-headline mt-4" {...props} />,
+  blockquote: (props: any) => <blockquote className="relative border-l-4 border-primary bg-primary/10 p-4 my-4 rounded-r-lg italic text-muted-foreground" {...props} />,
+  p: (props: any) => <p className="leading-relaxed my-4" {...props} />,
+  ul: (props: any) => <ul className="list-disc list-outside pl-6 my-4 space-y-2" {...props} />,
+  ol: (props: any) => <ol className="list-decimal list-outside pl-6 my-4 space-y-2" {...props} />,
+  li: (props: any) => <li className="pl-2" {...props} />,
+  code: (props: any) => <code className="bg-muted text-foreground font-mono text-sm rounded-md px-1.5 py-1" {...props} />,
+  table: (props: any) => <div className="my-6 w-full overflow-y-auto rounded-lg border"><table className="w-full" {...props} /></div>,
+  tr: (props: any) => <tr className="m-0 border-t p-0 even:bg-muted" {...props} />,
+  th: (props: any) => <th className="border-b border-r px-4 py-2 text-left font-bold bg-muted/50 [&[align=center]]:text-center [&[align=right]]:text-right" {...props} />,
+  td: (props: any) => <td className="border-r px-4 py-2 text-left [&[align=center]]:text-center [&[align=right]]:text-right" {...props} />,
+};
 
 export default function NewspaperAnalysisPage() {
   const [isLoading, setIsLoading] = useState(false);
@@ -193,8 +218,10 @@ export default function NewspaperAnalysisPage() {
                     {!isLoading && analysis && (
                         <ScrollArea className="h-[450px] w-full pr-4">
                             <ReactMarkdown
-                                className="prose prose-sm dark:prose-invert max-w-none prose-p:leading-relaxed prose-headings:font-headline prose-headings:text-primary prose-a:text-primary hover:prose-a:text-primary/80 prose-li:my-1 prose-blockquote:border-primary prose-strong:text-foreground"
                                 remarkPlugins={[remarkGfm]}
+                                rehypePlugins={[rehypeRaw]}
+                                components={markdownComponents}
+                                className="w-full"
                             >
                                 {analysis}
                             </ReactMarkdown>
