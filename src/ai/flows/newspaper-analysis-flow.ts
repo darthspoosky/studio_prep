@@ -35,6 +35,10 @@ const NewspaperAnalysisSyllabusInputSchema = NewspaperAnalysisInputSchema.extend
     mainsSyllabus: z.string().describe('The full text of the UPSC Mains syllabus.'),
 });
 
+const NewspaperAnalysisWithTopicInputSchema = NewspaperAnalysisSyllabusInputSchema.extend({
+    identifiedSyllabusTopic: z.string().describe('The pre-identified, granular syllabus topic for the article.'),
+});
+
 const NewspaperAnalysisOutputSchema = z.object({
   analysis: z.string().describe('The detailed, markdown-formatted analysis of the article.'),
   summary: z.string().describe('A concise, 2-3 sentence summary of the article, suitable for text-to-speech conversion.'),
@@ -51,6 +55,7 @@ export async function analyzeNewspaperArticle(input: NewspaperAnalysisInput): Pr
 
 const RelevanceCheckOutputSchema = z.object({
     isRelevant: z.boolean().describe('Whether the article content is relevant to the provided UPSC syllabus.'),
+    syllabusTopic: z.string().nullable().describe('The single most specific, granular syllabus topic the article relates to. If not relevant, this should be null.'),
     reasoning: z.string().describe('A brief explanation for why the article is or is not relevant, written in the requested output language.'),
 });
 
@@ -58,16 +63,15 @@ const relevanceCheckPrompt = ai.definePrompt({
     name: 'relevanceCheckPrompt',
     input: { schema: NewspaperAnalysisSyllabusInputSchema },
     output: { schema: RelevanceCheckOutputSchema },
-    prompt: `You are an AI assistant for a UPSC exam preparation tool. Your first task is to determine if a given article is relevant for a UPSC aspirant.
-      
-Analyze the source text and determine if its content relates to any topics in the provided UPSC Prelims or Mains syllabus.
+    prompt: `You are an AI assistant for a UPSC exam preparation tool. Your first task is to determine if a given article is relevant for a UPSC aspirant by tagging it to a specific syllabus topic.
 
-- If the article is about topics like politics, international relations, Indian economy, modern history, geography, environment, science & tech policy, social issues, etc., it is RELEVANT.
-- If the article is about topics like entertainment, celebrity gossip, sports results, fictional stories, or is purely advertising, it is NOT RELEVANT.
+Analyze the source text and compare it against the provided UPSC Prelims and Mains syllabus.
+1.  **Identify the single most specific, granular syllabus topic** the article relates to. For example, instead of just "GS-II", specify "GS Paper II - Governance - Role of Civil Services in a Democracy".
+2.  **Determine Relevance:**
+    *   If you can successfully tag the article to a specific syllabus topic, set \`isRelevant\` to \`true\` and populate the \`syllabusTopic\` field with the identified topic. The \`reasoning\` should briefly state the connection.
+    *   If the article is completely unrelated (e.g., sports scores, celebrity gossip, local crime, fiction) and you CANNOT tag it to a specific topic, set \`isRelevant\` to \`false\`, set \`syllabusTopic\` to \`null\`, and provide a brief one-sentence \`reasoning\` explaining why it's not relevant.
 
-Set 'isRelevant' to true or false. Provide a brief one-sentence reasoning.
-
-IMPORTANT: You MUST write the 'reasoning' in the language specified here: {{{outputLanguage}}}.
+IMPORTANT: You MUST write the 'reasoning' and 'syllabusTopic' (if found) in the language specified here: {{{outputLanguage}}}.
 
 Source Text: "{{{sourceText}}}"
 
@@ -81,7 +85,7 @@ Source Text: "{{{sourceText}}}"
 
 const analysisPrompt = ai.definePrompt({
   name: 'newspaperAnalysisPrompt',
-  input: { schema: NewspaperAnalysisSyllabusInputSchema },
+  input: { schema: NewspaperAnalysisWithTopicInputSchema },
   output: { schema: NewspaperAnalysisOutputSchema },
   prompt: `You are a world-class editor and exam coach AI for Indian competitive exam aspirants, with deep expertise in the UPSC syllabus. Your analysis must be presented in a premium, highly structured, and easy-to-digest format. 
 Use markdown extensively and intelligently: leverage headings, subheadings, blockquotes for key takeaways, bold text for keywords, and tables for data comparison.
@@ -89,7 +93,7 @@ Use markdown extensively and intelligently: leverage headings, subheadings, bloc
 IMPORTANT: Your entire response, including all analysis, questions, summaries, and explanations, MUST be in the following language: {{{outputLanguage}}}. Do not use English unless the specified language is English.
 
 First, your critical tasks are:
-1.  Read the provided article and cross-reference its content with the UPSC syllabus documents below to identify the most specific, granular syllabus topic it relates to. Mention this topic clearly at the beginning of your analysis.
+1.  The article has already been identified as relating to the following syllabus topic: '{{{identifiedSyllabusTopic}}}'. You MUST use this exact topic and mention it clearly at the beginning of your analysis.
 2.  Generate a concise, 2-3 sentence summary of the article's core message. CRITICAL: The summary MUST NOT contain any HTML, XML, or custom tags. It must be pure, clean, plain text suitable for a text-to-speech engine. Place this in the 'summary' field.
 
 The user is preparing for the '{{{examType}}}' exam.
@@ -207,15 +211,18 @@ const analyzeNewspaperArticleFlow = ai.defineFlow(
         throw new Error("Relevance check failed.");
     }
 
-    if (!relevanceResult.isRelevant) {
+    if (!relevanceResult.isRelevant || !relevanceResult.syllabusTopic) {
       return {
-        analysis: `## Article Not Relevant\n\n**Reasoning:** ${relevanceResult.reasoning}`,
+        analysis: `## Article Not Relevant\n\n**Reasoning:** ${relevanceResult.reasoning}\n\nPlease provide an article related to subjects like Indian Polity, Governance, Economy, History, Geography, or other topics covered in the UPSC syllabus to get a meaningful analysis.`,
         summary: ""
       };
     }
 
     // Step 2: Generate the initial analysis (if relevant)
-    const { output: initialOutput } = await analysisPrompt(input);
+    const { output: initialOutput } = await analysisPrompt({
+        ...input,
+        identifiedSyllabusTopic: relevanceResult.syllabusTopic,
+    });
     if (!initialOutput) {
         throw new Error("Initial analysis generation failed.");
     }
