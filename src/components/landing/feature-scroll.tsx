@@ -108,7 +108,9 @@ const FeedbackWall = ({ scrollYProgress }: { scrollYProgress: MotionValue<number
         <div className="relative h-screen flex flex-col justify-center overflow-hidden">
             <div className="container mx-auto px-4 text-center mb-16">
                 <h2 className="font-headline text-3xl md:text-4xl font-bold tracking-tight">
-                    From the PrepTalk Community
+                    <span className="animate-gradient-anim bg-[length:200%_auto] bg-gradient-to-r from-primary via-accent to-pink-500 bg-clip-text text-transparent">
+                        From the PrepTalk Community
+                    </span>
                 </h2>
                 <p className="mt-3 max-w-2xl mx-auto text-lg text-muted-foreground">
                     See what our users are saying about their prep journey with us.
@@ -155,9 +157,19 @@ const AnimatedCard = ({
   const showcaseDurationPerCard = (showcaseEnd - 0.05) / tools.length;
   const showcaseStartTime = 0.05 + i * showcaseDurationPerCard;
   const showcaseEndTime = showcaseStartTime + showcaseDurationPerCard;
+  
   const isLastCard = i === tools.length - 1;
 
-  // --- Opacity ---
+  const lastCardOpacity = useTransform(
+    scrollYProgress,
+    [
+      showcaseStartTime,
+      showcaseStartTime + 0.02,
+      stackingEnd
+    ],
+    [0, 1, 1]
+  );
+  
   const showcaseOpacity = useTransform(
     scrollYProgress,
     [
@@ -168,19 +180,11 @@ const AnimatedCard = ({
     ],
     [0, 1, 1, 0]
   );
+  
   const stackingOpacity = useTransform(
     scrollYProgress,
     [stackingStart, stackingStart + 0.05],
     [0, 1]
-  );
-  const lastCardOpacity = useTransform(
-    scrollYProgress,
-    [
-      showcaseStartTime,
-      showcaseStartTime + 0.02,
-      stackingEnd
-    ],
-    [0, 1, 1]
   );
 
   const opacity = useTransform(scrollYProgress, (p) => {
@@ -195,12 +199,15 @@ const AnimatedCard = ({
 
   // --- Y Position (translateY for performance) ---
   const showcaseY = useTransform(scrollYProgress, [showcaseStartTime, showcaseEndTime], ["4rem", "0rem"]);
-  const finalStackY = i * 30;
+  
+  const finalStackY = (i) * 30;
+
   const stackingY = useTransform(
     scrollYProgress,
     [stackingStart, stackingEnd],
     [0, finalStackY]
   );
+
   const y = useTransform(scrollYProgress, (p) => {
     if (p < stackingStart) return showcaseY.get();
     return stackingY.get();
@@ -208,12 +215,15 @@ const AnimatedCard = ({
 
   // --- Scale ---
   const showcaseScale = useTransform(scrollYProgress, [showcaseStartTime, showcaseEndTime], [0.95, 1]);
+  
   const finalStackScale = 1 - (tools.length - 1 - i) * 0.05;
+
   const stackingScale = useTransform(
     scrollYProgress,
     [stackingStart, stackingEnd],
     [1, finalStackScale]
   );
+
   const scale = useTransform(scrollYProgress, (p) => {
     if (p < stackingStart) return showcaseScale.get();
     return stackingScale.get();
