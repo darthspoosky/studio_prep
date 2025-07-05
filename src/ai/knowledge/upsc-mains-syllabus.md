@@ -110,6 +110,100 @@ This file will serve as the knowledge base for our AI to understand the Mains cu
 
 ### **Paper-III: General Studies–II** (Governance, Constitution, Polity, Social Justice and International relations)
 
+- Indian Constitution—Historical Underpinnings, Evolution, Features, Amendments, Significant Provisions and Basic Structure.
+- Functions and Responsibilities of the Union and the States, Issues and Challenges Pertaining to the Federal Structure, Devolution of Powers and Finances up to Local Levels and Challenges Therein.
+- Separation of Powers between various organs Dispute Redressal Mechanisms and Institutions.
+- Comparison of the Indian Constitutional Scheme with that of Other Countries.
+- Parliament and State Legislatures—Structure, Functioning, Conduct of Business, Powers & Privileges and Issues Arising out of these.
+- Structure, Organization and Functioning of the Executive and the Judiciary—Ministries and Departments of the Government; Pressure Groups and Formal/Informal Associations and their Role in the Polity.
+- Salient Features of the Representation of People’s Act.
+- Appointment to various Constitutional Posts, Powers, Functions and Responsibilities of various Constitutional Bodies.
+- Statutory, Regulatory and various Quasi-judicial Bodies.
+- Government Policies and Interventions for Development in various sectors and Issues arising out of their Design and Implementation.
+- Development Processes and the Development Industry — the Role of NGOs, SHGs, various groups and associations, donors, charities, institutional and other stakeholders.
+- Welfare Schemes for Vulnerable Sections of the population by the Centre and States and the Performance of these Schemes; Mechanisms, Laws, Institutions and Bodies constituted for the Protection and Betterment of these Vulnerable Sections.
+- Issues Relating to Development and Management of Social Sector/Services relating to Health, Education, Human Resources.
+- Issues relating to Poverty and Hunger.
+- Important Aspects of Governance, Transparency and Accountability, E-governance- applications, models, successes, limitations, and potential; Citizens Charters, Transparency & Accountability and institutional and other measures.
+- Role of Civil Services in a Democracy.
+- India and its Neighborhood- Relations.
+- Bilateral, Regional and Global Groupings and Agreements involving India and/or affecting India’s interests.
+- Effect of Policies and Politics of Developed and Developing Countries on India’s interests, Indian Diaspora.
+- Important International Institutions, agencies and fora - their Structure, Mandate.
+
+---
+#### Polity
+
+##### Indian Constitution
+- **Historical Underpinning & Evolution:** Regulating Act (1773) to Independence Act (1947), Constituent Assembly, Objective Resolution, Enactment & Enforcement of Constitution.
+- **Features:** Written, Flexible & Rigid, Federal & Unitary, Parliamentary Form of Government.
+- **Amendments:** Significant Amendments & Their Provisions, Procedure for Amending Constitution.
+- **Significant Provisions:** Fundamental Rights, DPSP, Judicial Review, Universal Adult Franchise, Single Citizenship, Separation of Powers.
+- **Basic Structure:** The Doctrine, Judgments & Cases.
+
+##### Functions & Responsibilities of the Union and the States
+- **7th Schedule:** Legislative, Financial, Administrative & Quasi-Judicial Functions.
+- **Federal Structure:** Cooperative & Competitive Federalism, Centre-State & Inter-State Relations, Emergency Provisions, Role of Governor.
+- **Commission Reports:** 2nd ARC, Punchhi, Sarkaria, etc.
+
+##### Devolution of Powers & Finances to Local Levels & Challenges Therein
+- Role of State Government & State Finance Commission, 11th & 12th Schedule, Reasons for Ineffective Performance.
+
+##### Separation of Powers
+- Doctrine of Separation of Power, Checks & Balances, Related Judgments.
+
+##### Dispute Redressal Mechanisms
+- RTI, PIL, Tribunals.
+
+##### Comparison of the Indian Constitutional Scheme with that of Other Countries
+- Written Constitution, Blend of Rigidity and Flexibility, Federal System with Unitary Bias, Parliamentary Form of Government, etc.
+
+##### Parliament & State Legislatures
+- Structure, Functioning, Conduct of Business, Powers & Privileges.
+
+##### Structure, Organization & Functioning of the Executive and the Judiciary
+- **Executive:** Union (President, PM, CoM) & State (Governor, CM, CoM).
+- **Judiciary:** Three-Tier Structure, CJI, SC & HC Judges, Jurisdiction.
+- **Ministries and Departments.**
+- **Pressure Groups & Formal/informal Associations.**
+
+##### Salient Features of Representation of People's Act
+
+##### Constitutional Bodies
+- Appointment, Powers, Functions & Responsibilities of: Election Commission, UPSC, SPSC, Finance Commission, NCSC, NCST, CAG, etc.
+
+##### Statutory, Regulatory & Quasi-Judicial Bodies
+- NITI Aayog, NHRC, CIC, CVC, CBI, Lokpal, RBI, SEBI, TRAI, NGT, etc.
+
+---
+#### Governance
+
+- **Government Policies & Interventions:** Issues in design & implementation, critical assessment of schemes (e.g., Beti Bachao, Smart City, MGNREGA).
+- **Development Processes:** Role of NGOs, SHGs, Cooperatives, Trusts.
+- **Important Aspects of Governance:** Good Governance, E-Governance (models, limitations), Citizens Charters (Sevottam Model), Transparency & Accountability (RTI, Social Audit, Whistleblower Protection).
+- **Role of Civil Services in a Democracy:** Issues (lack of professionalism, political interference), required reforms.
+
+---
+#### Social Justice
+
+- **Welfare Schemes for Vulnerable Sections:** For SCs, STs, Minorities, Children, Elderly, Disabled, Women, Transgender.
+- **Mechanisms for Protection:** The Protection of Civil Rights Act, POCSO Act, Domestic Violence Act, National Commissions (for SCs, STs, Women, etc.).
+- **Development & Management of Social Sector/Services:**
+    - **Health:** Health indicators, infrastructure, National Health Policy, government initiatives.
+    - **Education:** Status of literacy, challenges, government initiatives, ASER Report.
+    - **Human Resources:** Skill development initiatives and challenges.
+- **Issues Relating to Poverty & Hunger:** Relation, magnitude, causes, impact, National Food Security Act, Mid-day Meal Scheme.
+
+---
+#### International Relations
+
+- **India and its Neighborhood:** Relations with China, Pakistan, Myanmar, Bhutan, Bangladesh, Sri Lanka, Afghanistan, Nepal, Maldives.
+- **Bilateral, Regional & Global Groupings:** Foreign policy doctrines (NAM, Look East), relations with major powers (USA, Russia), groupings (SAARC, BRICS, BIMSTEC, ASEAN, SCO, G-20).
+- **Effect of Policies of other countries on India:** One Belt One Road, global trade/currency wars, Syrian crisis, UN/WTO reforms, Brexit, US sanctions.
+- **Indian Diaspora:** Spread, diaspora policy, role, issues (dual nationality, remittances).
+- **Important International Institutions:** UN, WTO, World Bank, IMF, WEF.
+
+
 ### **Paper-IV: General Studies–III** (Technology, Economic Development, Bio diversity, Environment, Security and Disaster Management)
 
 ### **Paper-V: General Studies–IV** (Ethics, Integrity and Aptitude)
