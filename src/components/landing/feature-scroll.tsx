@@ -1,3 +1,4 @@
+
 "use client";
 
 import React, { useRef } from 'react';
@@ -191,7 +192,7 @@ const MobileView = () => {
                 </div>
 
                 <div className="relative mt-12 flex flex-col justify-center overflow-hidden">
-                    <div className="flex flex-col gap-8 -rotate-3 p-10">
+                    <div className="flex flex-col gap-8 -rotate-3 p-16">
                         <motion.div 
                             className="flex gap-8"
                             animate={{ x: ['0%', '-100%'] }}
@@ -336,7 +337,7 @@ const IdeaBoard = () => {
                 </p>
             </div>
             
-            <div className="flex flex-col gap-8 -rotate-3 p-10">
+            <div className="flex flex-col gap-8 -rotate-3 p-16">
                 <motion.div 
                     className="flex gap-8"
                     animate={{ x: ['0%', '-100%'] }}
@@ -429,3 +430,4 @@ const FeatureScroll = () => {
 };
 
 export default FeatureScroll;
+
