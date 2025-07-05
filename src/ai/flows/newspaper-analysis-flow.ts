@@ -43,6 +43,10 @@ const NewspaperAnalysisOutputSchema = z.object({
   analysis: z.string().describe('The detailed, markdown-formatted analysis. For question generation, this contains ONLY Prelims questions. For all other focuses, it contains the full analysis.'),
   mainsQuestions: z.string().optional().describe('The detailed, markdown-formatted Mains questions. This is ONLY populated when "Generate Questions" is the focus.'),
   summary: z.string().describe('A concise, 2-3 sentence summary of the article, suitable for text-to-speech conversion.'),
+  inputTokens: z.number().optional().describe('Total input tokens used for the analysis.'),
+  outputTokens: z.number().optional().describe('Total output tokens for the analysis.'),
+  totalTokens: z.number().optional().describe('Total tokens used for the analysis.'),
+  cost: z.number().optional().describe('Estimated cost for the analysis.'),
 });
 export type NewspaperAnalysisOutput = z.infer<typeof NewspaperAnalysisOutputSchema>;
 
@@ -211,30 +215,51 @@ const analyzeNewspaperArticleFlow = ai.defineFlow(
     outputSchema: NewspaperAnalysisOutputSchema,
   },
   async (input) => {
+    let totalInputTokens = 0;
+    let totalOutputTokens = 0;
+    
+    // Example pricing for Gemini Flash models.
+    const INPUT_PRICE_PER_1K_TOKENS = 0.00035;
+    const OUTPUT_PRICE_PER_1K_TOKENS = 0.00105;
+
     // Step 1: Relevance Check
-    const { output: relevanceResult } = await relevanceCheckPrompt(input);
+    const { response: relevanceResponse, output: relevanceResult } = await relevanceCheckPrompt(input);
+    
+    totalInputTokens += relevanceResponse.usage?.inputTokens || 0;
+    totalOutputTokens += relevanceResponse.usage?.outputTokens || 0;
+    
     if (!relevanceResult) {
         throw new Error("Relevance check failed.");
     }
 
     if (!relevanceResult.isRelevant || !relevanceResult.syllabusTopic) {
+      const totalTokens = totalInputTokens + totalOutputTokens;
+      const cost = (totalInputTokens / 1000) * INPUT_PRICE_PER_1K_TOKENS + (totalOutputTokens / 1000) * OUTPUT_PRICE_PER_1K_TOKENS;
+      
       return {
         analysis: `## Article Not Relevant\n\n**Reasoning:** ${relevanceResult.reasoning}\n\nPlease provide an article related to subjects like Indian Polity, Governance, Economy, History, Geography, or other topics covered in the UPSC syllabus to get a meaningful analysis.`,
-        summary: ""
+        summary: "",
+        totalTokens,
+        inputTokens: totalInputTokens,
+        outputTokens: totalOutputTokens,
+        cost,
       };
     }
 
     // Step 2: Generate the initial analysis (if relevant)
-    const { output: initialOutput } = await analysisPrompt({
+    const { response: analysisResponse, output: initialOutput } = await analysisPrompt({
         ...input,
         identifiedSyllabusTopic: relevanceResult.syllabusTopic,
     });
     if (!initialOutput) {
         throw new Error("Initial analysis generation failed.");
     }
+    totalInputTokens += analysisResponse.usage?.inputTokens || 0;
+    totalOutputTokens += analysisResponse.usage?.outputTokens || 0;
+
 
     // Step 3: Verify and fact-check the analysis
-    const { output: verifiedOutput } = await verificationPrompt({
+    const { response: verificationResponse, output: verifiedOutput } = await verificationPrompt({
         sourceText: input.sourceText,
         generatedAnalysisString: JSON.stringify(initialOutput),
         outputLanguage: input.outputLanguage,
@@ -243,13 +268,22 @@ const analyzeNewspaperArticleFlow = ai.defineFlow(
     if (!verifiedOutput) {
         throw new Error("Verification step failed.");
     }
+    totalInputTokens += verificationResponse.usage?.inputTokens || 0;
+    totalOutputTokens += verificationResponse.usage?.outputTokens || 0;
     
     // Step 4: Final sanitization of the summary to ensure it's clean for TTS
     const cleanSummary = verifiedOutput.summary.replace(/<[^>]+>/g, '');
 
+    const totalTokens = totalInputTokens + totalOutputTokens;
+    const cost = (totalInputTokens / 1000) * INPUT_PRICE_PER_1K_TOKENS + (totalOutputTokens / 1000) * OUTPUT_PRICE_PER_1K_TOKENS;
+
     return {
         ...verifiedOutput,
         summary: cleanSummary,
+        totalTokens,
+        inputTokens: totalInputTokens,
+        outputTokens: totalOutputTokens,
+        cost,
     };
   }
 );

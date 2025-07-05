@@ -12,7 +12,7 @@ import { Textarea } from "@/components/ui/textarea";
 import Footer from "@/components/landing/footer";
 import Header from "@/components/layout/header";
 import Link from "next/link";
-import { ArrowLeft, Loader2, Sparkles, CheckCircle, XCircle, Circle, Info, Maximize, Volume2 } from "lucide-react";
+import { ArrowLeft, Loader2, Sparkles, CheckCircle, XCircle, Circle, Info, Maximize, Volume2, Gauge, DollarSign } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { analyzeNewspaperArticle, type NewspaperAnalysisInput, type NewspaperAnalysisOutput } from "@/ai/flows/newspaper-analysis-flow";
 import { textToSpeech } from "@/ai/flows/text-to-speech-flow";
@@ -159,6 +159,42 @@ const AnalysisOutputDisplay = ({ analysis }: { analysis: string }) => (
         {analysis}
     </ReactMarkdown>
 );
+
+const UsageStats = ({ tokens, cost }: { tokens: number; cost: number }) => {
+    if (tokens === 0) return null;
+
+    return (
+        <div className="flex items-center gap-6 text-xs text-muted-foreground border-b mb-4 pb-4">
+            <TooltipProvider>
+                <Tooltip>
+                    <TooltipTrigger asChild>
+                        <div className="flex items-center gap-1.5">
+                            <Gauge className="w-3.5 h-3.5" />
+                            <span><span className="font-semibold text-foreground">{tokens.toLocaleString()}</span> tokens</span>
+                        </div>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                        <p>Total tokens used for this analysis.</p>
+                    </TooltipContent>
+                </Tooltip>
+            </TooltipProvider>
+
+            <TooltipProvider>
+                <Tooltip>
+                    <TooltipTrigger asChild>
+                        <div className="flex items-center gap-1.5">
+                            <DollarSign className="w-3.5 h-3.5" />
+                            <span>Cost: <span className="font-semibold text-foreground">${cost.toFixed(5)}</span></span>
+                        </div>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                        <p>Estimated cost based on Gemini Flash model pricing.</p>
+                    </TooltipContent>
+                </Tooltip>
+            </TooltipProvider>
+        </div>
+    );
+};
 
 
 export default function NewspaperAnalysisPage() {
@@ -430,6 +466,9 @@ export default function NewspaperAnalysisPage() {
                             )}
                             {!isLoading && analysisResult && (
                               <div className="flex-1 flex flex-col">
+                                {analysisResult.totalTokens !== undefined && analysisResult.cost !== undefined && (
+                                    <UsageStats tokens={analysisResult.totalTokens} cost={analysisResult.cost} />
+                                )}
                                 {analysisResult.summary && (
                                   <div className="mb-4 p-4 bg-primary/10 rounded-lg flex items-center gap-4">
                                     <p className="flex-1 text-sm text-muted-foreground italic">
