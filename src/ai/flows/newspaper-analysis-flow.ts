@@ -145,7 +145,7 @@ Follow these specific instructions for the given 'analysisFocus':
 3.  If 'analysisFocus' is 'Prelims Fact Finder (Key Names, Dates, Schemes)':
     *   Place the entire analysis in the 'analysis' field. When you identify an entity, you MUST wrap it in one of the following custom tags: <person>Name</person>, <place>Location</place>, <scheme>Scheme/Policy Name</scheme>, <date>Date/Time Period</date>, or <org>Organization/Committee</org>.
 
-4.  For any other 'analysisFocus', generate the appropriate, detailed markdown response and place it entirely within the 'analysis' field. Ensure the `mainsQuestions` field is not included in the output JSON.
+4.  For any other 'analysisFocus', generate the appropriate, detailed markdown response and place it entirely within the 'analysis' field. Ensure the 'mainsQuestions' field is not included in the output JSON.
 
 Remember to generate the separate, concise 2-3 sentence 'summary' field first, then generate the detailed 'analysis' and 'mainsQuestions' fields based on the focus.
 `,
@@ -244,5 +244,3 @@ const analyzeNewspaperArticleFlow = ai.defineFlow(
     };
   }
 );
-
-    
