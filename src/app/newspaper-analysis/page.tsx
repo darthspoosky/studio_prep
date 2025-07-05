@@ -16,6 +16,8 @@ import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { analyzeNewspaperArticle, type NewspaperAnalysisInput } from "@/ai/flows/newspaper-analysis-flow";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 
 export default function NewspaperAnalysisPage() {
   const [isLoading, setIsLoading] = useState(false);
@@ -173,25 +175,29 @@ export default function NewspaperAnalysisPage() {
                     <CardTitle>AI Analysis</CardTitle>
                     <CardDescription>The breakdown of your article will appear here.</CardDescription>
                 </CardHeader>
-                <CardContent className="flex-1 flex flex-col justify-center">
+                <CardContent className="flex-1 flex flex-col">
                     {isLoading && (
-                        <div className="flex flex-col items-center justify-center text-center h-full">
+                        <div className="flex flex-col items-center justify-center text-center h-full flex-1">
                             <Loader2 className="w-16 h-16 text-primary/50 animate-spin mb-4" />
-                            <p className="text-muted-foreground">Our AI is reading the article... Please wait.</p>
+                            <p className="text-muted-foreground font-medium text-lg">Our AI is reading...</p>
+                            <p className="text-muted-foreground">This can take a moment for long articles.</p>
                         </div>
                     )}
                     {!isLoading && !analysis && (
-                        <div className="flex flex-col items-center justify-center text-center h-full pt-16">
+                        <div className="flex flex-col items-center justify-center text-center h-full flex-1 pt-16">
                             <Bot className="w-24 h-24 text-primary/30 mb-4" />
-                            <h3 className="font-semibold text-foreground">Waiting for article...</h3>
-                            <p className="text-muted-foreground mt-2 text-sm">Submit an article to see the AI-powered analysis.</p>
+                            <h3 className="font-semibold text-foreground text-xl">Waiting for article</h3>
+                            <p className="text-muted-foreground mt-2 max-w-sm">Submit an article on the left to see the AI-powered analysis.</p>
                         </div>
                     )}
                     {!isLoading && analysis && (
-                        <ScrollArea className="h-[450px] w-full">
-                            <div className="prose prose-sm dark:prose-invert prose-p:leading-relaxed prose-headings:font-headline prose-headings:text-primary whitespace-pre-wrap p-1">
+                        <ScrollArea className="h-[450px] w-full pr-4">
+                            <ReactMarkdown
+                                className="prose prose-sm dark:prose-invert max-w-none prose-p:leading-relaxed prose-headings:font-headline prose-headings:text-primary prose-a:text-primary hover:prose-a:text-primary/80 prose-li:my-1 prose-blockquote:border-primary prose-strong:text-foreground"
+                                remarkPlugins={[remarkGfm]}
+                            >
                                 {analysis}
-                            </div>
+                            </ReactMarkdown>
                         </ScrollArea>
                     )}
                 </CardContent>
