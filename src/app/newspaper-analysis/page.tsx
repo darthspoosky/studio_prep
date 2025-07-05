@@ -12,7 +12,7 @@ import { Textarea } from "@/components/ui/textarea";
 import Footer from "@/components/landing/footer";
 import Header from "@/components/layout/header";
 import Link from "next/link";
-import { ArrowLeft, Loader2, Sparkles, CheckCircle, XCircle, Circle, Info } from "lucide-react";
+import { ArrowLeft, Loader2, Sparkles, CheckCircle, XCircle, Circle, Info, Maximize } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { analyzeNewspaperArticle, type NewspaperAnalysisInput } from "@/ai/flows/newspaper-analysis-flow";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -21,6 +21,8 @@ import remarkGfm from "remark-gfm";
 import rehypeRaw from "rehype-raw";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
+import { motion, AnimatePresence } from "framer-motion";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 
 
 const MCQ = ({ question, subject, explanation, children }: { question: string, subject: string, explanation: string, children: React.ReactNode }) => {
@@ -70,11 +72,11 @@ const MCQ = ({ question, subject, explanation, children }: { question: string, s
               onClick={() => handleSelect(optionValue)}
               disabled={isAnswered}
               className={cn(
-                "justify-start text-left h-auto py-2 px-3 whitespace-normal w-full items-center gap-2 transition-colors duration-200",
+                "justify-start text-left h-auto py-2 px-3 whitespace-normal w-full items-center gap-2 transition-all duration-200 hover:bg-accent/80 hover:border-primary/50",
                 isAnswered && {
                   "border-green-400 bg-green-50 text-green-900 hover:bg-green-100 dark:bg-green-900/30 dark:border-green-600 dark:text-green-100 dark:hover:bg-green-900/40": isCorrect,
                   "border-red-400 bg-red-50 text-red-900 hover:bg-red-100 dark:bg-red-900/30 dark:border-red-600 dark:text-red-100 dark:hover:bg-red-900/40": isSelected && !isCorrect,
-                  "opacity-70": !isSelected && !isCorrect
+                  "opacity-60 hover:opacity-80": !isSelected && !isCorrect
                 }
               )}
             >
@@ -85,8 +87,8 @@ const MCQ = ({ question, subject, explanation, children }: { question: string, s
         })}
       </div>
       {isAnswered && !hasSelectedCorrect && (
-          <p className="text-xs text-muted-foreground mt-3">
-              You selected an incorrect answer. The correct answer is highlighted in green.
+          <p className="text-xs text-red-600 dark:text-red-400 mt-3 font-medium">
+              Not quite. The correct answer is highlighted in green.
           </p>
       )}
       {isAnswered && hasSelectedCorrect && (
@@ -94,17 +96,27 @@ const MCQ = ({ question, subject, explanation, children }: { question: string, s
               Correct! Well done.
           </p>
       )}
+      <AnimatePresence>
       {isAnswered && explanation && (
-        <div className="mt-4 p-3 bg-primary/10 border-l-4 border-primary rounded-r-lg">
-          <div className="flex items-start gap-3">
-            <Info className="w-5 h-5 text-primary mt-0.5 flex-shrink-0" />
-            <div>
-              <h4 className="font-semibold text-sm text-primary">Explanation</h4>
-              <p className="text-sm text-muted-foreground mt-1">{explanation}</p>
+        <motion.div 
+            initial={{ opacity: 0, height: 0, marginTop: 0 }}
+            animate={{ opacity: 1, height: 'auto', marginTop: '1rem' }}
+            exit={{ opacity: 0, height: 0, marginTop: 0 }}
+            transition={{ duration: 0.3, ease: "easeOut" }}
+            className="overflow-hidden"
+        >
+            <div className="p-3 bg-primary/10 border-l-4 border-primary rounded-r-lg">
+              <div className="flex items-start gap-3">
+                <Info className="w-5 h-5 text-primary mt-0.5 flex-shrink-0" />
+                <div>
+                  <h4 className="font-semibold text-sm text-primary">Explanation</h4>
+                  <p className="text-sm text-muted-foreground mt-1">{explanation}</p>
+                </div>
+              </div>
             </div>
-          </div>
-        </div>
+        </motion.div>
       )}
+      </AnimatePresence>
     </div>
   );
 };
@@ -134,6 +146,17 @@ const markdownComponents = {
   td: (props: any) => <td className="border-r px-4 py-2 text-left [&[align=center]]:text-center [&[align=right]]:text-right" {...props} />,
 };
 
+const AnalysisOutput = ({ analysis }: { analysis: string }) => (
+    <ReactMarkdown
+        remarkPlugins={[remarkGfm]}
+        rehypePlugins={[rehypeRaw]}
+        components={markdownComponents}
+        className="prose-sm dark:prose-invert max-w-none prose-headings:font-headline prose-h1:text-primary"
+    >
+        {analysis}
+    </ReactMarkdown>
+);
+
 export default function NewspaperAnalysisPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [analysis, setAnalysis] = useState("");
@@ -141,7 +164,7 @@ export default function NewspaperAnalysisPage() {
   const [inputs, setInputs] = useState({
     url: "",
     text: "",
-    examType: "",
+    examType: "upsc", // Default to UPSC
     analysisFocus: ""
   });
   const { toast } = useToast();
@@ -285,40 +308,50 @@ export default function NewspaperAnalysisPage() {
             </Card>
 
             {/* Right Column: Analysis Output */}
-             <Card className="glassmorphic shadow-2xl shadow-primary/10 lg:min-h-[620px] flex flex-col">
-                <CardHeader>
-                    <CardTitle>AI Analysis</CardTitle>
-                    <CardDescription>The breakdown of your article will appear here.</CardDescription>
-                </CardHeader>
-                <CardContent className="flex-1 flex flex-col">
-                    {isLoading && (
-                        <div className="flex flex-col items-center justify-center text-center h-full flex-1">
-                            <Loader2 className="w-16 h-16 text-primary/50 animate-spin mb-4" />
-                            <p className="text-muted-foreground font-medium text-lg">Our AI is reading...</p>
-                            <p className="text-muted-foreground">This can take a moment for long articles.</p>
-                        </div>
-                    )}
-                    {!isLoading && !analysis && (
-                        <div className="flex flex-col items-center justify-center text-center h-full flex-1 pt-16">
-                            <Sparkles className="w-24 h-24 text-primary/30 mb-4" />
-                            <h3 className="font-semibold text-foreground text-xl">Waiting for article</h3>
-                            <p className="text-muted-foreground mt-2 max-w-sm">Submit an article on the left to see the AI-powered analysis.</p>
-                        </div>
-                    )}
-                    {!isLoading && analysis && (
-                        <ScrollArea className="h-[450px] w-full pr-4">
-                            <ReactMarkdown
-                                remarkPlugins={[remarkGfm]}
-                                rehypePlugins={[rehypeRaw]}
-                                components={markdownComponents}
-                                className="w-full"
-                            >
-                                {analysis}
-                            </ReactMarkdown>
-                        </ScrollArea>
-                    )}
-                </CardContent>
-            </Card>
+            <Dialog>
+                 <Card className="relative glassmorphic shadow-2xl shadow-primary/10 lg:min-h-[620px] flex flex-col">
+                    <CardHeader>
+                        <CardTitle>AI Analysis</CardTitle>
+                        <CardDescription>The breakdown of your article will appear here.</CardDescription>
+                         {analysis && (
+                            <DialogTrigger asChild>
+                                <Button variant="ghost" size="icon" className="absolute top-4 right-4 text-muted-foreground hover:text-primary">
+                                    <Maximize className="w-5 h-5" />
+                                </Button>
+                            </DialogTrigger>
+                        )}
+                    </CardHeader>
+                    <CardContent className="flex-1 flex flex-col">
+                        {isLoading && (
+                            <div className="flex flex-col items-center justify-center text-center h-full flex-1">
+                                <Loader2 className="w-16 h-16 text-primary/50 animate-spin mb-4" />
+                                <p className="text-muted-foreground font-medium text-lg">Our AI is reading...</p>
+                                <p className="text-muted-foreground">This can take a moment for long articles.</p>
+                            </div>
+                        )}
+                        {!isLoading && !analysis && (
+                            <div className="flex flex-col items-center justify-center text-center h-full flex-1 pt-16">
+                                <Sparkles className="w-24 h-24 text-primary/30 mb-4" />
+                                <h3 className="font-semibold text-foreground text-xl">Waiting for article</h3>
+                                <p className="text-muted-foreground mt-2 max-w-sm">Submit an article on the left to see the AI-powered analysis.</p>
+                            </div>
+                        )}
+                        {!isLoading && analysis && (
+                            <ScrollArea className="h-[450px] w-full pr-4 -mr-4">
+                               <AnalysisOutput analysis={analysis} />
+                            </ScrollArea>
+                        )}
+                    </CardContent>
+                </Card>
+                <DialogContent className="max-w-5xl h-[90vh] flex flex-col">
+                    <DialogHeader>
+                        <DialogTitle>Expanded Analysis</DialogTitle>
+                    </DialogHeader>
+                    <ScrollArea className="flex-1 pr-6 -mr-6">
+                       <AnalysisOutput analysis={analysis} />
+                    </ScrollArea>
+                </DialogContent>
+            </Dialog>
         </div>
       </main>
       <Footer />

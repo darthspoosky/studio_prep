@@ -9,6 +9,12 @@
 
 import { ai } from '@/ai/genkit';
 import { z } from 'zod';
+import fs from 'fs';
+import path from 'path';
+
+// Load syllabus content once at startup
+const prelimsSyllabus = fs.readFileSync(path.join(process.cwd(), 'src/ai/knowledge/upsc-prelims-syllabus.md'), 'utf-8');
+const mainsSyllabus = fs.readFileSync(path.join(process.cwd(), 'src/ai/knowledge/upsc-mains-syllabus.md'), 'utf-8');
 
 const NewspaperAnalysisInputSchema = z.object({
   sourceText: z.string().describe('The article content, which can be either a URL or the full text of the article.'),
@@ -21,23 +27,32 @@ const NewspaperAnalysisInputSchema = z.object({
 });
 export type NewspaperAnalysisInput = z.infer<typeof NewspaperAnalysisInputSchema>;
 
+const NewspaperAnalysisSyllabusInputSchema = NewspaperAnalysisInputSchema.extend({
+    prelimsSyllabus: z.string().describe('The full text of the UPSC Prelims syllabus.'),
+    mainsSyllabus: z.string().describe('The full text of the UPSC Mains syllabus.'),
+});
+
 const NewspaperAnalysisOutputSchema = z.object({
   analysis: z.string().describe('The detailed, markdown-formatted analysis of the article.'),
 });
 export type NewspaperAnalysisOutput = z.infer<typeof NewspaperAnalysisOutputSchema>;
 
 export async function analyzeNewspaperArticle(input: NewspaperAnalysisInput): Promise<NewspaperAnalysisOutput> {
-  return await analyzeNewspaperArticleFlow(input);
+  return await analyzeNewspaperArticleFlow({
+      ...input,
+      prelimsSyllabus,
+      mainsSyllabus,
+  });
 }
 
 const analysisPrompt = ai.definePrompt({
   name: 'newspaperAnalysisPrompt',
-  input: { schema: NewspaperAnalysisInputSchema },
+  input: { schema: NewspaperAnalysisSyllabusInputSchema },
   output: { schema: NewspaperAnalysisOutputSchema },
-  prompt: `You are a world-class editor and exam coach AI for Indian competitive exam aspirants. Your analysis must be presented in a premium, highly structured, and easy-to-digest format. 
+  prompt: `You are a world-class editor and exam coach AI for Indian competitive exam aspirants, with deep expertise in the UPSC syllabus. Your analysis must be presented in a premium, highly structured, and easy-to-digest format. 
 Use markdown extensively and intelligently: leverage headings, subheadings, blockquotes for key takeaways, bold text for keywords, and tables for data comparison.
 
-Your task is to analyze a news article provided either as a URL or as raw text, tailored to the user's specific exam preparation needs.
+Your first and most critical task is to read the provided article and cross-reference its content with the UPSC syllabus documents provided below to identify the most specific, granular syllabus topic it relates to. Mention this topic clearly at the beginning of your analysis.
 
 The user is preparing for the '{{{examType}}}' exam.
 The requested analysis focus is: '{{{analysisFocus}}}'.
@@ -45,25 +60,35 @@ The requested analysis focus is: '{{{analysisFocus}}}'.
 Here is the source material to analyze:
 "{{{sourceText}}}"
 
+Here is the UPSC Prelims Syllabus for your reference:
+--- PRELIMS SYLLABUS START ---
+{{{prelimsSyllabus}}}
+--- PRELIMS SYLLABUS END ---
+
+Here is the UPSC Mains Syllabus for your reference:
+--- MAINS SYLLABUS START ---
+{{{mainsSyllabus}}}
+--- MAINS SYLLABUS END ---
+
 Based on the 'analysisFocus', generate a detailed, well-structured response in markdown format.
 
 Follow these specific instructions for the given 'analysisFocus':
 
 1.  If 'analysisFocus' is 'Generate Questions (Mains & Prelims)':
-    *   Create a section titled "## Potential Prelims Questions". Under it, generate 3-5 potential Prelims-style MCQs with four options each.
+    *   Create a section titled "## Potential Prelims Questions". Under it, generate 3-5 potential Prelims-style MCQs based on the provided Prelims syllabus pattern.
     *   For each MCQ, you MUST wrap it in the following custom tag structure, including a detailed explanation:
-    *   <mcq question="The full question text here..." subject="e.g., GS Paper II - Polity & Governance" explanation="A detailed explanation for why the correct answer is correct and the others are incorrect.">
+    *   <mcq question="The full question text here..." subject="e.g., GS Paper II - Polity & Governance - Federal Structure" explanation="A detailed explanation for why the correct answer is correct and the others are incorrect. This must be thorough.">
     *   <option correct="true">The correct answer option.</option>
     *   <option>An incorrect answer option.</option>
     *   <option>Another incorrect answer option.</option>
     *   <option>A final incorrect answer option.</option>
     *   </mcq>
-    *   Ensure you identify the most relevant GS paper or subject at a granular level in the 'subject' attribute.
-    *   Create another section titled "## Potential Mains Questions". Under it, generate 2-3 potential Mains-style questions that require analytical and critical thinking.
-    *   After EACH Mains question, add a section titled "### Guidance for Answer". Under this, use bullet points to outline the key concepts, ideal structure (Introduction, Body, Conclusion), and specific examples from the article that should be included for a high-scoring response.
+    *   Ensure you identify the most relevant GS paper or subject AT THE MOST GRANULAR LEVEL POSSIBLE using the syllabus in the 'subject' attribute.
+    *   Create another section titled "## Potential Mains Questions". Under it, generate 2-3 potential Mains-style questions that require analytical and critical thinking, based on the Mains syllabus.
+    *   After EACH Mains question, add a section titled "### Guidance for Answer". Under this, use bullet points to outline the key concepts, ideal structure (Introduction, Body, Conclusion), and specific examples from the article that should be included for a high-scoring response, referencing Mains syllabus topics where relevant.
 
 2.  If 'analysisFocus' is 'Mains Analysis (Arguments, Keywords, Viewpoints)':
-    *   Start with a "## Central Theme" heading.
+    *   Start with a "## Central Theme" heading and identify the core Mains syllabus topic.
     *   Use headings like "### Main Arguments", "### Counter-Arguments", "### Key Statistics & Data", and "### Important Keywords" to structure your analysis.
     *   Present arguments and viewpoints as bullet points.
     *   Use blockquotes for particularly impactful statements or phrases from the article.
@@ -83,7 +108,7 @@ Follow these specific instructions for the given 'analysisFocus':
 
 6.  If 'analysisFocus' is 'Comprehensive Summary':
     *   Provide a concise summary (approx. 150-200 words) under the heading "## Executive Summary".
-    *   Follow it with a "### Key Takeaways" section, using a bulleted list for the 3-4 most important points.
+    *   Follow it with a "### Key Takeaways" section, using a bulleted list for the 3-4 most important points, linking each to a relevant syllabus topic.
 
 Begin the analysis now.
 `,
@@ -92,7 +117,7 @@ Begin the analysis now.
 const analyzeNewspaperArticleFlow = ai.defineFlow(
   {
     name: 'analyzeNewspaperArticleFlow',
-    inputSchema: NewspaperAnalysisInputSchema,
+    inputSchema: NewspaperAnalysisSyllabusInputSchema,
     outputSchema: NewspaperAnalysisOutputSchema,
   },
   async (input) => {
