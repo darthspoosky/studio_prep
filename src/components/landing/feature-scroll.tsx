@@ -146,21 +146,18 @@ const FeatureScroll = () => {
         offset: ['start start', 'end end']
     });
 
-    const titleOpacity = useTransform(scrollYProgress, [0, 0.05, 0.8], [0, 1, 0]);
+    const titleOpacity = useTransform(scrollYProgress, [0, 0.05], [0, 1]);
     const titleY = useTransform(scrollYProgress, [0, 0.05], ['20px', '0px']);
     
-    // Total animation for cards is from 0.05 to 0.8
-    const cardAnimationTotalDuration = 0.75;
-    // Stacking starts after the showcase part
-    const showcaseDuration = 0.5;
-    const stackingStartTime = 0.05 + showcaseDuration;
-    const stackingDuration = cardAnimationTotalDuration - showcaseDuration;
-
+    // Animation Ranges
+    const showcaseEnd = 0.55;
+    const stackingStart = 0.55;
+    const stackingEnd = 0.8;
     const feedbackStart = 0.8;
-    const feedbackEnd = 1.0;
-    const feedbackOpacity = useTransform(scrollYProgress, [feedbackStart, feedbackStart + 0.1], [0, 1]);
-    const feedbackY = useTransform(scrollYProgress, [feedbackStart, feedbackEnd], ['50vh', '0vh']);
-    const feedbackX = useTransform(scrollYProgress, [feedbackStart + 0.1, feedbackEnd], ['0%', '-50%']);
+
+    const feedbackOpacity = useTransform(scrollYProgress, [feedbackStart - 0.05, feedbackStart], [0, 1]);
+    const feedbackY = useTransform(scrollYProgress, [feedbackStart, 1.0], ['50vh', '0vh']);
+    const feedbackX = useTransform(scrollYProgress, [feedbackStart, 1.0], ['0%', '-50%']);
 
 
     return (
@@ -185,70 +182,72 @@ const FeatureScroll = () => {
 
                 <div className="absolute inset-0 flex items-center justify-center">
                     {tools.map((tool, i) => {
-                        const cardShowcaseDuration = showcaseDuration / tools.length;
-                        const start = 0.05 + i * cardShowcaseDuration;
-                        const end = start + cardShowcaseDuration;
-                        
-                        const opacity = useTransform(
-                            scrollYProgress,
-                            [start, start + cardShowcaseDuration * 0.2, end - cardShowcaseDuration * 0.2, end],
-                            [0, 1, 1, 0]
-                        );
-
-                        const scaleDuringShowcase = useTransform(
-                            scrollYProgress,
-                            [start, start + cardShowcaseDuration * 0.2, end - cardShowcaseDuration * 0.2, end],
-                            [0.9, 1, 1, 0.9]
-                        );
-                        
-                        const yDuringShowcase = useTransform(
-                            scrollYProgress,
-                             [start, start + cardShowcaseDuration * 0.2],
-                            ["2rem", "0rem"]
-                        );
-
-                        // Stacking animation
                         const isLastCard = i === tools.length - 1;
-                        const stackOpacity = useTransform(
+                        
+                        const showcaseDurationPerCard = (showcaseEnd - 0.05) / tools.length;
+                        const showcaseStartTime = 0.05 + i * showcaseDurationPerCard;
+                        const showcaseEndTime = showcaseStartTime + showcaseDurationPerCard;
+
+                        // Opacity during showcase
+                        const showcaseOpacity = useTransform(
                             scrollYProgress,
-                            [stackingStartTime - (isLastCard ? cardShowcaseDuration : 0), stackingStartTime],
-                            [isLastCard ? 1 : 0, 1]
+                            [showcaseStartTime, showcaseStartTime + 0.02, showcaseEndTime - 0.02, showcaseEndTime],
+                            [0, 1, 1, isLastCard ? 1 : 0]
                         );
 
-                        const finalScale = 1 - (tools.length - 1 - i) * 0.05;
-                        const scale = useTransform(
-                          scrollYProgress,
-                          [stackingStartTime, stackingStartTime + stackingDuration],
-                          [isLastCard ? 1 : 0.5, finalScale]
+                        // Opacity during stacking
+                        const stackingOpacity = useTransform(
+                            scrollYProgress,
+                            [stackingStart - 0.05, stackingStart],
+                            [0, 1]
                         );
 
-                        const finalY = (tools.length - 1 - i) * -20;
-                        const y = useTransform(
-                          scrollYProgress,
-                          [stackingStartTime, stackingStartTime + stackingDuration],
-                          [0, finalY]
+                        const opacity = useTransform(scrollYProgress, (p) => {
+                            if (p < showcaseEndTime) return showcaseOpacity.get();
+                            return isLastCard ? 1 : stackingOpacity.get();
+                        });
+
+                        // Y position
+                        const showcaseY = useTransform(
+                            scrollYProgress,
+                            [showcaseStartTime, showcaseEndTime],
+                            ["4rem", "0rem"]
                         );
-
-                        const combinedOpacity = useTransform(scrollYProgress, (p) => {
-                            return p < stackingStartTime ? opacity.get() : stackOpacity.get();
+                        const finalStackY = (tools.length - 1 - i) * 20;
+                        const stackingY = useTransform(
+                            scrollYProgress,
+                            [stackingStart, stackingEnd],
+                            [0, -finalStackY]
+                        );
+                        const y = useTransform(scrollYProgress, (p) => {
+                            if (p < showcaseEndTime) return showcaseY.get();
+                            return stackingY.get();
                         });
-
-                        const combinedScale = useTransform(scrollYProgress, (p) => {
-                             return p < stackingStartTime ? scaleDuringShowcase.get() : scale.get();
+                        
+                        // Scale
+                        const showcaseScale = useTransform(
+                            scrollYProgress,
+                            [showcaseStartTime, showcaseEndTime],
+                            [0.9, 1]
+                        );
+                        const finalStackScale = 1 - (tools.length - 1 - i) * 0.05;
+                        const stackingScale = useTransform(
+                            scrollYProgress,
+                            [stackingStart, stackingEnd],
+                            [1, finalStackScale]
+                        );
+                         const scale = useTransform(scrollYProgress, (p) => {
+                            if (p < showcaseEndTime) return showcaseScale.get();
+                            return stackingScale.get();
                         });
-
-                        const combinedY = useTransform(scrollYProgress, (p) => {
-                            return p < stackingStartTime ? yDuringShowcase.get() : y.get();
-                        });
-
 
                         return (
                             <motion.div
                                 key={tool.title}
                                 style={{
-                                    opacity: combinedOpacity,
-                                    scale: combinedScale,
-                                    y: combinedY,
+                                    opacity,
+                                    scale,
+                                    y,
                                     zIndex: i,
                                 }}
                                 className="absolute h-[450px] w-full max-w-2xl"
