@@ -1,11 +1,5 @@
 # UPSC Prelims Syllabus
 
-**Please replace this placeholder text with the full UPSC Prelims syllabus from your PDF.**
-
-This file will serve as the knowledge base for our AI to understand the Prelims curriculum.
-
-## Example Structure (replace with actual content):
-
 ### Paper I - General Studies (200 marks)
 
 *   Current events of national and international importance.
