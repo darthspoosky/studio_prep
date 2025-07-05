@@ -26,6 +26,7 @@ const NewspaperAnalysisInputSchema = z.object({
       'The specific type of analysis requested by the user, e.g., "Generate Questions (Mains & Prelims)".'
     ),
   difficulty: z.string().describe('The difficulty level for question generation: Standard, Advanced, or Expert.'),
+  outputLanguage: z.string().describe('The language for the analysis output, e.g., "Hindi".'),
 });
 export type NewspaperAnalysisInput = z.infer<typeof NewspaperAnalysisInputSchema>;
 
@@ -50,7 +51,7 @@ export async function analyzeNewspaperArticle(input: NewspaperAnalysisInput): Pr
 
 const RelevanceCheckOutputSchema = z.object({
     isRelevant: z.boolean().describe('Whether the article content is relevant to the provided UPSC syllabus.'),
-    reasoning: z.string().describe('A brief explanation for why the article is or is not relevant.'),
+    reasoning: z.string().describe('A brief explanation for why the article is or is not relevant, written in the requested output language.'),
 });
 
 const relevanceCheckPrompt = ai.definePrompt({
@@ -65,6 +66,8 @@ Analyze the source text and determine if its content relates to any topics in th
 - If the article is about topics like entertainment, celebrity gossip, sports results, fictional stories, or is purely advertising, it is NOT RELEVANT.
 
 Set 'isRelevant' to true or false. Provide a brief one-sentence reasoning.
+
+IMPORTANT: You MUST write the 'reasoning' in the language specified here: {{{outputLanguage}}}.
 
 Source Text: "{{{sourceText}}}"
 
@@ -82,6 +85,8 @@ const analysisPrompt = ai.definePrompt({
   output: { schema: NewspaperAnalysisOutputSchema },
   prompt: `You are a world-class editor and exam coach AI for Indian competitive exam aspirants, with deep expertise in the UPSC syllabus. Your analysis must be presented in a premium, highly structured, and easy-to-digest format. 
 Use markdown extensively and intelligently: leverage headings, subheadings, blockquotes for key takeaways, bold text for keywords, and tables for data comparison.
+
+IMPORTANT: Your entire response, including all analysis, questions, summaries, and explanations, MUST be in the following language: {{{outputLanguage}}}. Do not use English unless the specified language is English.
 
 First, your critical tasks are:
 1.  Read the provided article and cross-reference its content with the UPSC syllabus documents below to identify the most specific, granular syllabus topic it relates to. Mention this topic clearly at the beginning of your analysis.
@@ -158,6 +163,7 @@ Remember to generate the separate, concise 2-3 sentence 'summary' field first, t
 const VerificationInputSchema = z.object({
     sourceText: z.string().describe('The original article content.'),
     generatedAnalysisString: z.string().describe('The AI-generated analysis and summary object as a JSON string to be verified.'),
+    outputLanguage: z.string().describe('The language for the analysis output, e.g., "Hindi".'),
 });
 
 const verificationPrompt = ai.definePrompt({
@@ -183,8 +189,8 @@ const verificationPrompt = ai.definePrompt({
     ---json
     {{{generatedAnalysisString}}}
     ---
-
-    Return the final, polished analysis object now.`,
+    
+    Return the final, polished analysis object now. Ensure the final output strictly adheres to the requested language: {{{outputLanguage}}}.`,
 });
 
 
@@ -203,7 +209,7 @@ const analyzeNewspaperArticleFlow = ai.defineFlow(
 
     if (!relevanceResult.isRelevant) {
       return {
-        analysis: `## Article Not Relevant\n\n**Reasoning:** ${relevanceResult.reasoning}\n\nThe provided article does not appear to be relevant to the UPSC syllabus. Please provide an article related to topics like national and international current events, government policies, economy, history, geography, or social issues.`,
+        analysis: `## Article Not Relevant\n\n**Reasoning:** ${relevanceResult.reasoning}`,
         summary: ""
       };
     }
@@ -218,6 +224,7 @@ const analyzeNewspaperArticleFlow = ai.defineFlow(
     const { output: verifiedOutput } = await verificationPrompt({
         sourceText: input.sourceText,
         generatedAnalysisString: JSON.stringify(initialOutput),
+        outputLanguage: input.outputLanguage,
     });
     if (!verifiedOutput) {
         throw new Error("Verification step failed.");

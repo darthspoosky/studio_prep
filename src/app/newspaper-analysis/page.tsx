@@ -24,6 +24,7 @@ import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { motion, AnimatePresence } from "framer-motion";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 
 const MCQ = ({ question, subject, explanation, children }: { question: string, subject: string, explanation: string, children: React.ReactNode }) => {
@@ -130,6 +131,7 @@ const markdownComponents = {
   date: (props: any) => <span className="entity-tag entity-date">{props.children}</span>,
   org: (props: any) => <span className="entity-tag entity-org">{props.children}</span>,
   mcq: (props: any) => <MCQ {...props} />,
+  option: (props: any) => <>{props.children}</>,
   
   // Premium styling for standard markdown
   h1: (props: any) => <h1 className="text-3xl font-bold font-headline mt-8 pb-2 border-b-2 border-primary/30 text-primary" {...props} />,
@@ -171,7 +173,8 @@ export default function NewspaperAnalysisPage() {
     text: "",
     examType: "UPSC Civil Services",
     analysisFocus: "Generate Questions (Mains & Prelims)",
-    difficulty: "Standard"
+    difficulty: "Standard",
+    outputLanguage: "English",
   });
   const { toast } = useToast();
 
@@ -205,6 +208,7 @@ export default function NewspaperAnalysisPage() {
             examType: inputs.examType,
             analysisFocus: inputs.analysisFocus,
             difficulty: inputs.difficulty,
+            outputLanguage: inputs.outputLanguage,
         };
         const result = await analyzeNewspaperArticle(flowInput);
         setAnalysisResult(result);
@@ -253,6 +257,18 @@ export default function NewspaperAnalysisPage() {
   }, [analysisResult, inputs.analysisFocus]);
 
   const showTabs = !!prelimsContent;
+  
+  const audioButton = (
+    <Button 
+        onClick={handleGenerateAudio} 
+        disabled={isGeneratingAudio || inputs.outputLanguage !== 'English'} 
+        variant="outline" 
+        size="sm"
+    >
+        {isGeneratingAudio ? <Loader2 className="animate-spin" /> : <Volume2 />}
+        {isGeneratingAudio ? "Generating..." : "Listen"}
+    </Button>
+  );
 
 
   return (
@@ -313,6 +329,21 @@ export default function NewspaperAnalysisPage() {
                                 <SelectItem value="Critical Analysis (Tone, Bias, Fact vs. Opinion)">Critical Analysis (Tone, Bias, Fact vs. Opinion)</SelectItem>
                                 <SelectItem value="Vocabulary Builder for Editorials">Vocabulary Builder for Editorials</SelectItem>
                                 <SelectItem value="Comprehensive Summary">Comprehensive Summary</SelectItem>
+                            </SelectContent>
+                        </Select>
+                    </div>
+                     <div className="space-y-2">
+                        <Label htmlFor="output-language">Output Language</Label>
+                        <Select value={inputs.outputLanguage} onValueChange={(value) => handleInputChange("outputLanguage", value)}>
+                            <SelectTrigger id="output-language">
+                                <SelectValue placeholder="Select a language" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="English">English</SelectItem>
+                                <SelectItem value="Hindi">Hindi (हिन्दी)</SelectItem>
+                                <SelectItem value="Tamil">Tamil (தமிழ்)</SelectItem>
+                                <SelectItem value="Bengali">Bengali (বাংলা)</SelectItem>
+                                <SelectItem value="Telugu">Telugu (తెలుగు)</SelectItem>
                             </SelectContent>
                         </Select>
                     </div>
@@ -404,10 +435,20 @@ export default function NewspaperAnalysisPage() {
                                     <p className="flex-1 text-sm text-muted-foreground italic">
                                       {analysisResult.summary}
                                     </p>
-                                    <Button onClick={handleGenerateAudio} disabled={isGeneratingAudio} variant="outline" size="sm">
-                                      {isGeneratingAudio ? <Loader2 className="animate-spin" /> : <Volume2 />}
-                                      {isGeneratingAudio ? "Generating..." : "Listen"}
-                                    </Button>
+                                    {inputs.outputLanguage !== 'English' ? (
+                                        <TooltipProvider>
+                                            <Tooltip>
+                                                <TooltipTrigger asChild>
+                                                    <span tabIndex={0}>{audioButton}</span>
+                                                </TooltipTrigger>
+                                                <TooltipContent>
+                                                    <p>Audio summaries are only available in English for now.</p>
+                                                </TooltipContent>
+                                            </Tooltip>
+                                        </TooltipProvider>
+                                    ) : (
+                                        audioButton
+                                    )}
                                   </div>
                                 )}
                                 {audioSrc && (
