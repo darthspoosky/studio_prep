@@ -50,30 +50,31 @@ Based on the 'analysisFocus', generate a detailed, well-structured response in m
 Follow these specific instructions for the given 'analysisFocus':
 
 1.  If 'analysisFocus' is 'Generate Questions (Mains & Prelims)':
-    *   Create a section titled "Potential Prelims Questions". Under it, generate 3-5 potential Prelims-style MCQs with four options each.
-    *   For each MCQ, you MUST wrap it in the following custom tag structure:
-    *   <mcq question="The full question text here..." subject="e.g., GS Paper II - Polity & Governance">
+    *   Create a section titled "## Potential Prelims Questions". Under it, generate 3-5 potential Prelims-style MCQs with four options each.
+    *   For each MCQ, you MUST wrap it in the following custom tag structure, including a detailed explanation:
+    *   <mcq question="The full question text here..." subject="e.g., GS Paper II - Polity & Governance" explanation="A detailed explanation for why the correct answer is correct and the others are incorrect.">
     *   <option correct="true">The correct answer option.</option>
     *   <option>An incorrect answer option.</option>
     *   <option>Another incorrect answer option.</option>
     *   <option>A final incorrect answer option.</option>
     *   </mcq>
     *   Ensure you identify the most relevant GS paper or subject at a granular level in the 'subject' attribute.
-    *   Create another section titled "Potential Mains Questions". Under it, generate 2-3 potential Mains-style questions that require analytical and critical thinking.
+    *   Create another section titled "## Potential Mains Questions". Under it, generate 2-3 potential Mains-style questions that require analytical and critical thinking.
+    *   After EACH Mains question, add a section titled "### Guidance for Answer". Under this, use bullet points to outline the key concepts, ideal structure (Introduction, Body, Conclusion), and specific examples from the article that should be included for a high-scoring response.
 
 2.  If 'analysisFocus' is 'Mains Analysis (Arguments, Keywords, Viewpoints)':
-    *   Start with a "Central Theme" heading.
-    *   Use headings like "Main Arguments", "Counter-Arguments", "Key Statistics & Data", and "Important Keywords" to structure your analysis.
+    *   Start with a "## Central Theme" heading.
+    *   Use headings like "### Main Arguments", "### Counter-Arguments", "### Key Statistics & Data", and "### Important Keywords" to structure your analysis.
     *   Present arguments and viewpoints as bullet points.
     *   Use blockquotes for particularly impactful statements or phrases from the article.
 
 3.  If 'analysisFocus' is 'Prelims Fact Finder (Key Names, Dates, Schemes)':
     *   Scour the article for specific, factual information relevant for Prelims.
     *   When you identify an entity, you MUST wrap it in one of the following custom tags: <person>Name</person>, <place>Location</place>, <scheme>Scheme/Policy Name</scheme>, <date>Date/Time Period</date>, or <org>Organization/Committee</org>.
-    *   Present these facts under clear headings for each category (e.g., "Key People", "Locations Mentioned", "Government Schemes").
+    *   Present these facts under clear headings for each category (e.g., "### Key People", "### Locations Mentioned", "### Government Schemes").
 
 4.  If 'analysisFocus' is 'Critical Analysis (Tone, Bias, Fact vs. Opinion)':
-    *   Use headings: "Author's Tone", "Assessment of Bias", "Fact vs. Opinion", and "Objective of the Article".
+    *   Use headings: "### Author's Tone", "### Assessment of Bias", "### Fact vs. Opinion", and "### Objective of the Article".
     *   Under "Fact vs. Opinion", use bullet points to list examples of each, clearly labeled.
 
 5.  If 'analysisFocus' is 'Vocabulary Builder for Editorials':
@@ -81,8 +82,8 @@ Follow these specific instructions for the given 'analysisFocus':
     *   Use a heading for each word. Under it, use bold labels for "Definition:", "Contextual Meaning:", and "Example Sentence:".
 
 6.  If 'analysisFocus' is 'Comprehensive Summary':
-    *   Provide a concise summary (approx. 150-200 words) under the heading "Executive Summary".
-    *   Follow it with a "Key Takeaways" section, using a bulleted list for the 3-4 most important points.
+    *   Provide a concise summary (approx. 150-200 words) under the heading "## Executive Summary".
+    *   Follow it with a "### Key Takeaways" section, using a bulleted list for the 3-4 most important points.
 
 Begin the analysis now.
 `,
@@ -95,7 +96,7 @@ const analyzeNewspaperArticleFlow = ai.defineFlow(
     outputSchema: NewspaperAnalysisOutputSchema,
   },
   async (input) => {
-    const { output } = await analysisPrompt(input);
+    const { output } = await analyzeNewspaperArticlePrompt(input);
     return output!;
   }
 );

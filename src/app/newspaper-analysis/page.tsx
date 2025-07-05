@@ -12,7 +12,7 @@ import { Textarea } from "@/components/ui/textarea";
 import Footer from "@/components/landing/footer";
 import Header from "@/components/layout/header";
 import Link from "next/link";
-import { ArrowLeft, Loader2, Sparkles, CheckCircle, XCircle, Circle } from "lucide-react";
+import { ArrowLeft, Loader2, Sparkles, CheckCircle, XCircle, Circle, Info } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { analyzeNewspaperArticle, type NewspaperAnalysisInput } from "@/ai/flows/newspaper-analysis-flow";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -23,7 +23,7 @@ import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 
 
-const MCQ = ({ question, subject, children }: { question: string, subject: string, children: React.ReactNode }) => {
+const MCQ = ({ question, subject, explanation, children }: { question: string, subject: string, explanation: string, children: React.ReactNode }) => {
   const [selected, setSelected] = useState<string | null>(null);
   const [isAnswered, setIsAnswered] = useState(false);
 
@@ -94,6 +94,17 @@ const MCQ = ({ question, subject, children }: { question: string, subject: strin
               Correct! Well done.
           </p>
       )}
+      {isAnswered && explanation && (
+        <div className="mt-4 p-3 bg-primary/10 border-l-4 border-primary rounded-r-lg">
+          <div className="flex items-start gap-3">
+            <Info className="w-5 h-5 text-primary mt-0.5 flex-shrink-0" />
+            <div>
+              <h4 className="font-semibold text-sm text-primary">Explanation</h4>
+              <p className="text-sm text-muted-foreground mt-1">{explanation}</p>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
@@ -108,9 +119,9 @@ const markdownComponents = {
   mcq: (props: any) => <MCQ {...props} />,
   
   // Premium styling for standard markdown
-  h1: (props: any) => <h1 className="text-2xl font-bold font-headline mt-6 pb-2 border-b-2 border-primary/30 text-primary" {...props} />,
-  h2: (props: any) => <h2 className="text-xl font-bold font-headline mt-6 pb-2 border-b border-primary/20" {...props} />,
-  h3: (props: any) => <h3 className="text-lg font-semibold font-headline mt-4" {...props} />,
+  h1: (props: any) => <h1 className="text-3xl font-bold font-headline mt-8 pb-2 border-b-2 border-primary/30 text-primary" {...props} />,
+  h2: (props: any) => <h2 className="text-2xl font-bold font-headline mt-6 pb-2 border-b border-primary/20" {...props} />,
+  h3: (props: any) => <h3 className="text-xl font-semibold font-headline mt-4" {...props} />,
   blockquote: (props: any) => <blockquote className="relative border-l-4 border-primary bg-primary/10 p-4 my-4 rounded-r-lg italic text-muted-foreground" {...props} />,
   p: (props: any) => <p className="leading-relaxed my-4" {...props} />,
   ul: (props: any) => <ul className="list-disc list-outside pl-6 my-4 space-y-2" {...props} />,
