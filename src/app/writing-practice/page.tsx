@@ -8,9 +8,26 @@ import { Textarea } from "@/components/ui/textarea";
 import Footer from "@/components/landing/footer";
 import Header from "@/components/layout/header";
 import Link from "next/link";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Loader2 } from "lucide-react";
+import { useState } from "react";
+import { useToast } from "@/hooks/use-toast";
 
 export default function WritingPracticePage() {
+  const [isLoading, setIsLoading] = useState(false);
+  const { toast } = useToast();
+
+  const handleFeedback = () => {
+    setIsLoading(true);
+    // Simulate API call while feature is in development
+    setTimeout(() => {
+      toast({
+        title: "Coming Soon!",
+        description: "Our AI writing coach is getting ready. This feature is coming soon!",
+      });
+      setIsLoading(false);
+    }, 1000);
+  };
+
   return (
     <div className="flex flex-col min-h-screen bg-gray-50 dark:bg-gray-900">
       <Header />
@@ -58,7 +75,10 @@ export default function WritingPracticePage() {
                     </div>
                 </CardContent>
                 <CardFooter>
-                    <Button size="lg" className="w-full">Get Feedback</Button>
+                    <Button size="lg" className="w-full" onClick={handleFeedback} disabled={isLoading}>
+                        {isLoading && <Loader2 className="animate-spin" />}
+                        {isLoading ? "Getting Feedback..." : "Get Feedback"}
+                    </Button>
                 </CardFooter>
             </Card>
         </div>

@@ -7,9 +7,26 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import Footer from "@/components/landing/footer";
 import Header from "@/components/layout/header";
 import Link from "next/link";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Loader2 } from "lucide-react";
+import { useState } from "react";
+import { useToast } from "@/hooks/use-toast";
 
 export default function DailyQuizPage() {
+  const [isLoading, setIsLoading] = useState(false);
+  const { toast } = useToast();
+
+  const handleStartQuiz = () => {
+    setIsLoading(true);
+    // Simulate API call while feature is in development
+    setTimeout(() => {
+      toast({
+        title: "Coming Soon!",
+        description: "The daily quiz feature is under development. Stay tuned!",
+      });
+      setIsLoading(false);
+    }, 1000);
+  };
+
   return (
     <div className="flex flex-col min-h-screen bg-gray-50 dark:bg-gray-900">
       <Header />
@@ -82,7 +99,10 @@ export default function DailyQuizPage() {
                     </div>
                 </CardContent>
                 <CardFooter>
-                    <Button size="lg" className="w-full">Start Quiz</Button>
+                    <Button size="lg" className="w-full" onClick={handleStartQuiz} disabled={isLoading}>
+                        {isLoading && <Loader2 className="animate-spin" />}
+                        {isLoading ? "Preparing Quiz..." : "Start Quiz"}
+                    </Button>
                 </CardFooter>
             </Card>
         </div>

@@ -8,9 +8,26 @@ import { Textarea } from "@/components/ui/textarea";
 import Footer from "@/components/landing/footer";
 import Header from "@/components/layout/header";
 import Link from "next/link";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Loader2 } from "lucide-react";
+import { useState } from "react";
+import { useToast } from "@/hooks/use-toast";
 
 export default function MockInterviewPage() {
+  const [isLoading, setIsLoading] = useState(false);
+  const { toast } = useToast();
+
+  const handleStart = () => {
+    setIsLoading(true);
+    // Simulate API call while feature is in development
+    setTimeout(() => {
+      toast({
+        title: "Coming Soon!",
+        description: "The mock interview feature is being fine-tuned. It'll be available shortly!",
+      });
+      setIsLoading(false);
+    }, 1000);
+  };
+
   return (
     <div className="flex flex-col min-h-screen bg-gray-50 dark:bg-gray-900">
       <Header />
@@ -71,7 +88,10 @@ export default function MockInterviewPage() {
                     </div>
                 </CardContent>
                 <CardFooter>
-                    <Button size="lg" className="w-full">Start Interview</Button>
+                    <Button size="lg" className="w-full" onClick={handleStart} disabled={isLoading}>
+                        {isLoading && <Loader2 className="animate-spin" />}
+                        {isLoading ? "Configuring Session..." : "Start Interview"}
+                    </Button>
                 </CardFooter>
             </Card>
         </div>

@@ -10,9 +10,26 @@ import { Textarea } from "@/components/ui/textarea";
 import Footer from "@/components/landing/footer";
 import Header from "@/components/layout/header";
 import Link from "next/link";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Loader2 } from "lucide-react";
+import { useState } from "react";
+import { useToast } from "@/hooks/use-toast";
 
 export default function NewspaperAnalysisPage() {
+  const [isLoading, setIsLoading] = useState(false);
+  const { toast } = useToast();
+
+  const handleAnalyze = () => {
+    setIsLoading(true);
+    // Simulate API call while feature is in development
+    setTimeout(() => {
+      toast({
+        title: "Coming Soon!",
+        description: "Our AI is sharpening its analytical skills. This feature will be live soon!",
+      });
+      setIsLoading(false);
+    }, 1000);
+  };
+
   return (
     <div className="flex flex-col min-h-screen bg-gray-50 dark:bg-gray-900">
       <Header />
@@ -74,7 +91,10 @@ export default function NewspaperAnalysisPage() {
                     </div>
                 </CardContent>
                 <CardFooter>
-                    <Button size="lg" className="w-full">Analyze Article</Button>
+                    <Button size="lg" className="w-full" onClick={handleAnalyze} disabled={isLoading}>
+                        {isLoading && <Loader2 className="animate-spin" />}
+                        {isLoading ? "Analyzing Article..." : "Analyze Article"}
+                    </Button>
                 </CardFooter>
             </Card>
         </div>
