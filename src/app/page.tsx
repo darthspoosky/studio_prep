@@ -1,7 +1,8 @@
 import Header from '@/components/layout/header';
 import Hero from '@/components/landing/hero';
-import Explore from '@/components/landing/explore';
-import FeatureScroll from '@/components/landing/feature-scroll';
+import ToolsShowcase from '@/components/landing/tools-showcase';
+import FeedbackWall from '@/components/landing/feedback-wall';
+import Differentiator from '@/components/landing/differentiator';
 import SurveyCTA from '@/components/landing/survey-cta';
 import Footer from '@/components/landing/footer';
 
@@ -11,8 +12,9 @@ export default function Home() {
       <Header />
       <main className="flex-1">
         <Hero />
-        <Explore />
-        <FeatureScroll />
+        <ToolsShowcase />
+        <FeedbackWall />
+        <Differentiator />
         <SurveyCTA />
       </main>
       <Footer />

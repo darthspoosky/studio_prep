@@ -3,7 +3,7 @@
 import React from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { motion, type MotionValue } from 'framer-motion';
+import { motion } from 'framer-motion';
 
 const testimonials = [
   {
@@ -46,38 +46,58 @@ const testimonials = [
 
 const duplicatedTestimonials = [...testimonials, ...testimonials];
 
-const FeedbackWall = ({ scrollYProgress }: { scrollYProgress: MotionValue<number> }) => {
+const TestimonialCard = ({ quote, name, handle, avatar }: (typeof testimonials)[0]) => (
+    <Card className="w-[300px] sm:w-[350px] lg:w-[400px] shrink-0 glassmorphic h-full">
+        <CardContent className="pt-6 flex flex-col h-full">
+            <p className="mb-4 text-foreground flex-grow text-base">"{quote}"</p>
+            <div className="flex items-center mt-auto">
+                <Avatar>
+                    <AvatarImage data-ai-hint="person" src={`https://placehold.co/40x40.png`} />
+                    <AvatarFallback>{avatar}</AvatarFallback>
+                </Avatar>
+                <div className="ml-4 text-left">
+                    <p className="font-semibold text-foreground">{name}</p>
+                    <p className="text-sm text-muted-foreground">{handle}</p>
+                </div>
+            </div>
+        </CardContent>
+    </Card>
+);
+
+
+const FeedbackWall = () => {
     return (
-        <div className="relative h-screen flex flex-col justify-center overflow-hidden">
+        <section className="relative py-24 sm:py-32 flex flex-col justify-center overflow-hidden bg-background">
             <div className="container mx-auto px-4 text-center mb-16">
-                <h2 className="font-headline text-3xl md:text-4xl font-bold tracking-tight">
+                <h2 className="font-headline text-4xl md:text-5xl font-bold tracking-tight">
                     From the PrepTalk Community
                 </h2>
-                <p className="mt-3 max-w-2xl mx-auto text-lg text-muted-foreground">
+                <p className="mt-4 max-w-2xl mx-auto text-lg md:text-xl text-muted-foreground">
                     See what our users are saying about their prep journey with us.
                 </p>
             </div>
-
-            <motion.div style={{ x: scrollYProgress }} className="flex gap-8 pl-8">
-                {duplicatedTestimonials.map((testimonial, index) => (
-                    <Card key={index} className="w-[400px] lg:w-[450px] shrink-0 glassmorphic">
-                        <CardContent className="pt-6 flex flex-col h-full">
-                            <p className="mb-4 text-foreground flex-grow text-base md:text-lg">"{testimonial.quote}"</p>
-                            <div className="flex items-center mt-auto">
-                                <Avatar>
-                                    <AvatarImage data-ai-hint="person" src={`https://placehold.co/40x40.png`} />
-                                    <AvatarFallback>{testimonial.avatar}</AvatarFallback>
-                                </Avatar>
-                                <div className="ml-4 text-left">
-                                    <p className="font-semibold text-foreground">{testimonial.name}</p>
-                                    <p className="text-sm text-muted-foreground">{testimonial.handle}</p>
-                                </div>
-                            </div>
-                        </CardContent>
-                    </Card>
-                ))}
-            </motion.div>
-        </div>
+            
+            <div className="w-full flex flex-col gap-8 -rotate-2 py-8">
+                <motion.div 
+                    className="flex gap-8"
+                    animate={{ x: ['0%', '-100%'] }}
+                    transition={{ ease: 'linear', duration: 50, repeat: Infinity }}
+                >
+                    {duplicatedTestimonials.map((testimonial, index) => (
+                        <TestimonialCard key={`marquee-1-${index}`} {...testimonial} />
+                    ))}
+                </motion.div>
+                <motion.div 
+                    className="flex gap-8"
+                    animate={{ x: ['-100%', '0%'] }}
+                    transition={{ ease: 'linear', duration: 50, repeat: Infinity }}
+                >
+                    {duplicatedTestimonials.map((testimonial, index) => (
+                        <TestimonialCard key={`marquee-2-${index}`} {...testimonial} />
+                    ))}
+                </motion.div>
+            </div>
+        </section>
     );
 };
 
