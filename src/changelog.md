@@ -6,7 +6,16 @@ This document is the central hub for tracking all future changes, enhancements, 
 
 Our goal is to move from ad-hoc changes to a structured, ticket-based system to ensure quality and maintainability.
 
-## 2. How This Document Works
+## 2. Guiding Principle: Surgical Precision
+
+All code modifications must be executed with surgical precision. This means:
+*   **Minimalism**: We will only change the absolute minimum amount of code required to achieve the agreed-upon goal.
+*   **Targeted Changes**: Changes will be focused and targeted, avoiding unrelated refactoring or "nice-to-have" tweaks that are outside the scope of the current task.
+*   **No Unnecessary Deletions**: We will not remove code unless it is made explicitly redundant by the new implementation.
+
+This principle minimizes the risk of introducing unintended side effects and ensures that every change is deliberate, understood, and directly contributes to the task at hand.
+
+## 3. How This Document Works
 
 1.  **User Request**: You provide a high-level goal or report a bug (e.g., "The MCQ explanations are unprofessional," "The app crashes when I do X").
 2.  **AI Analysis & Plan**: I will analyze the request and create a new "Ticket" in this changelog. Each ticket will detail:
@@ -15,11 +24,11 @@ Our goal is to move from ad-hoc changes to a structured, ticket-based system to 
     *   **Affected Files**: A list of all files that will be modified.
     *   **Implementation Details**: Specific changes to prompts, logic, or UI components.
 3.  **User Approval**: You review the plan in the ticket. If you agree, you can simply say "Proceed" or "Approved."
-4.  **Implementation**: Upon your approval, I will generate the `<changes>` block to implement the plan exactly as described in the ticket.
+4.  **Implementation**: Upon your approval, I will generate the `<changes>` block to implement the plan exactly as described in the ticket, adhering to our principle of surgical precision.
 
 ---
 
-## 3. Active Tickets
+## 4. Active Tickets
 
 ### Ticket-001: Overhaul MCQ Generation for Reliability & Professional Explanations
 
