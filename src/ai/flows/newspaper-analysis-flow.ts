@@ -11,6 +11,7 @@ import { ai } from '@/ai/genkit';
 import { z } from 'zod';
 import fs from 'fs';
 import path from 'path';
+import { load as loadHtml } from 'cheerio';
 
 // Cache syllabus content to avoid repeated file reads
 let syllabusCache: { prelims?: string; mains?: string } = {};
@@ -84,40 +85,74 @@ interface QuestionQualityMetrics {
   overallScore: number;
 }
 
+// Parse and normalize a single <mcq> block
+function parseMcqBlock(block: string): string | null {
+  const $ = loadHtml(block, { xmlMode: true, decodeEntities: false });
+  const mcq = $('mcq').first();
+  if (!mcq.length) return null;
+
+  // Extract attributes to preserve metadata
+  const attribs = mcq[0].attribs || {};
+
+  // Determine question text either from attribute or inner text
+  let question = attribs['question'] || '';
+  if (!question) {
+    const clone = mcq.clone();
+    clone.find('option').remove();
+    question = clone.text().trim();
+  }
+
+  // Extract options
+  const options = mcq.find('option').map((_, el) => {
+    const opt = $(el);
+    return {
+      text: opt.text().trim(),
+      correct: opt.attr('correct') === 'true'
+    };
+  }).get();
+
+  if (options.length === 0) return null;
+
+  // Ensure exactly four options
+  if (options.length > 4) options.splice(4);
+  if (options.length < 4) return null;
+
+  // Ensure exactly one correct option
+  let correctCount = options.filter(o => o.correct).length;
+  if (correctCount === 0) {
+    options[0].correct = true;
+  } else if (correctCount > 1) {
+    let found = false;
+    options.forEach(o => {
+      if (o.correct) {
+        if (!found) {
+          found = true;
+        } else {
+          o.correct = false;
+        }
+      }
+    });
+  }
+
+  // Build attribute string
+  const attrString = Object.entries(attribs)
+    .map(([k, v]) => `${k}="${v}"`)
+    .join(' ');
+
+  const opening = `<mcq${attrString ? ' ' + attrString : ''}>`;
+  const optionLines = options
+    .map(o => `<option${o.correct ? ' correct="true"' : ''}>${o.text}</option>`) 
+    .join('\n');
+
+  return `${opening}\n${question}\n${optionLines}\n</mcq>`;
+}
+
 // Post-processing function to fix malformed MCQs
 function fixMCQFormatting(text: string): string {
-  const mcqRegex = /<mcq([^>]*)>(.*?)<\/mcq>/gs;
-  
-  return text.replace(mcqRegex, (match, attributes, content) => {
-    // Check if options are properly formatted
-    if (!content.includes('<option>')) {
-      // Extract question and options parts
-      const lines = content.trim().split('\n').filter(line => line.trim());
-      
-      if (lines.length < 2) return match;
-      
-      // Try to find option patterns in the content
-      const optionPattern = /(?:\d+\s+only|\d+[,\s]*and\s*\d+\s*only|\d+,\s*\d+\s*and\s*\d+|None of the above|All of the above)/gi;
-      const fullContent = content.replace(/\n/g, ' ');
-      const options = fullContent.match(optionPattern) || [];
-      
-      if (options.length >= 2) {
-        // Extract question part (everything before options)
-        let questionPart = fullContent;
-        options.forEach(opt => {
-          questionPart = questionPart.replace(opt, '');
-        });
-        questionPart = questionPart.trim();
-        
-        // Format options properly
-        const formattedOptions = options.map((opt, index) => 
-          `<option${index === 0 ? ' correct="true"' : ''}>${opt.trim()}</option>`
-        ).join('\n');
-        
-        return `<mcq${attributes}>\n${questionPart}\n${formattedOptions}\n</mcq>`;
-      }
-    }
-    return match;
+  const mcqRegex = /<mcq[^>]*>[\s\S]*?<\/mcq>/g;
+  return text.replace(mcqRegex, block => {
+    const parsed = parseMcqBlock(block);
+    return parsed || block;
   });
 }
 
