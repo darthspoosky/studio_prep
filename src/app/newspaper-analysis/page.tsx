@@ -46,6 +46,49 @@ const DifficultyGauge = ({ score }: { score: number }) => {
     );
 };
 
+const FormattedQuestion = ({ text }: { text: string }) => {
+    const lines = text.split('\n').filter(line => line.trim() !== '');
+
+    if (lines.length <= 1) {
+        return <p className="font-semibold leading-relaxed text-foreground">{text}</p>;
+    }
+
+    const firstStatementIndex = lines.findIndex(line => /^\d+\.\s/.test(line.trim()));
+
+    // If no numbered statements are found, render with preserved line breaks.
+    if (firstStatementIndex === -1) {
+        return <p className="font-semibold leading-relaxed text-foreground" style={{ whiteSpace: 'pre-line' }}>{text}</p>;
+    }
+
+    const preamble = lines.slice(0, firstStatementIndex).join('\n');
+    
+    // Find where the statements end
+    let lastStatementIndex = firstStatementIndex;
+    for (let i = firstStatementIndex + 1; i < lines.length; i++) {
+        if (/^\d+\.\s/.test(lines[i].trim())) {
+            lastStatementIndex = i;
+        } else {
+            // Stop at the first line that is not a numbered statement
+            break; 
+        }
+    }
+    
+    const statements = lines.slice(firstStatementIndex, lastStatementIndex + 1);
+    const conclusion = lines.slice(lastStatementIndex + 1).join('\n');
+    
+    return (
+        <div className="font-semibold leading-relaxed text-foreground">
+            {preamble && <p className="mb-3" style={{ whiteSpace: 'pre-line' }}>{preamble}</p>}
+            <ol className="list-decimal list-outside space-y-2 pl-5 my-3">
+                {statements.map((stmt, index) => (
+                    <li key={index} className="pl-2">{stmt.trim().replace(/^\d+\.\s/, '')}</li>
+                ))}
+            </ol>
+            {conclusion && <p className="mt-3" style={{ whiteSpace: 'pre-line' }}>{conclusion}</p>}
+        </div>
+    );
+};
+
 
 const MCQ = (props: MCQType) => {
   const { question, subject, explanation, options, difficulty } = props;
@@ -64,7 +107,7 @@ const MCQ = (props: MCQType) => {
   return (
     <div className="my-6 p-4 border rounded-lg bg-background/50 shadow-sm">
       {score && <DifficultyGauge score={score} />}
-      <p className="font-semibold leading-relaxed text-foreground">{question}</p>
+      <FormattedQuestion text={question} />
       {subject && <Badge variant="secondary" className="mb-4 mt-2 font-normal">{subject}</Badge>}
       <div className="grid grid-cols-1 gap-2 mt-4">
         {options.map((option, index) => {
