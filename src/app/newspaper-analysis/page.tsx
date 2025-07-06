@@ -280,7 +280,33 @@ export default function NewspaperAnalysisPage() {
   };
 
   const handleAnalyze = async () => {
-    const sourceText = activeTab === 'url' ? inputs.url : inputs.text;
+    let sourceText = inputs.text;
+
+    if (activeTab === 'url') {
+        if (!inputs.url.trim()) {
+            toast({ variant: 'destructive', title: "Input Required", description: "Please provide an article URL or paste the text to analyze." });
+            return;
+        }
+        try {
+            const res = await fetch(`/api/readArticle?url=${encodeURIComponent(inputs.url)}`);
+            if (!res.ok) {
+                const err = await res.json().catch(() => ({}));
+                throw new Error(err.error || 'Fetch failed');
+            }
+            const data = await res.json();
+            sourceText = data.text || '';
+        } catch (err) {
+            console.error('Article fetch error:', err);
+            toast({
+                variant: 'destructive',
+                title: 'Fetch Failed',
+                description: 'Could not retrieve the article. Please check the URL and try again.',
+            });
+            return;
+        }
+    } else {
+        sourceText = inputs.text;
+    }
 
     if (!sourceText.trim()) {
         toast({ variant: 'destructive', title: "Input Required", description: "Please provide an article URL or paste the text to analyze." });
