@@ -58,11 +58,39 @@ const NewspaperAnalysisWithTopicInputSchema = NewspaperAnalysisSyllabusInputSche
   identifiedSyllabusTopic: z.string().describe('The pre-identified, granular syllabus topic for the article.'),
 });
 
+// MCQ and Mains question schemas
+const OptionSchema = z.object({
+  text: z.string(),
+  correct: z.boolean().optional(),
+});
+
+const MCQSchema = z.object({
+  question: z.string(),
+  subject: z.string().optional(),
+  explanation: z.string().optional(),
+  difficulty: z.number().min(1).max(10).optional(),
+  options: z.array(OptionSchema),
+});
+export type MCQ = z.infer<typeof MCQSchema>;
+
+const MainsQuestionSchema = z.object({
+  question: z.string(),
+  guidance: z.string().optional(),
+  difficulty: z.number().min(1).max(10).optional(),
+});
+export type MainsQuestion = z.infer<typeof MainsQuestionSchema>;
+
 // Enhanced output schema with quality metrics
 const NewspaperAnalysisOutputSchema = z.object({
-  analysis: z.string().describe('The detailed, markdown-formatted analysis. For question generation, this contains ONLY Prelims questions. For all other focuses, it contains the full analysis.'),
-  mainsQuestions: z.string().optional().describe('The detailed, markdown-formatted Mains questions. This is ONLY populated when "Generate Questions" is the focus.'),
   summary: z.string().describe('A concise, 2-3 sentence summary of the article, suitable for text-to-speech conversion.'),
+  prelims: z.object({
+    mcqs: z.array(MCQSchema),
+  }),
+  mains: z
+    .object({
+      questions: z.array(MainsQuestionSchema),
+    })
+    .optional(),
   syllabusTopic: z.string().optional().describe('The identified syllabus topic for the article.'),
   qualityScore: z.number().optional().describe('Overall quality score of generated questions (0-1).'),
   questionsCount: z.number().optional().describe('Number of questions generated.'),
@@ -84,129 +112,68 @@ interface QuestionQualityMetrics {
   overallScore: number;
 }
 
-// Post-processing function to fix malformed MCQs
-function fixMCQFormatting(text: string): string {
-  const mcqRegex = /<mcq([^>]*)>(.*?)<\/mcq>/gs;
-  
-  return text.replace(mcqRegex, (match, attributes, content) => {
-    // Check if options are properly formatted
-    if (!content.includes('<option>')) {
-      // Extract question and options parts
-      const lines = content.trim().split('\n').filter(line => line.trim());
-      
-      if (lines.length < 2) return match;
-      
-      // Try to find option patterns in the content
-      const optionPattern = /(?:\d+\s+only|\d+[,\s]*and\s*\d+\s*only|\d+,\s*\d+\s*and\s*\d+|None of the above|All of the above)/gi;
-      const fullContent = content.replace(/\n/g, ' ');
-      const options = fullContent.match(optionPattern) || [];
-      
-      if (options.length >= 2) {
-        // Extract question part (everything before options)
-        let questionPart = fullContent;
-        options.forEach(opt => {
-          questionPart = questionPart.replace(opt, '');
-        });
-        questionPart = questionPart.trim();
-        
-        // Format options properly
-        const formattedOptions = options.map((opt, index) => 
-          `<option${index === 0 ? ' correct="true"' : ''}>${opt.trim()}</option>`
-        ).join('\n');
-        
-        return `<mcq${attributes}>\n${questionPart}\n${formattedOptions}\n</mcq>`;
-      }
-    }
-    return match;
-  });
-}
-
 // Quality validation function
-function validateQuestionQuality(analysis: string): QuestionQualityMetrics {
-  const mcqMatches = analysis.match(/<mcq[^>]*>.*?<\/mcq>/gs) || [];
-  
-  if (mcqMatches.length === 0) {
+function validateQuestionQuality(mcqs: MCQ[]): QuestionQualityMetrics {
+  if (mcqs.length === 0) {
     return {
       hasStatementFormat: false,
       difficultyAppropriate: false,
       optionsFollowUPSCPattern: false,
       explanationAdequate: false,
-      overallScore: 0
+      overallScore: 0,
     };
   }
-  
-  let totalScore = 0;
+
   const metrics = {
     hasStatementFormat: 0,
     difficultyAppropriate: 0,
     optionsFollowUPSCPattern: 0,
-    explanationAdequate: 0
+    explanationAdequate: 0,
   };
-  
-  mcqMatches.forEach(mcqBlock => {
-    // Check for statement-based format
-    if (mcqBlock.includes('Consider the following statements')) {
+
+  mcqs.forEach(mcq => {
+    if (mcq.question.includes('Consider the following statements')) {
       metrics.hasStatementFormat++;
     }
-    
-    // Check difficulty score
-    const difficultyMatch = mcqBlock.match(/difficultyScore="(\d+)"/);
-    if (difficultyMatch && parseInt(difficultyMatch[1]) >= 7) {
+
+    if (mcq.difficulty && mcq.difficulty >= 7) {
       metrics.difficultyAppropriate++;
     }
-    
-    // Check for UPSC option patterns
-    if (/\d+\s+and\s+\d+\s+only|\d+\s+only/.test(mcqBlock)) {
+
+    if (mcq.options.some(o => /\d+\s+and\s+\d+\s+only|\d+\s+only/.test(o.text))) {
       metrics.optionsFollowUPSCPattern++;
     }
-    
-    // Check explanation length
-    const explanationMatch = mcqBlock.match(/explanation="([^"]*)"/);
-    if (explanationMatch && explanationMatch[1].length > 100) {
+
+    if (mcq.explanation && mcq.explanation.length > 100) {
       metrics.explanationAdequate++;
     }
   });
-  
-  const total = mcqMatches.length;
+
+  const total = mcqs.length;
   const overallScore = (
-    metrics.hasStatementFormat + 
-    metrics.difficultyAppropriate + 
-    metrics.optionsFollowUPSCPattern + 
+    metrics.hasStatementFormat +
+    metrics.difficultyAppropriate +
+    metrics.optionsFollowUPSCPattern +
     metrics.explanationAdequate
   ) / (total * 4);
-  
+
   return {
     hasStatementFormat: metrics.hasStatementFormat / total > 0.8,
     difficultyAppropriate: metrics.difficultyAppropriate / total > 0.8,
     optionsFollowUPSCPattern: metrics.optionsFollowUPSCPattern / total > 0.8,
     explanationAdequate: metrics.explanationAdequate / total > 0.8,
-    overallScore
+    overallScore,
   };
 }
 
 // Fallback analysis generation
 function generateFallbackAnalysis(
-  input: NewspaperAnalysisInput, 
+  input: NewspaperAnalysisInput,
   relevanceResult: { syllabusTopic: string; reasoning: string }
 ): NewspaperAnalysisOutput {
-  const fallbackAnalysis = `## Article Analysis - ${relevanceResult.syllabusTopic}
-
-**Note**: This is a simplified analysis due to processing limitations.
-
-### Key Points:
-- Article relates to: ${relevanceResult.syllabusTopic}
-- Reasoning: ${relevanceResult.reasoning}
-
-### Study Recommendations:
-1. Review the identified syllabus topic in detail
-2. Connect this article's content to static knowledge
-3. Practice related questions from previous years
-
-*For detailed question generation, please try again or contact support.*`;
-
   return {
-    analysis: fallbackAnalysis,
-    summary: "Article analysis completed with basic insights due to processing limitations.",
+    summary: 'Article analysis completed with basic insights due to processing limitations.',
+    prelims: { mcqs: [] },
     syllabusTopic: relevanceResult.syllabusTopic,
     qualityScore: 0.3,
     questionsCount: 0,
@@ -299,6 +266,8 @@ CRITICAL: Your entire response, including all analysis, questions, summaries, an
 
 **MANDATORY FIRST STEP**: Generate a clean, 2-3 sentence summary in the 'summary' field. This must be pure text without any HTML, XML, or custom tags - suitable for text-to-speech conversion.
 
+**OUTPUT FORMAT**: Respond ONLY with valid JSON adhering to the provided schema. Prelims MCQs go in \`prelims.mcqs\` and Mains questions in \`mains.questions\`.
+
 --- ANALYSIS FOCUS INSTRUCTIONS ---
 
 **IF 'analysisFocus' = 'Generate Questions (Mains & Prelims)':**
@@ -357,7 +326,7 @@ Which of the statements given above is/are correct?" subject="{{{identifiedSylla
 ❌ NEVER: Skip closing </mcq> tag
 ✅ ALWAYS: Include difficultyScore="8" or "9"
 
-**Place ENTIRE Prelims analysis in 'analysis' field.**
+**Return ALL Prelims MCQs inside the JSON field \`prelims.mcqs\`.**
 
 ## **UPSC MAINS QUESTION GENERATION PROTOCOL**
 
@@ -388,7 +357,7 @@ Each question must demand:
 **Examples from Article:** [3-4 specific facts, statistics, or quotes to use]
 **Keywords:** [8-10 advanced terms crucial for scoring well]
 
-**Place ENTIRE Mains analysis in 'mainsQuestions' field.**
+**Return ALL Mains questions inside the JSON field \`mains.questions\`.**
 
 **FOR OTHER ANALYSIS FOCUSES:**
 [Continue with existing instructions for other focus types...]
@@ -494,7 +463,7 @@ If critical errors cannot be fixed:
 - Include clear guidance for user next steps
 
 **VERIFICATION COMPLETE - OUTPUT REQUIREMENTS:**
-Return the polished, error-free analysis that would pass editorial review for publication in a premium UPSC preparation platform.
+Return ONLY valid JSON matching the output schema. This JSON should be polished and error-free, ready for use in the application.
 
 ---
 
@@ -548,8 +517,8 @@ const analyzeNewspaperArticleFlow = ai.defineFlow(
         const cost = costInUSD * USD_TO_INR_RATE;
         
         return {
-          analysis: `## Article Not Relevant for UPSC Preparation\n\n**Assessment**: ${relevanceResult.reasoning}\n\n**Recommendation**: Please provide articles related to:\n- Indian Polity & Governance\n- Economics & Development\n- International Relations\n- Science & Technology\n- Environment & Ecology\n- Indian History & Culture\n- Geography\n\nThese topics align with UPSC syllabus and will generate meaningful questions for your preparation.`,
-          summary: "Article assessed as not relevant for UPSC preparation based on syllabus alignment.",
+          summary: 'Article assessed as not relevant for UPSC preparation based on syllabus alignment.',
+          prelims: { mcqs: [] },
           syllabusTopic: null,
           qualityScore: 0,
           questionsCount: 0,
@@ -610,14 +579,10 @@ const analyzeNewspaperArticleFlow = ai.defineFlow(
         return generateFallbackAnalysis(input, relevanceResult);
       }
 
-      // Step 4: Post-processing and quality enhancement
-      const fixedAnalysis = fixMCQFormatting(verifiedOutput.analysis || '');
-      const fixedMainsQuestions = verifiedOutput.mainsQuestions ? 
-        fixMCQFormatting(verifiedOutput.mainsQuestions) : undefined;
-
-      // Step 5: Quality assessment
-      const qualityMetrics = validateQuestionQuality(fixedAnalysis);
-      const questionsCount = (fixedAnalysis.match(/<mcq[^>]*>/g) || []).length;
+      // Step 4: Quality assessment on structured data
+      const mcqs = verifiedOutput.prelims.mcqs || [];
+      const qualityMetrics = validateQuestionQuality(mcqs);
+      const questionsCount = mcqs.length;
 
       // Step 6: Final sanitization
       const cleanSummary = (verifiedOutput.summary || '')
@@ -631,16 +596,15 @@ const analyzeNewspaperArticleFlow = ai.defineFlow(
       const cost = costInUSD * USD_TO_INR_RATE;
 
       return {
-        analysis: fixedAnalysis,
-        mainsQuestions: fixedMainsQuestions,
-        summary: cleanSummary || "Analysis completed successfully.",
+        ...verifiedOutput,
+        summary: cleanSummary || 'Analysis completed successfully.',
         syllabusTopic: relevanceResult.syllabusTopic,
         qualityScore: qualityMetrics.overallScore,
         questionsCount,
         totalTokens,
         inputTokens: totalInputTokens,
         outputTokens: totalOutputTokens,
-        cost: Math.round(cost * 100) / 100, // Round to 2 decimal places
+        cost: Math.round(cost * 100) / 100,
       };
 
     } catch (error) {
@@ -648,8 +612,8 @@ const analyzeNewspaperArticleFlow = ai.defineFlow(
       
       // Ultimate fallback
       return {
-        analysis: `## Analysis Error\n\nWe encountered an issue processing this article. This could be due to:\n- Network connectivity issues\n- Article content format\n- System overload\n\n**Suggestion**: Please try again in a few moments or contact support if the issue persists.\n\n**Error Details**: ${(error as any).message}`,
-        summary: "Analysis could not be completed due to a system error.",
+        summary: 'Analysis could not be completed due to a system error.',
+        prelims: { mcqs: [] },
         qualityScore: 0,
         questionsCount: 0,
         totalTokens: totalInputTokens + totalOutputTokens,
@@ -704,22 +668,22 @@ function extractAnalysisMetadata(output: NewspaperAnalysisOutput): {
   wordCount: number;
   questionTypes: string[];
 } {
-  const mcqMatches = output.analysis?.match(/<mcq[^>]*>/g) || [];
-  const difficulties = mcqMatches.map(match => {
-    const diffMatch = match.match(/difficultyScore="(\d+)"/);
-    return diffMatch ? parseInt(diffMatch[1]) : 5;
-  });
-  
-  const avgDifficulty = difficulties.length > 0 
-    ? difficulties.reduce((a, b) => a + b, 0) / difficulties.length 
-    : 0;
-  
-  const wordCount = (output.analysis || '').split(/\s+/).length;
-  
+  const mcqs = output.prelims.mcqs || [];
+  const difficulties = mcqs.map(mcq => mcq.difficulty || 5);
+
+  const avgDifficulty =
+    difficulties.length > 0
+      ? difficulties.reduce((a, b) => a + b, 0) / difficulties.length
+      : 0;
+
+  const wordCount = mcqs
+    .map(m => m.question.split(/\s+/).length)
+    .reduce((a, b) => a + b, 0);
+
   return {
     topics: output.syllabusTopic ? [output.syllabusTopic] : [],
     difficulty: avgDifficulty,
     wordCount,
-    questionTypes: ['MCQ'] // Can be extended for other types
+    questionTypes: ['MCQ'],
   };
 }

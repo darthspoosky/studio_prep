@@ -14,7 +14,7 @@ import Header from "@/components/layout/header";
 import Link from "next/link";
 import { ArrowLeft, Loader2, Sparkles, CheckCircle, XCircle, Circle, Info, Maximize, Volume2, Gauge, IndianRupee } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { analyzeNewspaperArticle, type NewspaperAnalysisInput, type NewspaperAnalysisOutput } from "@/ai/flows/newspaper-analysis-flow";
+import { analyzeNewspaperArticle, type NewspaperAnalysisInput, type NewspaperAnalysisOutput, type MCQ as MCQType, type MainsQuestion } from "@/ai/flows/newspaper-analysis-flow";
 import { textToSpeech } from "@/ai/flows/text-to-speech-flow";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import ReactMarkdown from "react-markdown";
@@ -145,6 +145,38 @@ const MCQ = ({ question, subject, explanation, children, difficultyScore }: { qu
     </div>
   );
 };
+
+const MCQList = ({ mcqs }: { mcqs: MCQType[] }) => (
+  <div>
+    {mcqs.map((q, idx) => (
+      <MCQ
+        key={idx}
+        question={q.question}
+        subject={q.subject || ""}
+        explanation={q.explanation || ""}
+        difficultyScore={q.difficulty ? q.difficulty.toString() : undefined}
+      >
+        {q.options.map((opt, i) => (
+          <span key={i} correct={opt.correct ? "true" : undefined}>{opt.text}</span>
+        ))}
+      </MCQ>
+    ))}
+  </div>
+);
+
+const MainsQuestionList = ({ questions }: { questions: MainsQuestion[] }) => (
+  <div className="space-y-8">
+    {questions.map((q, i) => (
+      <div key={i} className="p-4 border rounded-lg bg-background/50 shadow-sm">
+        <h3 className="font-semibold mb-2">{q.question}</h3>
+        {q.difficulty && <DifficultyGauge score={q.difficulty} />}
+        {q.guidance && (
+          <AnalysisOutputDisplay analysis={q.guidance} />
+        )}
+      </div>
+    ))}
+  </div>
+);
 
 const markdownComponents = {
   // Custom tag renderers
@@ -342,18 +374,15 @@ export default function NewspaperAnalysisPage() {
 
   const { prelimsContent, mainsContent } = useMemo(() => {
     if (!analysisResult) {
-        return { prelimsContent: null, mainsContent: null };
+        return { prelimsContent: [] as MCQType[], mainsContent: null as MainsQuestion[] | null };
     }
-    if (inputs.analysisFocus === 'Generate Questions (Mains & Prelims)') {
-        return {
-            prelimsContent: analysisResult.analysis,
-            mainsContent: analysisResult.mainsQuestions || null,
-        };
-    }
-    return { prelimsContent: analysisResult.analysis, mainsContent: null };
-  }, [analysisResult, inputs.analysisFocus]);
+    return {
+        prelimsContent: analysisResult.prelims.mcqs,
+        mainsContent: analysisResult.mains?.questions || null,
+    };
+  }, [analysisResult]);
 
-  const showTabs = inputs.analysisFocus === 'Generate Questions (Mains & Prelims)' && !!prelimsContent;
+  const showTabs = !!mainsContent && prelimsContent.length > 0;
   
   const audioButton = (
     <Button 
@@ -570,20 +599,20 @@ export default function NewspaperAnalysisPage() {
                                         </TabsList>
                                         <TabsContent value="prelims" className="flex-1 mt-4">
                                             <ScrollArea className="h-[400px] w-full pr-4 -mr-4">
-                                                <AnalysisOutputDisplay analysis={prelimsContent || ''} />
+                                                <MCQList mcqs={prelimsContent} />
                                             </ScrollArea>
                                         </TabsContent>
                                         {mainsContent && (
                                             <TabsContent value="mains" className="flex-1 mt-4">
                                                 <ScrollArea className="h-[400px] w-full pr-4 -mr-4">
-                                                    <AnalysisOutputDisplay analysis={mainsContent} />
+                                                    <MainsQuestionList questions={mainsContent} />
                                                 </ScrollArea>
                                             </TabsContent>
                                         )}
                                     </Tabs>
                                 ) : (
                                     <ScrollArea className="h-[450px] w-full pr-4 -mr-4">
-                                        <AnalysisOutputDisplay analysis={analysisResult.analysis} />
+                                        <MCQList mcqs={prelimsContent} />
                                     </ScrollArea>
                                 )}
                               </div>
@@ -595,8 +624,12 @@ export default function NewspaperAnalysisPage() {
                             <DialogTitle>Expanded Analysis</DialogTitle>
                         </DialogHeader>
                         <ScrollArea className="flex-1 pr-6 -mr-6">
-                           <AnalysisOutputDisplay analysis={analysisResult?.analysis || ""} />
-                           {analysisResult?.mainsQuestions && <AnalysisOutputDisplay analysis={analysisResult.mainsQuestions} />}
+                           {analysisResult && (
+                             <MCQList mcqs={analysisResult.prelims.mcqs} />
+                           )}
+                           {analysisResult?.mains && (
+                             <MainsQuestionList questions={analysisResult.mains.questions} />
+                           )}
                         </ScrollArea>
                     </DialogContent>
                 </Dialog>
