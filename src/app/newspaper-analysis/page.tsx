@@ -1,7 +1,7 @@
 
 "use client";
 
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -19,7 +19,6 @@ import { textToSpeech } from "@/ai/flows/text-to-speech-flow";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
-import rehypeRaw from "rehype-raw";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { motion, AnimatePresence } from "framer-motion";
@@ -48,15 +47,11 @@ const DifficultyGauge = ({ score }: { score: number }) => {
 };
 
 
-const MCQ = ({ question, subject, explanation, children, difficultyScore }: { question: string, subject: string, explanation: string, children: React.ReactNode, difficultyScore?: string }) => {
+const MCQ = (props: MCQType) => {
+  const { question, subject, explanation, options, difficulty } = props;
   const [selected, setSelected] = useState<string | null>(null);
   const [isAnswered, setIsAnswered] = useState(false);
-  const score = difficultyScore ? parseInt(difficultyScore, 10) : null;
-
-  const options = React.Children.toArray(children).filter(
-    (child): child is React.ReactElement<{ children: string, correct?: string }> =>
-      React.isValidElement(child) && typeof child.props.children === 'string'
-  );
+  const score = difficulty;
 
   const handleSelect = (optionValue: string) => {
     if (isAnswered) return;
@@ -64,17 +59,17 @@ const MCQ = ({ question, subject, explanation, children, difficultyScore }: { qu
     setIsAnswered(true);
   };
   
-  const hasSelectedCorrect = options.some(o => o.props.children === selected && o.props.correct === 'true');
+  const hasSelectedCorrect = options.some(o => o.text === selected && o.correct);
 
   return (
     <div className="my-6 p-4 border rounded-lg bg-background/50 shadow-sm">
       {score && <DifficultyGauge score={score} />}
       <p className="font-semibold leading-relaxed text-foreground">{question}</p>
       {subject && <Badge variant="secondary" className="mb-4 mt-2 font-normal">{subject}</Badge>}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-4">
+      <div className="grid grid-cols-1 gap-2 mt-4">
         {options.map((option, index) => {
-          const optionValue = option.props.children;
-          const isCorrect = option.props.correct === 'true';
+          const optionValue = option.text;
+          const isCorrect = option.correct;
           const isSelected = selected === optionValue;
           
           let icon;
@@ -97,7 +92,7 @@ const MCQ = ({ question, subject, explanation, children, difficultyScore }: { qu
               onClick={() => handleSelect(optionValue)}
               disabled={isAnswered}
               className={cn(
-                "justify-start text-left h-auto py-2 px-3 whitespace-normal w-full items-center gap-2 transition-all duration-200 hover:bg-accent/80 hover:border-primary/50",
+                "justify-start text-left h-auto py-2 px-3 whitespace-normal w-full items-center gap-3 transition-all duration-200 hover:bg-accent/80 hover:border-primary/50",
                 isAnswered && {
                   "border-green-400 bg-green-50 text-green-900 hover:bg-green-100 dark:bg-green-900/30 dark:border-green-600 dark:text-green-100 dark:hover:bg-green-900/40": isCorrect,
                   "border-red-400 bg-red-50 text-red-900 hover:bg-red-100 dark:bg-red-900/30 dark:border-red-600 dark:text-red-100 dark:hover:bg-red-900/40": isSelected && !isCorrect,
@@ -106,7 +101,10 @@ const MCQ = ({ question, subject, explanation, children, difficultyScore }: { qu
               )}
             >
               {icon}
-              <span>{optionValue}</span>
+              <span className="flex items-start gap-2">
+                <span className="font-bold">({String.fromCharCode(65 + index)})</span>
+                <span>{optionValue}</span>
+              </span>
             </Button>
           );
         })}
@@ -146,50 +144,24 @@ const MCQ = ({ question, subject, explanation, children, difficultyScore }: { qu
   );
 };
 
-const MCQList = ({ mcqs }: { mcqs: MCQType[] }) => (
-  <div>
-    {mcqs.map((q, idx) => (
-      <MCQ
-        key={idx}
-        question={q.question}
-        subject={q.subject || ""}
-        explanation={q.explanation || ""}
-        difficultyScore={q.difficulty ? q.difficulty.toString() : undefined}
-      >
-        {q.options.map((opt, i) => (
-          <span key={i} correct={opt.correct ? "true" : undefined}>{opt.text}</span>
-        ))}
-      </MCQ>
-    ))}
-  </div>
-);
-
-const MainsQuestionList = ({ questions }: { questions: MainsQuestion[] }) => (
-  <div className="space-y-8">
-    {questions.map((q, i) => (
-      <div key={i} className="p-4 border rounded-lg bg-background/50 shadow-sm">
-        <h3 className="font-semibold mb-2">{q.question}</h3>
-        {q.difficulty && <DifficultyGauge score={q.difficulty} />}
-        {q.guidance && (
-          <AnalysisOutputDisplay analysis={q.guidance} />
-        )}
-      </div>
-    ))}
-  </div>
-);
+const MCQList = ({ mcqs }: { mcqs: MCQType[] }) => {
+    if (!mcqs || mcqs.length === 0) {
+        return (
+            <div className="text-center text-muted-foreground p-8">
+                No Prelims questions were generated for this analysis.
+            </div>
+        );
+    }
+    return (
+        <div>
+            {mcqs.map((q, idx) => (
+                <MCQ key={idx} {...q} />
+            ))}
+        </div>
+    );
+};
 
 const markdownComponents = {
-  // Custom tag renderers
-  person: (props: any) => <span className="entity-tag entity-person">{props.children}</span>,
-  place: (props: any) => <span className="entity-tag entity-place">{props.children}</span>,
-  scheme: (props: any) => <span className="entity-tag entity-scheme">{props.children}</span>,
-  date: (props: any) => <span className="entity-tag entity-date">{props.children}</span>,
-  org: (props: any) => <span className="entity-tag entity-org">{props.children}</span>,
-  mcq: (props: any) => <MCQ {...props} />,
-  option: (props: any) => <>{props.children}</>,
-  
-  // Premium styling for standard markdown
-  h1: (props: any) => <h1 className="text-3xl font-bold font-headline mt-8 pb-2 border-b-2 border-primary/30 text-primary" {...props} />,
   h2: (props: any) => {
     const content = React.Children.toArray(props.children).join('');
     const difficultyRegex = / \(Difficulty: (\d{1,2})\/10\)$/;
@@ -206,28 +178,39 @@ const markdownComponents = {
     );
   },
   h3: (props: any) => <h3 className="text-xl font-semibold font-headline mt-6 mb-2 text-primary/90" {...props} />,
-  blockquote: (props: any) => <blockquote className="relative border-l-4 border-primary bg-primary/10 p-4 my-4 rounded-r-lg italic text-muted-foreground" {...props} />,
   p: (props: any) => <p className="leading-relaxed my-4" {...props} />,
   ul: (props: any) => <ul className="list-disc list-outside pl-6 my-4 space-y-2 text-muted-foreground" {...props} />,
   ol: (props: any) => <ol className="list-decimal list-outside pl-6 my-4 space-y-2" {...props} />,
   li: (props: any) => <li className="pl-2" {...props} />,
-  code: (props: any) => <code className="bg-muted text-foreground font-mono text-sm rounded-md px-1.5 py-1" {...props} />,
-  table: (props: any) => <div className="my-6 w-full overflow-y-auto rounded-lg border"><table className="w-full" {...props} /></div>,
-  tr: (props: any) => <tr className="m-0 border-t p-0 even:bg-muted" {...props} />,
-  th: (props: any) => <th className="border-b border-r px-4 py-2 text-left font-bold bg-muted/50 [&[align=center]]:text-center [&[align=right]]:text-right" {...props} />,
-  td: (props: any) => <td className="border-r px-4 py-2 text-left [&[align=center]]:text-center [&[align=right]]:text-right" {...props} />,
+  strong: (props: any) => <strong className="font-bold text-foreground" {...props} />,
 };
 
-const AnalysisOutputDisplay = ({ analysis }: { analysis: string }) => (
-    <ReactMarkdown
-        remarkPlugins={[remarkGfm]}
-        rehypePlugins={[rehypeRaw]}
-        components={markdownComponents}
-        className="prose-sm dark:prose-invert max-w-none prose-headings:font-headline prose-h1:text-primary"
-    >
-        {analysis}
-    </ReactMarkdown>
-);
+const MainsQuestionList = ({ questions }: { questions: MainsQuestion[] }) => {
+    if (!questions || questions.length === 0) {
+        return (
+            <div className="text-center text-muted-foreground p-8">
+                No Mains questions were generated for this analysis.
+            </div>
+        );
+    }
+    return (
+        <div className="space-y-8">
+            {questions.map((q, i) => (
+                <div key={i} className="p-4 border rounded-lg bg-background/50 shadow-sm">
+                    <h2 className="text-xl font-bold font-headline text-primary">{q.question}</h2>
+                    {q.difficulty && <div className="mt-2"><DifficultyGauge score={q.difficulty} /></div>}
+                    {q.guidance && (
+                        <div className="prose-sm dark:prose-invert max-w-none text-muted-foreground mt-4">
+                            <ReactMarkdown remarkPlugins={[remarkGfm]} components={markdownComponents}>
+                                {q.guidance}
+                            </ReactMarkdown>
+                        </div>
+                    )}
+                </div>
+            ))}
+        </div>
+    );
+};
 
 const UsageStats = ({
   totalTokens,
@@ -298,6 +281,7 @@ export default function NewspaperAnalysisPage() {
   const [analysisResult, setAnalysisResult] = useState<NewspaperAnalysisOutput | null>(null);
   const [audioSrc, setAudioSrc] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState("url");
+  const [currentAnalysisTab, setCurrentAnalysisTab] = useState('prelims');
   const [inputs, setInputs] = useState({
     url: "",
     text: "",
@@ -356,9 +340,10 @@ export default function NewspaperAnalysisPage() {
     setIsLoading(true);
     setAnalysisResult(null);
     setAudioSrc(null);
+    setCurrentAnalysisTab('prelims');
 
     try {
-        const flowInput: Omit<NewspaperAnalysisInput, 'difficulty'> = {
+        const flowInput: NewspaperAnalysisInput = {
             sourceText,
             examType: inputs.examType,
             analysisFocus: inputs.analysisFocus,
@@ -366,12 +351,12 @@ export default function NewspaperAnalysisPage() {
         };
         const result = await analyzeNewspaperArticle(flowInput);
         setAnalysisResult(result);
-    } catch (error) {
+    } catch (error: any) {
         console.error("Analysis error:", error);
         toast({
             variant: "destructive",
             title: "Analysis Failed",
-            description: "The AI failed to analyze the article. Please check the input or try again later.",
+            description: error.message || "The AI failed to analyze the article. Please try again later.",
         });
     } finally {
         setIsLoading(false);
@@ -400,15 +385,23 @@ export default function NewspaperAnalysisPage() {
 
   const { prelimsContent, mainsContent } = useMemo(() => {
     if (!analysisResult) {
-        return { prelimsContent: [] as MCQType[], mainsContent: null as MainsQuestion[] | null };
+        return { prelimsContent: [], mainsContent: [] };
     }
     return {
-        prelimsContent: analysisResult.prelims.mcqs,
-        mainsContent: analysisResult.mains?.questions || null,
+        prelimsContent: analysisResult.prelims?.mcqs || [],
+        mainsContent: analysisResult.mains?.questions || [],
     };
   }, [analysisResult]);
 
-  const showTabs = !!mainsContent && prelimsContent.length > 0;
+  useEffect(() => {
+    if (prelimsContent.length === 0 && mainsContent.length > 0) {
+        setCurrentAnalysisTab('mains');
+    } else {
+        setCurrentAnalysisTab('prelims');
+    }
+  }, [prelimsContent, mainsContent]);
+
+  const showTabs = prelimsContent.length > 0 && mainsContent.length > 0;
   
   const audioButton = (
     <Button 
@@ -544,7 +537,7 @@ export default function NewspaperAnalysisPage() {
                                     <CardTitle>AI Analysis</CardTitle>
                                     <CardDescription>The breakdown of your article will appear here.</CardDescription>
                                 </div>
-                                {analysisResult?.analysis && (
+                                {analysisResult && (
                                     <DialogTrigger asChild>
                                         <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-primary -mr-2 -mt-2 flex-shrink-0">
                                             <Maximize className="w-5 h-5" />
@@ -606,7 +599,7 @@ export default function NewspaperAnalysisPage() {
                                 )}
 
                                 {showTabs ? (
-                                    <Tabs defaultValue="prelims" className="w-full flex-1 flex flex-col mt-4">
+                                    <Tabs value={currentAnalysisTab} onValueChange={setCurrentAnalysisTab} className="w-full flex-1 flex flex-col mt-4">
                                         <TabsList>
                                             <TabsTrigger 
                                                 value="prelims"
@@ -638,7 +631,8 @@ export default function NewspaperAnalysisPage() {
                                     </Tabs>
                                 ) : (
                                     <ScrollArea className="h-[450px] w-full pr-4 -mr-4">
-                                        <MCQList mcqs={prelimsContent} />
+                                        {prelimsContent.length > 0 && <MCQList mcqs={prelimsContent} />}
+                                        {mainsContent.length > 0 && <MainsQuestionList questions={mainsContent} />}
                                     </ScrollArea>
                                 )}
                               </div>
@@ -650,7 +644,7 @@ export default function NewspaperAnalysisPage() {
                             <DialogTitle>Expanded Analysis</DialogTitle>
                         </DialogHeader>
                         <ScrollArea className="flex-1 pr-6 -mr-6">
-                           {analysisResult && (
+                           {analysisResult?.prelims && (
                              <MCQList mcqs={analysisResult.prelims.mcqs} />
                            )}
                            {analysisResult?.mains && (
@@ -666,3 +660,5 @@ export default function NewspaperAnalysisPage() {
     </div>
   );
 }
+
+    
