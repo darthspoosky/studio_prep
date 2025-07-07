@@ -2,7 +2,7 @@
 'use client';
 
 import { db } from '@/lib/firebase';
-import { collection, addDoc, query, where, getDocs, Timestamp, doc, setDoc } from 'firebase/firestore';
+import { collection, addDoc, query, where, getDocs, Timestamp, doc, setDoc, orderBy } from 'firebase/firestore';
 
 export interface QuizAttempt {
     userId: string;
@@ -67,7 +67,7 @@ export async function getAllUserAttempts(userId: string): Promise<{[question: st
   
   const attempts: {[question: string]: string} = {};
   try {
-    const q = query(collection(db, 'quizAttempts'), where('userId', '==', userId));
+    const q = query(collection(db, 'quizAttempts'), where('userId', '==', userId), orderBy('timestamp', 'desc'));
     const querySnapshot = await getDocs(q);
     querySnapshot.forEach((doc) => {
       const data = doc.data();
@@ -77,7 +77,7 @@ export async function getAllUserAttempts(userId: string): Promise<{[question: st
   } catch (error) {
     console.error("Error fetching all user quiz attempts: ", error);
     if ((error as any).code === 'permission-denied') {
-        throw new Error("Could not read quiz attempts due to a permission error. Please check your Firestore security rules.");
+        throw new Error("Could not read quiz attempts due to a permission error. This usually happens when a Firestore index is missing. Please check your browser's developer console for a link to create the required index.");
     }
     return {};
   }
