@@ -5,6 +5,7 @@ import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useAuth } from '@/contexts/AuthContext';
 import { getHistoryEntry, type HistoryEntry } from '@/services/historyService';
+import { saveQuizAttempt, getQuizAttemptsForHistory } from '@/services/quizAttemptsService';
 
 import Header from '@/components/layout/header';
 import Footer from '@/components/landing/footer';
@@ -75,15 +76,18 @@ const FormattedQuestion = ({ text }: { text: string }) => {
     );
 };
 
-const MCQ = (props: MCQType) => {
-  const { question, subject, explanation, options, difficulty } = props;
-  const [selected, setSelected] = useState<string | null>(null);
-  const [isAnswered, setIsAnswered] = useState(false);
+const MCQ = ({ mcq, userId, historyId, savedSelection, onAnswer }: { mcq: MCQType, userId: string, historyId: string, savedSelection: string | null, onAnswer: (question: string, selectedOption: string, isCorrect: boolean, subject?: string, difficulty?: number) => void }) => {
+  const { question, subject, explanation, options, difficulty } = mcq;
+  const [selected, setSelected] = useState<string | null>(savedSelection);
+  const [isAnswered, setIsAnswered] = useState(!!savedSelection);
   const score = difficulty;
+
   const handleSelect = (optionValue: string) => {
     if (isAnswered) return;
     setSelected(optionValue);
     setIsAnswered(true);
+    const isCorrect = options.find(o => o.text === optionValue)?.correct || false;
+    onAnswer(question, optionValue, isCorrect, subject, difficulty);
   };
   const hasSelectedCorrect = options.some(o => o.text === selected && o.correct);
 
@@ -160,11 +164,50 @@ const MCQ = (props: MCQType) => {
   );
 };
 
-const MCQList = ({ mcqs }: { mcqs: MCQType[] }) => {
+const MCQList = ({ mcqs, userId, historyId }: { mcqs: MCQType[], userId: string, historyId: string }) => {
+    const [attempts, setAttempts] = useState<Record<string, string>>({});
+    const [loadingAttempts, setLoadingAttempts] = useState(true);
+
+    useEffect(() => {
+        const fetchAttempts = async () => {
+            if (historyId) {
+                setLoadingAttempts(true);
+                const savedAttempts = await getQuizAttemptsForHistory(historyId);
+                setAttempts(savedAttempts);
+                setLoadingAttempts(false);
+            }
+        };
+        fetchAttempts();
+    }, [historyId]);
+
+    const handleAnswer = (question: string, selectedOption: string, isCorrect: boolean, subject?: string, difficulty?: number) => {
+        setAttempts(prev => ({ ...prev, [question]: selectedOption }));
+        saveQuizAttempt(userId, historyId, question, selectedOption, isCorrect, subject, difficulty);
+    };
+
     if (!mcqs || mcqs.length === 0) {
         return <div className="text-center text-muted-foreground p-8">No Prelims questions were generated for this analysis.</div>;
     }
-    return <div>{mcqs.map((q, idx) => <MCQ key={idx} {...q} />)}</div>;
+
+    if (loadingAttempts) {
+        return (
+            <div>
+                {Array.from({ length: 3 }).map((_, i) => (
+                    <div key={i} className="my-6 p-4 border rounded-lg shadow-sm">
+                        <Skeleton className="h-5 w-3/4 mb-4" />
+                        <div className="space-y-2 mt-4">
+                            <Skeleton className="h-10 w-full" />
+                            <Skeleton className="h-10 w-full" />
+                            <Skeleton className="h-10 w-full" />
+                            <Skeleton className="h-10 w-full" />
+                        </div>
+                    </div>
+                ))}
+            </div>
+        );
+    }
+    
+    return <div>{mcqs.map((q, idx) => <MCQ key={idx} mcq={q} userId={userId} historyId={historyId} savedSelection={attempts[q.question] || null} onAnswer={handleAnswer} />)}</div>;
 };
 
 const markdownComponents = {
@@ -351,7 +394,7 @@ export default function HistoryDetailPage() {
     }, [historyEntry]);
 
 
-    if (authLoading) {
+    if (authLoading || !user) {
         return null; 
     }
 
@@ -424,7 +467,7 @@ export default function HistoryDetailPage() {
                                 </TabsList>
                                 <div className="mt-4">
                                     <ScrollArea className="h-[60vh] pr-4 -mr-4">
-                                        {showPrelims && <TabsContent value="prelims"><MCQList mcqs={prelimsContent} /></TabsContent>}
+                                        {showPrelims && <TabsContent value="prelims"><MCQList mcqs={prelimsContent} userId={user.uid} historyId={historyEntry.id} /></TabsContent>}
                                         {showMains && <TabsContent value="mains"><MainsQuestionList questions={mainsContent} /></TabsContent>}
                                         {showGraph && <TabsContent value="connections"><KnowledgeGraphVisualizer graphData={knowledgeGraphContent} /></TabsContent>}
                                     </ScrollArea>

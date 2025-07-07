@@ -17,6 +17,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { isToday } from 'date-fns';
 import { Sheet, SheetContent, SheetTrigger, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet';
 import { UserNav } from '@/components/layout/user-nav';
+import { getUserQuizStats, type UserQuizStats } from '@/services/quizAttemptsService';
 
 
 // --- Local Components for Dashboard ---
@@ -178,7 +179,7 @@ const DailyGoalChart = ({ progress }: { progress: number }) => {
     );
 };
 
-const RightSidebar = () => {
+const RightSidebar = ({ quizStats }: { quizStats: UserQuizStats | null }) => {
     const [date, setDate] = useState<Date | undefined>(new Date());
     return (
         <div className="flex flex-col gap-6 lg:p-4 lg:bg-card lg:rounded-2xl lg:h-full">
@@ -213,6 +214,23 @@ const RightSidebar = () => {
                     <p className="text-xs text-muted-foreground">Task Done</p>
                 </Card>
             </div>
+            {quizStats && quizStats.totalAttempted > 0 && (
+                 <div>
+                    <h3 className="font-semibold px-2 mb-2">Quiz Performance</h3>
+                     <div className="grid grid-cols-2 gap-4 px-2">
+                        <Card className="glassmorphic items-center justify-center flex flex-col p-4 text-center">
+                            <FileQuestion className="w-8 h-8 text-blue-500"/>
+                            <p className="text-2xl font-bold mt-1">{quizStats.totalAttempted}</p>
+                            <p className="text-xs text-muted-foreground">Answered</p>
+                        </Card>
+                        <Card className="glassmorphic items-center justify-center flex flex-col p-4 text-center">
+                            <CheckCircle className="w-8 h-8 text-teal-500"/>
+                            <p className="text-2xl font-bold mt-1">{quizStats.accuracy}%</p>
+                            <p className="text-xs text-muted-foreground">Accuracy</p>
+                        </Card>
+                    </div>
+                </div>
+            )}
              <div>
                 <h3 className="font-semibold px-2 mb-2">Daily Goal</h3>
                 <Card className="glassmorphic p-4 flex items-center">
@@ -234,6 +252,7 @@ export default function ReimaginedDashboardPage() {
     const router = useRouter();
     const [history, setHistory] = useState<HistoryEntry[]>([]);
     const [historyLoading, setHistoryLoading] = useState(true);
+    const [quizStats, setQuizStats] = useState<UserQuizStats | null>(null);
 
     useEffect(() => {
         if (!loading && !user) {
@@ -249,6 +268,9 @@ export default function ReimaginedDashboardPage() {
                 setHistoryLoading(false);
             }).catch(() => {
                 setHistoryLoading(false);
+            });
+            getUserQuizStats(user.uid).then(stats => {
+                setQuizStats(stats);
             });
         }
     }, [user]);
@@ -382,7 +404,7 @@ export default function ReimaginedDashboardPage() {
 
                 </main>
                 <div className="p-4 lg:p-0">
-                    <RightSidebar />
+                    <RightSidebar quizStats={quizStats} />
                 </div>
             </div>
         </div>

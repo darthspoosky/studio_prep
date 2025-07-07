@@ -28,6 +28,8 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useRouter } from "next/navigation";
 import { addHistory } from "@/services/historyService";
 import { incrementToolUsage } from "@/services/usageService";
+import { saveQuizAttempt } from "@/services/quizAttemptsService";
+import { Skeleton } from "@/components/ui/skeleton";
 
 
 const DifficultyGauge = ({ score }: { score: number }) => {
@@ -94,8 +96,8 @@ const FormattedQuestion = ({ text }: { text: string }) => {
 };
 
 
-const MCQ = (props: MCQType) => {
-  const { question, subject, explanation, options, difficulty } = props;
+const MCQ = ({ mcq, onAnswer }: { mcq: MCQType, onAnswer: (question: string, selectedOption: string, isCorrect: boolean, subject?: string, difficulty?: number) => void }) => {
+  const { question, subject, explanation, options, difficulty } = mcq;
   const [selected, setSelected] = useState<string | null>(null);
   const [isAnswered, setIsAnswered] = useState(false);
   const score = difficulty;
@@ -104,6 +106,8 @@ const MCQ = (props: MCQType) => {
     if (isAnswered) return;
     setSelected(optionValue);
     setIsAnswered(true);
+    const isCorrect = options.find(o => o.text === optionValue)?.correct || false;
+    onAnswer(question, optionValue, isCorrect, subject, difficulty);
   };
   
   const hasSelectedCorrect = options.some(o => o.text === selected && o.correct);
@@ -191,7 +195,7 @@ const MCQ = (props: MCQType) => {
   );
 };
 
-const MCQList = ({ mcqs }: { mcqs: MCQType[] }) => {
+const MCQList = ({ mcqs, onAnswer }: { mcqs: MCQType[], onAnswer: (question: string, selectedOption: string, isCorrect: boolean, subject?: string, difficulty?: number) => void }) => {
     if (!mcqs || mcqs.length === 0) {
         return (
             <div className="text-center text-muted-foreground p-8">
@@ -202,7 +206,7 @@ const MCQList = ({ mcqs }: { mcqs: MCQType[] }) => {
     return (
         <div>
             {mcqs.map((q, idx) => (
-                <MCQ key={idx} {...q} />
+                <MCQ key={idx} mcq={q} onAnswer={onAnswer} />
             ))}
         </div>
     );
@@ -404,6 +408,7 @@ export default function NewspaperAnalysisPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [isGeneratingAudio, setIsGeneratingAudio] = useState(false);
   const [analysisResult, setAnalysisResult] = useState<NewspaperAnalysisOutput | null>(null);
+  const [historyId, setHistoryId] = useState<string | null>(null);
   const [audioSrc, setAudioSrc] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState("url");
   const [currentAnalysisTab, setCurrentAnalysisTab] = useState('prelims');
@@ -466,6 +471,7 @@ export default function NewspaperAnalysisPage() {
     
     if(!isLoading) setIsLoading(true);
     setAnalysisResult(null);
+    setHistoryId(null);
     setAudioSrc(null);
     setCurrentAnalysisTab('prelims');
 
@@ -480,7 +486,8 @@ export default function NewspaperAnalysisPage() {
         setAnalysisResult(result);
 
         if (user) {
-            await addHistory(user.uid, result, activeTab === 'url' ? inputs.url : undefined);
+            const newHistoryId = await addHistory(user.uid, result, activeTab === 'url' ? inputs.url : undefined);
+            if (newHistoryId) setHistoryId(newHistoryId);
             await incrementToolUsage(user.uid, 'newspaperAnalysis');
         }
     } catch (error: any) {
@@ -520,6 +527,12 @@ export default function NewspaperAnalysisPage() {
     } finally {
       setIsGeneratingAudio(false);
     }
+  };
+  
+  const handleAnswer = (question: string, selectedOption: string, isCorrect: boolean, subject?: string, difficulty?: number) => {
+      if (user && historyId) {
+          saveQuizAttempt(user.uid, historyId, question, selectedOption, isCorrect, subject, difficulty);
+      }
   };
 
   const { prelimsContent, mainsContent, knowledgeGraphContent } = useMemo(() => {
@@ -790,7 +803,7 @@ export default function NewspaperAnalysisPage() {
                                     {showPrelims && (
                                         <TabsContent value="prelims" className="flex-1 mt-4">
                                             <ScrollArea className="h-[400px] w-full pr-4 -mr-4">
-                                                <MCQList mcqs={prelimsContent} />
+                                                <MCQList mcqs={prelimsContent} onAnswer={handleAnswer} />
                                             </ScrollArea>
                                         </TabsContent>
                                     )}
@@ -819,7 +832,7 @@ export default function NewspaperAnalysisPage() {
                         </DialogHeader>
                         <ScrollArea className="flex-1 pr-6 -mr-6">
                            {analysisResult?.prelims && (
-                             <MCQList mcqs={analysisResult.prelims.mcqs} />
+                             <MCQList mcqs={analysisResult.prelims.mcqs} onAnswer={handleAnswer} />
                            )}
                            {analysisResult?.mains && (
                              <MainsQuestionList questions={analysisResult.mains.questions} />
