@@ -1,0 +1,51 @@
+
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // USER DATA
+    match /userProfiles/{userId} {
+      allow read, write: if request.auth.uid == userId;
+    }
+    
+    // Allow users to manage their own usage stats. Global stats are handled separately.
+    match /toolUsage/{docId} {
+      allow read, write: if request.auth != null && request.auth.uid == docId;
+      allow read: if docId == 'global';
+      allow write: if request.auth != null && docId == 'global';
+    }
+
+    // Allow anyone to read ideas and allow anyone to create them (for anonymous surveys).
+    match /ideas/{ideaId} {
+      allow read: if true;
+      allow create: if true;
+      allow update, delete: if false;
+    }
+
+    // USER-SCOPED COLLECTIONS
+    match /userHistory/{historyId} {
+      allow get, update, delete: if request.auth.uid == resource.data.userId;
+      allow create: if request.auth.uid == request.resource.data.userId;
+      allow list: if request.auth.uid == request.query.where.userId;
+    }
+
+    match /quizAttempts/{attemptId} {
+      allow get, update, delete: if request.auth.uid == resource.data.userId;
+      allow create: if request.auth.uid == request.resource.data.userId;
+      allow list: if request.auth.uid == request.query.where.userId;
+    }
+
+    match /mainsAnswers/{answerId} {
+      allow get, update, delete: if request.auth.uid == resource.data.userId;
+      allow create: if request.auth.uid == request.resource.data.userId;
+      allow list: if request.auth.uid == request.query.where.userId;
+    }
+    
+    match /savedQuestions/{questionId} {
+      allow get, update, delete: if request.auth.uid == resource.data.userId;
+      allow create: if request.auth.uid == request.resource.data.userId;
+      allow list: if request.auth.uid == request.query.where.userId;
+    }
+  }
+}
