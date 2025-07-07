@@ -9,12 +9,12 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Newspaper, Mic, FileQuestion, PenLine, Book, BarChart3, HelpCircle, Users, Settings, LogOut, ChevronDown, CheckCircle, Flame, Target, PlayCircle, Library } from 'lucide-react';
 import { getHistory, type HistoryEntry } from '@/services/historyService';
-import { getUserUsage, type UsageStats } from '@/services/usageService';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Calendar } from '@/components/ui/calendar';
 import { Progress } from '@/components/ui/progress';
-import Image from 'next/image';
 import { RadialBarChart, RadialBar, ResponsiveContainer, PolarAngleAxis } from 'recharts';
+import { Skeleton } from '@/components/ui/skeleton';
+
 
 // --- Local Components for Dashboard ---
 
@@ -84,35 +84,40 @@ const ScheduleCard = ({ title, description, buttonText, buttonVariant = 'default
     </Card>
 );
 
-const CourseCard = ({ title, chapters, imageHint }: {title: string, chapters: number, imageHint: string}) => (
-    <Card className="overflow-hidden glassmorphic group">
-        <div className="relative h-32">
-            <Image src={`https://placehold.co/400x200.png`} alt={title} layout="fill" objectFit="cover" className="group-hover:scale-105 transition-transform" data-ai-hint={imageHint} />
-        </div>
-        <CardHeader>
-            <CardTitle className="text-base font-semibold">{title}</CardTitle>
-            <CardDescription className="text-sm">{chapters} Chapters</CardDescription>
-        </CardHeader>
-    </Card>
-);
-
-const WatchCard = ({ title, subtitle, imageHint, progress }: {title: string, subtitle: string, imageHint: string, progress: number}) => (
-     <Card className="min-w-[280px] w-[280px] overflow-hidden glassmorphic group relative">
-        <div className="relative h-32">
-            <Image src={`https://placehold.co/400x200.png`} alt={title} layout="fill" objectFit="cover" data-ai-hint={imageHint} />
-            <div className="absolute inset-0 bg-black/30 flex items-center justify-center">
-                <PlayCircle className="w-10 h-10 text-white/70 group-hover:text-white transition-colors"/>
+const HistoryCard = ({ entry }: { entry: HistoryEntry }) => {
+  const date = new Date(entry.timestamp.seconds * 1000).toLocaleDateString('en-US', {
+    month: 'long',
+    day: 'numeric',
+    year: 'numeric',
+  });
+  
+  return (
+    <Card className="glassmorphic flex flex-col">
+      <CardHeader>
+        <div className="flex items-center gap-3">
+            <div className="p-2 bg-primary/20 rounded-full flex-shrink-0">
+                <Newspaper className="w-5 h-5 text-primary"/>
+            </div>
+            <div>
+                <CardTitle className="text-base font-semibold">Newspaper Analysis</CardTitle>
+                <CardDescription className="text-xs">{date}</CardDescription>
             </div>
         </div>
-        <CardHeader>
-            <CardTitle className="text-sm font-semibold truncate">{title}</CardTitle>
-            <CardDescription className="text-xs truncate">{subtitle}</CardDescription>
-        </CardHeader>
-        <CardFooter>
-            <Progress value={progress} className="h-1.5" />
-        </CardFooter>
+      </CardHeader>
+      <CardContent className="flex-grow">
+        <p className="text-sm text-muted-foreground line-clamp-3">
+          {entry.analysis.summary || 'No summary available for this analysis.'}
+        </p>
+      </CardContent>
+      <CardFooter>
+        <Button asChild variant="outline" size="sm">
+          <Link href={`/history/${entry.id}`}>View Details</Link>
+        </Button>
+      </CardFooter>
     </Card>
-)
+  );
+};
+
 
 const DailyGoalChart = ({ progress }: { progress: number }) => {
     const data = [{ name: 'goal', value: progress, fill: 'hsl(var(--primary))' }];
@@ -209,12 +214,26 @@ const RightSidebar = () => {
 export default function ReimaginedDashboardPage() {
     const { user, loading } = useAuth();
     const router = useRouter();
+    const [history, setHistory] = useState<HistoryEntry[]>([]);
+    const [historyLoading, setHistoryLoading] = useState(true);
 
     useEffect(() => {
         if (!loading && !user) {
             router.push('/login');
         }
     }, [user, loading, router]);
+    
+    useEffect(() => {
+        if (user) {
+            setHistoryLoading(true);
+            getHistory(user.uid).then(data => {
+                setHistory(data);
+                setHistoryLoading(false);
+            }).catch(() => {
+                setHistoryLoading(false);
+            });
+        }
+    }, [user]);
 
     if (loading || !user) {
         return null;
@@ -248,26 +267,38 @@ export default function ReimaginedDashboardPage() {
                             />
                         </div>
                     </div>
-
-                    {/* Continue to Watch */}
+                    
+                    {/* Activity History */}
                      <div>
-                        <h3 className="text-lg font-semibold px-4 mb-3">Continue to Watch</h3>
-                        <div className="flex gap-4 px-4 overflow-x-auto pb-4">
-                           <WatchCard title="Indian Polity by M. Laxmikanth" subtitle="Video 1" imageHint="abstract purple" progress={60} />
-                           <WatchCard title="History for UPSC - IAS - Pre" subtitle="History of Ancient India" imageHint="abstract teal" progress={25} />
-                           <WatchCard title="GS Paper II Complete Course" subtitle="International Relations" imageHint="abstract blue" progress={80} />
+                        <h3 className="text-lg font-semibold px-4 mb-3">Activity History</h3>
+                        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 px-4">
+                           {historyLoading ? (
+                                Array.from({ length: 3 }).map((_, i) => (
+                                    <Card key={i}>
+                                        <CardHeader><Skeleton className="h-10 w-3/4" /></CardHeader>
+                                        <CardContent><Skeleton className="h-16 w-full" /></CardContent>
+                                        <CardFooter><Skeleton className="h-8 w-24" /></CardFooter>
+                                    </Card>
+                                ))
+                           ) : history.length > 0 ? (
+                                history.slice(0, 3).map(entry => (
+                                    <HistoryCard key={entry.id} entry={entry} />
+                                ))
+                           ) : (
+                             <Card className="md:col-span-3 text-center p-8 glassmorphic">
+                                <CardContent className="pt-6">
+                                    <Library className="mx-auto w-12 h-12 text-muted-foreground/50 mb-4" />
+                                    <h4 className="font-semibold text-lg">No history yet</h4>
+                                    <p className="text-muted-foreground mt-1">Your past analyses will appear here once you use a tool.</p>
+                                    <Button asChild className="mt-4">
+                                        <Link href="/newspaper-analysis">Analyze your first article</Link>
+                                    </Button>
+                                </CardContent>
+                            </Card>
+                           )}
                         </div>
                     </div>
 
-                     {/* Your Courses */}
-                    <div>
-                        <h3 className="text-lg font-semibold px-4 mb-3">Your Courses</h3>
-                        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 px-4">
-                           <CourseCard title="Indian Polity" chapters={11} imageHint="court law" />
-                           <CourseCard title="Ancient History" chapters={18} imageHint="ancient rome" />
-                           <Course_Card title="Medieval History" chapters={16} imageHint="castle architecture" />
-                        </div>
-                    </div>
                 </main>
                 <RightSidebar />
             </div>
@@ -276,4 +307,4 @@ export default function ReimaginedDashboardPage() {
 }
 
 // A small fix for a component name typo to avoid breaking the build
-const Course_Card = CourseCard;
+const Course_Card = HistoryCard;
