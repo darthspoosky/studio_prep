@@ -1,5 +1,7 @@
 import { User } from 'firebase/auth';
-import { Question, QuestionSet } from '@/types/quiz';
+import { Question, QuestionSet } from '../types/quiz';
+import { doc, collection, getDoc, getDocs, setDoc, updateDoc, query, where, Timestamp, addDoc, arrayUnion, serverTimestamp } from 'firebase/firestore';
+import { db } from '../config/firebase';
 
 export type PastYearFilter = {
   year?: number;
@@ -15,10 +17,56 @@ export type YearProgress = {
   correct: number;
 };
 
+export type UserAnswer = {
+  questionId: string;
+  answer: string;
+  isCorrect: boolean;
+  timestamp: Date;
+};
+
+export type UserProgressData = {
+  userId: string;
+  yearProgress: YearProgress[];
+  lastActiveDate?: Date;
+  currentStreak?: number;
+  bestStreak?: number;
+  syllabusProgress?: Record<string, { attempted: number; correct: number; total: number }>;
+  
+  // Additional fields for performance metrics
+  total: number;
+  attempted: number;
+  correct: number;
+  accuracy?: number;
+  weeklyPerformance?: Array<{ day: string; correct: number; total: number }>;
+  recentImprovement?: number;
+};
+
 /**
  * Service for managing past year questions
  */
 export default class PastYearQuestionService {
+  /**
+   * Gets the complete user progress data including streaks
+   * @param userId The user ID
+   * @returns Promise resolving to the complete user progress data
+   */
+  static async getUserProgressData(userId: string): Promise<UserProgressData | null> {
+    try {
+      if (!userId) return null;
+      
+      const userProgressRef = doc(db, 'userProgress', userId);
+      const userProgressDoc = await getDoc(userProgressRef);
+      
+      if (userProgressDoc.exists()) {
+        return userProgressDoc.data() as UserProgressData;
+      }
+      
+      return null;
+    } catch (error) {
+      console.error('Error getting user progress data:', error);
+      return null;
+    }
+  }
   /**
    * Fetches questions by year
    * @param year The year to fetch questions for
@@ -27,8 +75,60 @@ export default class PastYearQuestionService {
    */
   static async fetchQuestionsByYear(year: number, userId?: string): Promise<QuestionSet> {
     try {
-      // TODO: Replace with actual API call to fetch from database
-      // For now returning mock data
+      // Get questions collection reference
+      const questionsRef = collection(db, 'pastYearQuestions');
+      const q = query(questionsRef, where('year', '==', year));
+      
+      try {
+        // Try to fetch from database first
+        const querySnapshot = await getDocs(q);
+        
+        if (!querySnapshot.empty) {
+          const questions: Question[] = [];
+          
+          // Get user answers if userId is provided
+          let userAnswers: Record<string, string> = {};
+          if (userId) {
+            const userAnswersRef = collection(db, 'userAnswers');
+            const userAnswersQuery = query(userAnswersRef, where('userId', '==', userId));
+            const userAnswersSnapshot = await getDocs(userAnswersQuery);
+            
+            userAnswersSnapshot.forEach(doc => {
+              const data = doc.data();
+              userAnswers[data.questionId] = data.answer;
+            });
+          }
+          
+          // Process questions and add user answers if available
+          querySnapshot.forEach(doc => {
+            const questionData = doc.data() as Question;
+            questionData.id = doc.id;
+            
+            // Add user answer if available
+            if (userId && userAnswers[questionData.id]) {
+              questionData.userAnswer = userAnswers[questionData.id];
+            }
+            
+            questions.push(questionData);
+          });
+          
+          return {
+            id: `py-set-${year}`,
+            title: `UPSC ${year} Questions`,
+            description: `Questions from UPSC Prelims ${year} examination`,
+            questions,
+            metadata: {
+              source: 'past-year',
+              year,
+            },
+          };
+        }
+      } catch (dbError) {
+        console.error('Error fetching from database, falling back to mock data:', dbError);
+      }
+      
+      // Fall back to mock data if database fetch fails or returns empty
+      console.log('Using mock data for year', year);
       const mockQuestions: Question[] = Array(10).fill(null).map((_, index) => ({
         id: `py-${year}-${index}`,
         question: `Sample past year question ${index + 1} from ${year}`,
@@ -74,8 +174,81 @@ export default class PastYearQuestionService {
     userId?: string
   ): Promise<QuestionSet> {
     try {
-      // TODO: Replace with actual API call to fetch from database
-      // For now returning mock data
+      // Get questions collection reference
+      const questionsRef = collection(db, 'pastYearQuestions');
+      const q = query(questionsRef, where('metadata.syllabusSectionId', '==', sectionId));
+      
+      try {
+        // Try to fetch from database first
+        const querySnapshot = await getDocs(q);
+        
+        if (!querySnapshot.empty) {
+          const questions: Question[] = [];
+          
+          // Get user answers if userId is provided
+          let userAnswers: Record<string, string> = {};
+          if (userId) {
+            const userAnswersRef = collection(db, 'userAnswers');
+            const userAnswersQuery = query(userAnswersRef, where('userId', '==', userId));
+            const userAnswersSnapshot = await getDocs(userAnswersQuery);
+            
+            userAnswersSnapshot.forEach(doc => {
+              const data = doc.data();
+              userAnswers[data.questionId] = data.answer;
+            });
+          }
+          
+          // Process questions and add user answers if available
+          querySnapshot.forEach(doc => {
+            const questionData = doc.data() as Question;
+            questionData.id = doc.id;
+            
+            // Add user answer if available
+            if (userId && userAnswers[questionData.id]) {
+              questionData.userAnswer = userAnswers[questionData.id];
+            }
+            
+            questions.push(questionData);
+          });
+          
+          // Get the section name
+          let sectionName = sectionId;
+          const allSections = await this.getAvailableSyllabusSections();
+          
+          // Look for the section in main sections and their children
+          for (const section of allSections) {
+            if (section.id === sectionId) {
+              sectionName = section.name;
+              break;
+            }
+            
+            // Check children
+            if (section.children) {
+              const child = section.children.find(child => child.id === sectionId);
+              if (child) {
+                sectionName = child.name;
+                break;
+              }
+            }
+          }
+          
+          return {
+            id: `py-section-${sectionId}`,
+            title: `${sectionName} Questions`,
+            description: `Questions from syllabus section ${sectionName}`,
+            questions,
+            metadata: {
+              source: 'past-year',
+              syllabusSectionId: sectionId,
+            },
+          };
+        }
+      } catch (dbError) {
+        console.error('Error fetching from database, falling back to mock data:', dbError);
+      }
+      
+      // Fall back to mock data if database fetch fails or returns empty
+      console.log('Using mock data for section', sectionId);
       const mockQuestions: Question[] = Array(8).fill(null).map((_, index) => ({
         id: `py-section-${sectionId}-${index}`,
         question: `Sample question ${index + 1} from syllabus section ${sectionId}`,
@@ -117,30 +290,45 @@ export default class PastYearQuestionService {
    */
   static async getUserYearProgress(userId: string): Promise<YearProgress[]> {
     try {
-      // TODO: Replace with actual API call to fetch from database
-      // For now returning mock data
-      const currentYear = new Date().getFullYear();
-      const yearProgress: YearProgress[] = [];
-
-      // Generate mock progress for past 10 years
-      for (let i = 0; i < 10; i++) {
-        const year = currentYear - i;
-        const total = 100;
-        const attempted = Math.floor(Math.random() * total);
-        const correct = Math.floor(Math.random() * attempted);
-
-        yearProgress.push({
-          year,
-          total,
-          attempted,
-          correct,
-        });
+      // Check if user progress document exists
+      const userProgressRef = doc(db, 'userProgress', userId);
+      const userProgressDoc = await getDoc(userProgressRef);
+      
+      if (userProgressDoc.exists()) {
+        const userData = userProgressDoc.data() as UserProgressData;
+        return userData.yearProgress || [];
       }
-
+      
+      // If no progress exists yet, initialize with available years but zero progress
+      const years = await this.getAvailableYears();
+      const yearProgress: YearProgress[] = years.map(year => ({
+        year,
+        total: 100, // Assuming 100 questions per year
+        attempted: 0,
+        correct: 0
+      }));
+      
+      // Create initial user progress document
+      await setDoc(userProgressRef, {
+        userId,
+        yearProgress,
+        lastActiveDate: serverTimestamp(),
+        currentStreak: 0,
+        bestStreak: 0,
+        syllabusProgress: {}
+      });
+      
       return yearProgress;
     } catch (error) {
-      console.error('Error fetching user year progress:', error);
-      throw error;
+      console.error('Error getting user year progress:', error);
+      // Fall back to mock data if there's an error (e.g., when offline)
+      const currentYear = new Date().getFullYear();
+      return Array(10).fill(null).map((_, i) => ({
+        year: currentYear - i,
+        total: 100,
+        attempted: 0,
+        correct: 0
+      }));
     }
   }
 
@@ -149,20 +337,161 @@ export default class PastYearQuestionService {
    * @param questionId The question ID
    * @param userId The user ID
    * @param answer The user's answer
+   * @param questionData Additional question data for updating progress
    * @returns Promise resolving when the answer is updated
    */
   static async updateUserAnswer(
     questionId: string,
     userId: string,
-    answer: string
+    answer: string,
+    questionData?: Question
   ): Promise<void> {
     try {
-      // TODO: Implement actual API call to update user answer in database
-      console.log(`Updating answer for question ${questionId} by user ${userId} to ${answer}`);
-      return Promise.resolve();
+      if (!userId) {
+        console.warn('No user ID provided for answer update');
+        return;
+      }
+      
+      // Reference to user progress document
+      const userProgressRef = doc(db, 'userProgress', userId);
+      
+      // Reference to user answers collection
+      const userAnswersRef = collection(db, 'userAnswers');
+      
+      // Check if the answer is correct
+      const isCorrect = questionData ? questionData.correctOptionId === answer : false;
+      
+      // Add answer to user answers collection
+      await addDoc(userAnswersRef, {
+        userId,
+        questionId,
+        answer,
+        isCorrect,
+        timestamp: serverTimestamp(),
+        questionMetadata: {
+          year: questionData?.year,
+          subject: questionData?.subject,
+          topic: questionData?.topic,
+          syllabusSection: questionData?.metadata?.syllabusSectionId
+        }
+      });
+      
+      // Get current user progress
+      const userProgressDoc = await getDoc(userProgressRef);
+      
+      if (userProgressDoc.exists()) {
+        const userData = userProgressDoc.data() as UserProgressData;
+        
+        // Update year progress if the question has a year
+        if (questionData?.year) {
+          const yearProgress = userData.yearProgress || [];
+          const yearIndex = yearProgress.findIndex(yp => yp.year === questionData.year);
+          
+          if (yearIndex >= 0) {
+            // Update existing year progress
+            yearProgress[yearIndex].attempted += 1;
+            if (isCorrect) {
+              yearProgress[yearIndex].correct += 1;
+            }
+          } else {
+            // Add new year progress
+            yearProgress.push({
+              year: questionData.year,
+              total: 100, // Approximate total
+              attempted: 1,
+              correct: isCorrect ? 1 : 0
+            });
+          }
+          
+          // Update streak information
+          const today = new Date();
+          // Handle both Firebase Timestamp and JavaScript Date objects
+          let lastActive: Date;
+          if (userData.lastActiveDate) {
+            // Check if lastActiveDate is a Firestore Timestamp
+            const hasToDateMethod = !!(userData.lastActiveDate as any).toDate;
+            if (hasToDateMethod) {
+              lastActive = (userData.lastActiveDate as any).toDate();
+            } else {
+              lastActive = userData.lastActiveDate as Date;
+            }
+          } else {
+            lastActive = new Date(0);
+          }
+          const isConsecutiveDay = 
+            today.getDate() - lastActive.getDate() === 1 || 
+            (today.getDate() === lastActive.getDate() && 
+             today.getMonth() === lastActive.getMonth() && 
+             today.getFullYear() === lastActive.getFullYear());
+          
+          let currentStreak = userData.currentStreak || 0;
+          let bestStreak = userData.bestStreak || 0;
+          
+          if (isConsecutiveDay) {
+            currentStreak += 1;
+            bestStreak = Math.max(bestStreak, currentStreak);
+          } else if (!isConsecutiveDay && 
+                    today.getDate() !== lastActive.getDate()) {
+            currentStreak = 1; // Reset streak but count today
+          }
+          
+          // Update syllabus progress
+          const syllabusProgress = userData.syllabusProgress || {};
+          if (questionData?.metadata?.syllabusSectionId) {
+            const sectionId = questionData.metadata.syllabusSectionId;
+            if (!syllabusProgress[sectionId]) {
+              syllabusProgress[sectionId] = { attempted: 0, correct: 0, total: 20 };
+            }
+            syllabusProgress[sectionId].attempted += 1;
+            if (isCorrect) {
+              syllabusProgress[sectionId].correct += 1;
+            }
+          }
+          
+          // Update user progress document
+          await updateDoc(userProgressRef, {
+            yearProgress,
+            lastActiveDate: serverTimestamp(),
+            currentStreak,
+            bestStreak,
+            syllabusProgress
+          });
+        }
+      } else {
+        // Initialize user progress if it doesn't exist
+        const initialYearProgress: YearProgress[] = [];
+        if (questionData?.year) {
+          initialYearProgress.push({
+            year: questionData.year,
+            total: 100,
+            attempted: 1,
+            correct: isCorrect ? 1 : 0
+          });
+        }
+        
+        const syllabusProgress: Record<string, { attempted: number; correct: number; total: number }> = {};
+        if (questionData?.metadata?.syllabusSectionId) {
+          const sectionId = questionData.metadata.syllabusSectionId;
+          syllabusProgress[sectionId] = { 
+            attempted: 1, 
+            correct: isCorrect ? 1 : 0, 
+            total: 20 
+          };
+        }
+        
+        await setDoc(userProgressRef, {
+          userId,
+          yearProgress: initialYearProgress,
+          lastActiveDate: serverTimestamp(),
+          currentStreak: 1,
+          bestStreak: 1,
+          syllabusProgress
+        });
+      }
     } catch (error) {
       console.error('Error updating user answer:', error);
-      throw error;
+      // Don't throw the error to prevent app crashes during answer submission
+      // but log it for debugging
     }
   }
 
@@ -172,16 +501,45 @@ export default class PastYearQuestionService {
    */
   static async getAvailableYears(): Promise<number[]> {
     try {
-      // TODO: Replace with actual API call to fetch from database
-      // For now returning mock data for the past 15 years
+      // Try to get unique years from the database
+      const questionsRef = collection(db, 'pastYearQuestions');
+      
+      try {
+        const querySnapshot = await getDocs(questionsRef);
+        
+        if (!querySnapshot.empty) {
+          const years = new Set<number>();
+          
+          querySnapshot.forEach(doc => {
+            const data = doc.data();
+            if (data.year && typeof data.year === 'number') {
+              years.add(data.year);
+            }
+          });
+          
+          if (years.size > 0) {
+            return Array.from(years).sort((a, b) => b - a); // Sort in descending order
+          }
+        }
+      } catch (dbError) {
+        console.error('Error fetching years from database, falling back to mock data:', dbError);
+      }
+      
+      // Fall back to mock data if database fetch fails or returns empty
       const currentYear = new Date().getFullYear();
-      return Array(15)
-        .fill(null)
-        .map((_, index) => currentYear - index)
-        .filter(year => year >= 2000); // Only include years since 2000
+      const availableYears: number[] = [];
+
+      // Generate years from current year back to 2010
+      for (let i = 0; i < 10; i++) {
+        availableYears.push(currentYear - i);
+      }
+
+      return availableYears;
     } catch (error) {
-      console.error('Error fetching available years:', error);
-      throw error;
+      console.error('Error getting available years:', error);
+      // Return a safe default if there's an error
+      const currentYear = new Date().getFullYear();
+      return Array.from({ length: 10 }, (_, i) => currentYear - i);
     }
   }
 

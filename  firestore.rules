@@ -47,19 +47,18 @@ service cloud.firestore {
       allow list: if request.auth != null;
     }
     
-    // Past Year Question Bank collections
     match /pastYearQuestions/{questionId} {
-      allow read: if request.auth != null;
-      allow write: if false;  // Admin only via Firebase Admin SDK
-    }
+  		allow read: if request.auth != null;  // Allow authenticated users to read questions
+ 			allow write: if false;  // Only admin should write questions (via Firebase Admin SDK)
+		}
 
-    match /userProgress/{userId} {
-      allow read, write: if request.auth.uid == userId;
-    }
+		match /userProgress/{userId} {
+ 			allow read, write: if request.auth.uid == userId;  // Users can only access their own progress data
+		}
 
     match /syllabusSections/{sectionId} {
-      allow read: if request.auth != null;
-      allow write: if false;  // Admin only
-    }
+      allow read: if request.auth != null;  // All authenticated users can read syllabus sections
+      allow write: if false;  // Only admin should update syllabus sections
+		}
   }
 }

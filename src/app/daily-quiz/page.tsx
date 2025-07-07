@@ -11,6 +11,7 @@ import Link from "next/link";
 import { ArrowLeft, Loader2, Target, Flame, CheckCircle, XCircle, Timer, Award, Brain, Zap, 
          BookOpen, ChevronRight, HelpCircle, 
          BarChart4, Calendar, RefreshCcw } from "lucide-react";
+import QuizDashboardWidgets from "./components/widgets/QuizDashboardWidgets";
 import { useEffect, useState, useCallback } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { Progress } from "@/components/ui/progress";
@@ -236,7 +237,7 @@ export default function DailyQuizPage() {
 
   const handleStartQuiz = async () => {
     if (!user) return;
-    setQuizState("loading");
+    setQuizState(QuizState.LOADING);
     try {
       const fetchedQuestions = await getRandomPrelimsQuestions(user.uid, parseInt(numQuestions));
       if (fetchedQuestions.length < parseInt(numQuestions)) {
@@ -246,7 +247,7 @@ export default function DailyQuizPage() {
           description: `We could only find ${fetchedQuestions.length} questions. Please analyze more articles to build your question bank.`,
         });
         if (fetchedQuestions.length === 0) {
-            setQuizState("config");
+            setQuizState(QuizState.CONFIG);
             return;
         }
       }
@@ -357,31 +358,27 @@ export default function DailyQuizPage() {
                 </Card>
             </div>
             {/* Right Column: Stats */}
-            <div className="lg:col-span-1">
+            <div className="lg:col-span-1 space-y-6">
                 <Card className="glassmorphic shadow-2xl shadow-primary/10">
                     <CardHeader>
-                        <CardTitle>Your Progress</CardTitle>
-                        <CardDescription>Keep track of your stats.</CardDescription>
+                        <CardTitle className="flex items-center gap-2">
+                            <BarChart4 className="w-5 h-5 text-primary" />
+                            Your Progress
+                        </CardTitle>
+                        <CardDescription>Track your performance and focus areas</CardDescription>
                     </CardHeader>
-                    <CardContent className="space-y-6">
-                        <div className="flex items-center">
-                            <Flame className="w-5 h-5 text-primary mr-3"/>
-                            <span className="font-medium">Daily Streak</span>
-                            <span className="ml-auto font-bold text-lg">5 Days</span>
-                        </div>
-                         <div className="flex items-center">
-                            <Target className="w-5 h-5 text-primary mr-3"/>
-                            <span className="font-medium">Overall Accuracy</span>
-                            <span className="ml-auto font-bold text-lg">82%</span>
-                        </div>
-                        <div>
-                            <Label className="text-sm font-medium mb-2 block">Weekly Goal</Label>
-                            <div className="flex items-center gap-3">
-                                <Progress value={70} className="w-full" />
-                                <span className="text-sm font-semibold">7/10</span>
-                            </div>
-                        </div>
+                    <CardContent>
+                        {/* New dynamic dashboard widgets */}
+                        <QuizDashboardWidgets />
                     </CardContent>
+                    <CardFooter className="flex justify-between">
+                        <Button variant="link" size="sm" asChild>
+                            <Link href="/daily-quiz/past-year/progress">
+                                View Detailed Analytics
+                                <ChevronRight className="ml-1 h-4 w-4" />
+                            </Link>
+                        </Button>
+                    </CardFooter>
                 </Card>
             </div>
         </div>
