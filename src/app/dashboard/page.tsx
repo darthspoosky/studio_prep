@@ -15,7 +15,7 @@ import { Progress } from '@/components/ui/progress';
 import { RadialBarChart, RadialBar, ResponsiveContainer, PolarAngleAxis } from 'recharts';
 import { Skeleton } from '@/components/ui/skeleton';
 import { isToday } from 'date-fns';
-import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
+import { Sheet, SheetContent, SheetTrigger, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet';
 import { UserNav } from '@/components/layout/user-nav';
 
 
@@ -89,6 +89,12 @@ const MobileHeader = () => (
                 </Button>
             </SheetTrigger>
             <SheetContent side="left" className="w-72 p-0 border-r">
+                <SheetHeader className="sr-only">
+                    <SheetTitle>Navigation Menu</SheetTitle>
+                    <SheetDescription>
+                        Main menu for the PrepTalk application, containing links to dashboard, tools, and other resources.
+                    </SheetDescription>
+                </SheetHeader>
                 <SidebarContent />
             </SheetContent>
         </Sheet>
