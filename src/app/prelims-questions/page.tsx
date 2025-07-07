@@ -4,20 +4,23 @@
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useAuth } from '@/contexts/AuthContext';
-import { getPrelimsQuestions, type PrelimsQuestionWithContext } from '@/services/historyService';
+// NEW: Import from savedQuestionsService
+import { getSavedQuestions, unsaveQuestion, type SavedQuestion } from '@/services/savedQuestionsService';
+// We still need attempts service
 import { saveQuizAttempt, getAllUserAttempts } from '@/services/quizAttemptsService';
 import { useRouter } from 'next/navigation';
 
 import Header from '@/components/layout/header';
 import Footer from '@/components/landing/footer';
 import { Button } from '@/components/ui/button';
-import { Card, CardHeader, CardContent } from '@/components/ui/card';
+import { Card, CardHeader, CardContent, CardTitle, CardDescription } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
-import { ArrowLeft, ExternalLink, Info, CheckCircle, XCircle, Circle, Gauge, FileQuestion } from 'lucide-react';
+import { ArrowLeft, ExternalLink, Info, CheckCircle, XCircle, Circle, Gauge, FileQuestion, BookmarkCheck } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
-
+import { useToast } from '@/hooks/use-toast';
+import type { PrelimsQuestionWithContext } from '@/services/historyService';
 
 const DifficultyGauge = ({ score }: { score: number }) => {
     if (isNaN(score) || score < 1 || score > 10) return null;
@@ -70,11 +73,11 @@ const FormattedQuestion = ({ text }: { text: string }) => {
     );
 };
 
-const MCQ = ({ mcq, userId, savedSelection, onAnswer }: { mcq: PrelimsQuestionWithContext, userId: string, savedSelection: string | null, onAnswer: (question: string, selectedOption: string, isCorrect: boolean, subject?: string, difficulty?: number) => void }) => {
-  const { question, subject, explanation, options, difficulty, historyId } = mcq;
+// MCQ Component will need updating in the next step to include save/unsave functionality.
+const MCQ = ({ mcq, userId, savedSelection, onAnswer, onUnsave }: { mcq: PrelimsQuestionWithContext, userId: string, savedSelection: string | null, onAnswer: (question: string, selectedOption: string, isCorrect: boolean, subject?: string, difficulty?: number) => void, onUnsave: (question: PrelimsQuestionWithContext) => void }) => {
+  const { question, subject, explanation, options, difficulty } = mcq;
   const [selected, setSelected] = useState<string | null>(savedSelection);
   const [isAnswered, setIsAnswered] = useState(!!savedSelection);
-  const score = difficulty;
 
   useEffect(() => {
     setSelected(savedSelection);
@@ -96,15 +99,20 @@ const MCQ = ({ mcq, userId, savedSelection, onAnswer }: { mcq: PrelimsQuestionWi
             <div className="text-xs text-muted-foreground">
                 Generated on {new Date(mcq.timestamp.seconds * 1000).toLocaleDateString()}
             </div>
-            {mcq.articleUrl && (
-                <Button asChild variant="link" size="sm" className="h-auto p-0 text-xs">
-                    <a href={mcq.articleUrl} target="_blank" rel="noopener noreferrer">Source Article <ExternalLink className="w-3 h-3 ml-1" /></a>
+            <div className="flex items-center gap-2">
+                {mcq.articleUrl && (
+                    <Button asChild variant="link" size="sm" className="h-auto p-0 text-xs">
+                        <a href={mcq.articleUrl} target="_blank" rel="noopener noreferrer">Source Article <ExternalLink className="w-3 h-3 ml-1" /></a>
+                    </Button>
+                )}
+                <Button variant="ghost" size="icon" className="h-6 w-6 text-muted-foreground hover:text-primary" onClick={() => onUnsave(mcq)}>
+                    <BookmarkCheck className="w-4 h-4" />
                 </Button>
-            )}
+            </div>
         </div>
         
         <div className="flex-grow">
-          {score && <DifficultyGauge score={score} />}
+          {difficulty && <DifficultyGauge score={difficulty} />}
           <FormattedQuestion text={question} />
           {subject && <Badge variant="secondary" className="mb-4 mt-2 font-normal">{subject}</Badge>}
           <div className="grid grid-cols-1 gap-2 mt-4">
@@ -182,9 +190,11 @@ const MCQ = ({ mcq, userId, savedSelection, onAnswer }: { mcq: PrelimsQuestionWi
 export default function PrelimsQuestionBankPage() {
     const { user, loading: authLoading } = useAuth();
     const router = useRouter();
-    const [questions, setQuestions] = useState<PrelimsQuestionWithContext[]>([]);
+    // NEW: state for saved questions
+    const [savedQuestions, setSavedQuestions] = useState<SavedQuestion[]>([]);
     const [attempts, setAttempts] = useState<Record<string, string>>({});
     const [isLoading, setIsLoading] = useState(true);
+    const { toast } = useToast();
 
     useEffect(() => {
         if (!authLoading && !user) {
@@ -192,10 +202,11 @@ export default function PrelimsQuestionBankPage() {
         } else if (user) {
             setIsLoading(true);
             Promise.all([
-                getPrelimsQuestions(user.uid),
+                // NEW: fetch from getSavedQuestions
+                getSavedQuestions(user.uid),
                 getAllUserAttempts(user.uid) 
-            ]).then(([prelimsQuestions, savedAttempts]) => {
-                setQuestions(prelimsQuestions);
+            ]).then(([fetchedQuestions, savedAttempts]) => {
+                setSavedQuestions(fetchedQuestions);
                 setAttempts(savedAttempts);
                 setIsLoading(false);
             }).catch(error => {
@@ -208,12 +219,28 @@ export default function PrelimsQuestionBankPage() {
     const handleAnswer = (question: string, selectedOption: string, isCorrect: boolean, subject?: string, difficulty?: number) => {
         if (!user) return;
         setAttempts(prev => ({ ...prev, [question]: selectedOption }));
-        const questionData = questions.find(q => q.question === question);
+        const questionData = savedQuestions.find(q => q.question === question);
         if (questionData) {
             saveQuizAttempt(user.uid, questionData.historyId, question, selectedOption, isCorrect, subject, difficulty);
         }
     };
     
+    // NEW: handler to unsave a question
+    const handleUnsave = async (questionToUnsave: PrelimsQuestionWithContext) => {
+        if (!user) return;
+        // Optimistic UI update
+        setSavedQuestions(prev => prev.filter(q => q.question !== questionToUnsave.question));
+        
+        try {
+            await unsaveQuestion(user.uid, questionToUnsave);
+            toast({ title: "Removed from Wall", description: "The question has been removed from your wall." });
+        } catch (error) {
+            // Revert UI on failure
+            setSavedQuestions(prev => [...prev, questionToUnsave as SavedQuestion].sort((a,b) => b.savedAt.toMillis() - a.savedAt.toMillis()));
+            toast({ variant: "destructive", title: "Failed to remove", description: "Could not remove the question. Please try again." });
+        }
+    };
+
     if (authLoading || !user) {
         return null; 
     }
@@ -231,7 +258,7 @@ export default function PrelimsQuestionBankPage() {
                         Prelims Question Wall
                     </h1>
                     <p className="text-muted-foreground mt-4 max-w-2xl mx-auto text-lg">
-                        Your personal question bank. Review, practice, and master every MCQ you've generated.
+                        Your personal question bank. Review, practice, and master every MCQ you've saved.
                     </p>
                 </div>
 
@@ -256,14 +283,15 @@ export default function PrelimsQuestionBankPage() {
                                 </CardContent>
                             </Card>
                         ))
-                    ) : questions.length > 0 ? (
-                        questions.map((q, i) => (
+                    ) : savedQuestions.length > 0 ? (
+                        savedQuestions.map((q, i) => (
                             <MCQ 
-                                key={`${q.historyId}-${i}`} 
+                                key={(q as any).id || `${q.historyId}-${i}`} 
                                 mcq={q} 
                                 userId={user.uid} 
                                 savedSelection={attempts[q.question] || null} 
                                 onAnswer={handleAnswer}
+                                onUnsave={handleUnsave}
                             />
                         ))
                     ) : (
@@ -271,13 +299,17 @@ export default function PrelimsQuestionBankPage() {
                              <div className="mx-auto w-12 h-12 flex items-center justify-center bg-primary/10 rounded-full mb-4">
                                 <FileQuestion className="w-6 h-6 text-primary" />
                              </div>
-                            <h3 className="text-xl font-semibold">Your Question Wall is Empty</h3>
-                            <p className="text-muted-foreground mt-2 mb-4">
-                                Questions you generate using the Newspaper Analysis tool will appear here.
-                            </p>
-                            <Button asChild>
-                                <Link href="/newspaper-analysis">Analyze an Article to Start</Link>
-                            </Button>
+                             <CardHeader>
+                                <CardTitle>Your Question Wall is Empty</CardTitle>
+                                <CardDescription>
+                                    Save questions you generate using the Newspaper Analysis tool to build your personal question bank.
+                                </CardDescription>
+                            </CardHeader>
+                             <CardContent>
+                                <Button asChild>
+                                    <Link href="/newspaper-analysis">Analyze an Article to Start</Link>
+                                </Button>
+                            </CardContent>
                         </Card>
                     )}
                 </div>
@@ -286,5 +318,3 @@ export default function PrelimsQuestionBankPage() {
         </div>
     );
 }
-
-    
