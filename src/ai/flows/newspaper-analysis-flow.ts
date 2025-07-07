@@ -86,7 +86,7 @@ export type KnowledgeGraph = z.infer<typeof KnowledgeGraphSchema>;
 
 // Final output schema for the entire flow
 const NewspaperAnalysisOutputSchema = z.object({
-  summary: z.string(),
+  summary: z.string().optional(),
   prelims: z.object({ mcqs: z.array(MCQSchema) }),
   mains: z.object({ questions: z.array(MainsQuestionSchema) }).optional(),
   knowledgeGraph: KnowledgeGraphSchema.optional(),
@@ -249,7 +249,7 @@ const verificationEditorAgent = ai.definePrompt({
    - **Prelims:** Are explanations analytical? Do options follow real UPSC patterns?
    - **Mains:** Is the 'guidance' structured and genuinely helpful for writing a high-scoring answer?
    - **Difficulty:** Adjust if questions are too easy or too obscure.
-**3. SUMMARY SANITIZATION**: The 'summary' MUST be 2-3 sentences of clean text. Strip all tags.
+**3. SUMMARY SANITIZATION**: The 'summary' MUST be 2-3 sentences of clean text. If the summary is missing, empty, or inadequate in the input, you MUST generate a new one from the source article. Strip all tags.
 **4. KNOWLEDGE GRAPH VERIFICATION**: Ensure the extracted nodes and edges are factual and directly supported by the article text. The graph should be coherent and relationships logical. Node IDs must be valid identifiers.
 **5. METRICS**: Calculate and include 'questionsCount' and a 'qualityScore' (0-1).
 
