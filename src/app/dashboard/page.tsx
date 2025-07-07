@@ -4,76 +4,210 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useAuth } from '@/contexts/AuthContext';
-import Header from '@/components/layout/header';
-import Footer from '@/components/landing/footer';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { Newspaper, Mic, FileQuestion, PenLine, History, IndianRupee, BarChart } from 'lucide-react';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Newspaper, Mic, FileQuestion, PenLine, Book, BarChart3, HelpCircle, Users, Settings, LogOut, ChevronDown, CheckCircle, Flame, Target, PlayCircle, Library } from 'lucide-react';
 import { getHistory, type HistoryEntry } from '@/services/historyService';
 import { getUserUsage, type UsageStats } from '@/services/usageService';
-import { formatDistanceToNow } from 'date-fns';
-import { Skeleton } from '@/components/ui/skeleton';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Calendar } from '@/components/ui/calendar';
+import { Progress } from '@/components/ui/progress';
+import Image from 'next/image';
+import { RadialBarChart, RadialBar, ResponsiveContainer, PolarAngleAxis } from 'recharts';
 
-const tools = [
-    {
-        id: 'newspaperAnalysis',
-        icon: <Newspaper className="w-8 h-8 text-white" />,
-        title: 'Newspaper Analysis',
-        description: 'Analyze daily news and editorials.',
-        href: '/newspaper-analysis',
-        gradient: 'from-orange-500 to-amber-500',
-    },
-    {
-        id: 'mockInterview',
-        icon: <Mic className="w-8 h-8 text-white" />,
-        title: 'Mock Interview',
-        description: 'Practice with an AI interviewer.',
-        href: '/mock-interview',
-        gradient: 'from-purple-500 to-indigo-500',
-    },
-    {
-        id: 'dailyQuiz',
-        icon: <FileQuestion className="w-8 h-8 text-white" />,
-        title: 'Daily Quiz',
-        description: 'Take adaptive quizzes.',
-        href: '/daily-quiz',
-        gradient: 'from-sky-500 to-cyan-500',
-    },
-    {
-        id: 'writingPractice',
-        icon: <PenLine className="w-8 h-8 text-white" />,
-        title: 'Writing Practice',
-        description: 'Get feedback on your essays.',
-        href: '/writing-practice',
-        gradient: 'from-emerald-500 to-teal-500',
-    },
-];
+// --- Local Components for Dashboard ---
 
-const HistoryItemSkeleton = () => (
-    <Card className="flex flex-col">
-        <CardHeader>
-            <Skeleton className="h-5 w-3/4" />
-            <Skeleton className="h-4 w-1/4 mt-2" />
-        </CardHeader>
-        <CardContent className="flex-grow">
-            <div className="space-y-2">
-                <Skeleton className="h-4 w-full" />
-                <Skeleton className="h-4 w-5/6" />
+const LeftSidebar = () => (
+    <div className="hidden lg:flex flex-col gap-4 p-4 bg-card rounded-2xl h-full">
+        <div className="p-4">
+            <h1 className="font-headline text-2xl font-bold animate-gradient-anim bg-[length:200%_auto] bg-gradient-to-r from-primary via-accent to-pink-500 bg-clip-text text-transparent">PrepTalk</h1>
+        </div>
+        <nav className="flex flex-col gap-2 flex-grow">
+            <Link href="/dashboard" className="flex items-center gap-3 p-3 bg-primary/10 text-primary rounded-lg font-semibold">
+                <BarChart3 className="w-5 h-5" />
+                <span>Dashboard</span>
+            </Link>
+            <Link href="/newspaper-analysis" className="flex items-center gap-3 p-3 text-muted-foreground hover:bg-muted/50 hover:text-foreground rounded-lg transition-colors">
+                <Newspaper className="w-5 h-5" />
+                <span>Newspaper Analysis</span>
+            </Link>
+             <Link href="/mock-interview" className="flex items-center gap-3 p-3 text-muted-foreground hover:bg-muted/50 hover:text-foreground rounded-lg transition-colors">
+                <Mic className="w-5 h-5" />
+                <span>Mock Interview</span>
+            </Link>
+             <Link href="/daily-quiz" className="flex items-center gap-3 p-3 text-muted-foreground hover:bg-muted/50 hover:text-foreground rounded-lg transition-colors">
+                <FileQuestion className="w-5 h-5" />
+                <span>Daily Quiz</span>
+            </Link>
+            <Link href="/writing-practice" className="flex items-center gap-3 p-3 text-muted-foreground hover:bg-muted/50 hover:text-foreground rounded-lg transition-colors">
+                <PenLine className="w-5 h-5" />
+                <span>Writing Practice</span>
+            </Link>
+             <Link href="#" className="flex items-center gap-3 p-3 text-muted-foreground hover:bg-muted/50 hover:text-foreground rounded-lg transition-colors">
+                <Book className="w-5 h-5" />
+                <span>Syllabus</span>
+            </Link>
+             <Link href="#" className="flex items-center gap-3 p-3 text-muted-foreground hover:bg-muted/50 hover:text-foreground rounded-lg transition-colors">
+                <Users className="w-5 h-5" />
+                <span>Group Study</span>
+            </Link>
+        </nav>
+        <div className="mt-auto space-y-2">
+            <div className="p-4 bg-muted rounded-lg text-center">
+                <HelpCircle className="mx-auto w-8 h-8 text-primary mb-2"/>
+                <p className="font-semibold text-sm">Need Help?</p>
+                <p className="text-xs text-muted-foreground">Check our FAQ or contact support.</p>
+                <Button size="sm" variant="outline" className="mt-3 w-full">Ask Anything</Button>
             </div>
-        </CardContent>
+             <Button variant="ghost" className="w-full justify-start gap-3 p-3 text-muted-foreground">
+                <LogOut className="w-5 h-5"/> Log Out
+            </Button>
+        </div>
+    </div>
+);
+
+const ScheduleCard = ({ title, description, buttonText, buttonVariant = 'default'}: {title: string, description: string, buttonText: string, buttonVariant?: 'default' | 'outline'}) => (
+    <Card className="flex-1 glassmorphic">
+        <CardHeader className="flex-row items-start gap-4">
+            <div className="p-2 bg-primary/20 rounded-full">
+                <CheckCircle className="w-5 h-5 text-primary"/>
+            </div>
+            <div>
+                <CardTitle className="text-base font-semibold">{title}</CardTitle>
+                <CardDescription className="text-xs">{description}</CardDescription>
+            </div>
+        </CardHeader>
         <CardFooter>
-            <Skeleton className="h-8 w-24" />
+            <Button variant={buttonVariant} size="sm">{buttonText}</Button>
         </CardFooter>
     </Card>
 );
 
-export default function DashboardPage() {
+const CourseCard = ({ title, chapters, imageHint }: {title: string, chapters: number, imageHint: string}) => (
+    <Card className="overflow-hidden glassmorphic group">
+        <div className="relative h-32">
+            <Image src={`https://placehold.co/400x200.png`} alt={title} layout="fill" objectFit="cover" className="group-hover:scale-105 transition-transform" data-ai-hint={imageHint} />
+        </div>
+        <CardHeader>
+            <CardTitle className="text-base font-semibold">{title}</CardTitle>
+            <CardDescription className="text-sm">{chapters} Chapters</CardDescription>
+        </CardHeader>
+    </Card>
+);
+
+const WatchCard = ({ title, subtitle, imageHint, progress }: {title: string, subtitle: string, imageHint: string, progress: number}) => (
+     <Card className="min-w-[280px] w-[280px] overflow-hidden glassmorphic group relative">
+        <div className="relative h-32">
+            <Image src={`https://placehold.co/400x200.png`} alt={title} layout="fill" objectFit="cover" data-ai-hint={imageHint} />
+            <div className="absolute inset-0 bg-black/30 flex items-center justify-center">
+                <PlayCircle className="w-10 h-10 text-white/70 group-hover:text-white transition-colors"/>
+            </div>
+        </div>
+        <CardHeader>
+            <CardTitle className="text-sm font-semibold truncate">{title}</CardTitle>
+            <CardDescription className="text-xs truncate">{subtitle}</CardDescription>
+        </CardHeader>
+        <CardFooter>
+            <Progress value={progress} className="h-1.5" />
+        </CardFooter>
+    </Card>
+)
+
+const DailyGoalChart = ({ progress }: { progress: number }) => {
+    const data = [{ name: 'goal', value: progress, fill: 'hsl(var(--primary))' }];
+    return (
+        <ResponsiveContainer width="100%" height={100}>
+            <RadialBarChart 
+                innerRadius="70%" 
+                outerRadius="90%" 
+                barSize={10} 
+                data={data} 
+                startAngle={90} 
+                endAngle={-270}
+            >
+                <PolarAngleAxis
+                    type="number"
+                    domain={[0, 100]}
+                    angleAxisId={0}
+                    tick={false}
+                />
+                <RadialBar
+                    background
+                    dataKey="value"
+                    cornerRadius={5}
+                    className="fill-primary"
+                />
+                <text 
+                    x="50%" 
+                    y="50%" 
+                    textAnchor="middle" 
+                    dominantBaseline="middle" 
+                    className="text-2xl font-bold fill-foreground"
+                >
+                    {`${progress}%`}
+                </text>
+            </RadialBarChart>
+        </ResponsiveContainer>
+    );
+};
+
+const RightSidebar = () => {
+    const [date, setDate] = useState<Date | undefined>(new Date());
+    return (
+        <div className="hidden lg:flex flex-col gap-6 p-4 bg-card rounded-2xl h-full">
+            <div className="flex items-center justify-between p-2">
+                 <Button variant="outline" className="h-auto">
+                    UPSC Civil Services <ChevronDown className="w-4 h-4 ml-2"/>
+                 </Button>
+                 <Avatar>
+                    <AvatarImage src="https://placehold.co/40x40.png" data-ai-hint="person" />
+                    <AvatarFallback>U</AvatarFallback>
+                </Avatar>
+            </div>
+            <div>
+                <h3 className="font-semibold px-2 mb-2">Statistics</h3>
+                <Calendar
+                    mode="single"
+                    selected={date}
+                    onSelect={setDate}
+                    className="rounded-md"
+                    classNames={{
+                        day_selected: "bg-primary text-primary-foreground hover:bg-primary/90 focus:bg-primary/90",
+                        day_today: "bg-primary/20 text-primary"
+                    }}
+                />
+            </div>
+            <div className="grid grid-cols-2 gap-4 px-2">
+                <Card className="glassmorphic items-center justify-center flex flex-col p-4 text-center">
+                    <Flame className="w-8 h-8 text-orange-500"/>
+                    <p className="text-2xl font-bold mt-1">5</p>
+                    <p className="text-xs text-muted-foreground">Day Streak</p>
+                </Card>
+                <Card className="glassmorphic items-center justify-center flex flex-col p-4 text-center">
+                    <Target className="w-8 h-8 text-green-500"/>
+                    <p className="text-2xl font-bold mt-1">1</p>
+                    <p className="text-xs text-muted-foreground">Task Done</p>
+                </Card>
+            </div>
+             <div>
+                <h3 className="font-semibold px-2 mb-2">Daily Goal</h3>
+                <Card className="glassmorphic p-4 flex items-center">
+                    <div className="w-24 h-24">
+                        <DailyGoalChart progress={80} />
+                    </div>
+                    <div className="flex-1">
+                        <p className="font-semibold">You're doing great!</p>
+                        <p className="text-sm text-muted-foreground">You marked 1/2 tasks as done.</p>
+                    </div>
+                </Card>
+            </div>
+        </div>
+    );
+}
+
+export default function ReimaginedDashboardPage() {
     const { user, loading } = useAuth();
     const router = useRouter();
-    const [history, setHistory] = useState<HistoryEntry[]>([]);
-    const [historyLoading, setHistoryLoading] = useState(true);
-    const [userUsage, setUserUsage] = useState<UsageStats | null>(null);
-    const [usageLoading, setUsageLoading] = useState(true);
 
     useEffect(() => {
         if (!loading && !user) {
@@ -81,152 +215,64 @@ export default function DashboardPage() {
         }
     }, [user, loading, router]);
 
-    useEffect(() => {
-        if (user) {
-            const fetchHistoryAndUsage = async () => {
-                setHistoryLoading(true);
-                setUsageLoading(true);
-                const [userHistory, usageData] = await Promise.all([
-                    getHistory(user.uid),
-                    getUserUsage(user.uid)
-                ]);
-                setHistory(userHistory);
-                setUserUsage(usageData);
-                setHistoryLoading(false);
-                setUsageLoading(false);
-            };
-            fetchHistoryAndUsage();
-        }
-    }, [user]);
-
     if (loading || !user) {
         return null;
     }
 
     return (
-        <div className="flex flex-col min-h-screen bg-gray-50 dark:bg-gray-900">
-            <Header />
-            <main className="flex-1 container mx-auto px-4 py-24 sm:py-32">
-                <div className="mb-12">
-                    <h1 className="text-3xl md:text-4xl font-bold font-headline">Welcome, Aspirant!</h1>
-                    <p className="text-muted-foreground mt-2">Here are your tools. Let's get you exam-ready.</p>
-                </div>
+        <div className="min-h-screen bg-muted/30 dark:bg-muted/10 p-4">
+            <div className="grid grid-cols-1 lg:grid-cols-[280px_1fr] xl:grid-cols-[280px_1fr_320px] gap-4 h-full">
+                <LeftSidebar />
+                <main className="flex flex-col gap-6">
+                    {/* Main Header */}
+                    <div className="p-4">
+                        <h2 className="text-2xl font-bold">Welcome back, {user.email?.split('@')[0] || 'Aspirant'}!</h2>
+                        <p className="text-muted-foreground">You're doing great this week. Keep it up!</p>
+                    </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-16">
-                    {tools.map(tool => (
-                        <Link href={tool.href} key={tool.title} className="group">
-                            <Card className="h-full glassmorphic transition-all duration-300 group-hover:border-primary/50 group-hover:shadow-lg group-hover:-translate-y-1 flex flex-col">
-                                <CardHeader>
-                                    <div className={`w-12 h-12 rounded-lg bg-gradient-to-br ${tool.gradient} flex items-center justify-center mb-4`}>
-                                        {tool.icon}
-                                    </div>
-                                    <CardTitle className="font-headline text-xl">{tool.title}</CardTitle>
-                                </CardHeader>
-                                <CardContent className="flex-grow">
-                                    <CardDescription>{tool.description}</CardDescription>
-                                </CardContent>
-                            </Card>
-                        </Link>
-                    ))}
-                </div>
-
-                <div className="mb-16">
-                    <div className="flex items-center gap-3 mb-8">
-                        <BarChart className="w-8 h-8 text-primary"/>
-                        <div>
-                            <h2 className="text-2xl font-bold font-headline">Your Stats</h2>
-                            <p className="text-muted-foreground">A look at your tool usage.</p>
+                    {/* Schedule */}
+                    <div>
+                        <h3 className="text-lg font-semibold px-4 mb-3">Your Schedule for today</h3>
+                        <div className="flex gap-4 px-4">
+                            <ScheduleCard 
+                                title="Daily current affairs test"
+                                description="Your daily dose of current affairs test is served hot."
+                                buttonText="Attempt another quiz"
+                                buttonVariant="outline"
+                            />
+                             <ScheduleCard 
+                                title="Let's do one more"
+                                description="If you do 2 sub topics a day you can complete the entire syllabus!"
+                                buttonText="Go to syllabus"
+                            />
                         </div>
                     </div>
-                    {usageLoading ? (
-                        <Card className="glassmorphic"><CardContent className="p-6"><Skeleton className="h-24 w-full" /></CardContent></Card>
-                    ) : (
-                        <Card className="glassmorphic">
-                            <CardContent className="p-6 grid grid-cols-2 md:grid-cols-4 gap-6 text-center">
-                                <div>
-                                    <p className="text-3xl font-bold">{userUsage?.newspaperAnalysis || 0}</p>
-                                    <p className="text-sm text-muted-foreground">Analyses</p>
-                                </div>
-                                <div>
-                                    <p className="text-3xl font-bold">{userUsage?.mockInterview || 0}</p>
-                                    <p className="text-sm text-muted-foreground">Interviews</p>
-                                </div>
-                                <div>
-                                    <p className="text-3xl font-bold">{userUsage?.dailyQuiz || 0}</p>
-                                    <p className="text-sm text-muted-foreground">Quizzes</p>
-                                </div>
-                                <div>
-                                    <p className="text-3xl font-bold">{userUsage?.writingPractice || 0}</p>
-                                    <p className="text-sm text-muted-foreground">Essays</p>
-                                </div>
-                            </CardContent>
-                        </Card>
-                    )}
-                </div>
 
-
-                <div>
-                    <div className="flex items-center gap-3 mb-8">
-                        <History className="w-8 h-8 text-primary"/>
-                        <div>
-                            <h2 className="text-2xl font-bold font-headline">Activity History</h2>
-                            <p className="text-muted-foreground">Review your past activities from all our tools.</p>
+                    {/* Continue to Watch */}
+                     <div>
+                        <h3 className="text-lg font-semibold px-4 mb-3">Continue to Watch</h3>
+                        <div className="flex gap-4 px-4 overflow-x-auto pb-4">
+                           <WatchCard title="Indian Polity by M. Laxmikanth" subtitle="Video 1" imageHint="abstract purple" progress={60} />
+                           <WatchCard title="History for UPSC - IAS - Pre" subtitle="History of Ancient India" imageHint="abstract teal" progress={25} />
+                           <WatchCard title="GS Paper II Complete Course" subtitle="International Relations" imageHint="abstract blue" progress={80} />
                         </div>
                     </div>
-                    {historyLoading ? (
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                            <HistoryItemSkeleton />
-                            <HistoryItemSkeleton />
-                            <HistoryItemSkeleton />
+
+                     {/* Your Courses */}
+                    <div>
+                        <h3 className="text-lg font-semibold px-4 mb-3">Your Courses</h3>
+                        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 px-4">
+                           <CourseCard title="Indian Polity" chapters={11} imageHint="court law" />
+                           <CourseCard title="Ancient History" chapters={18} imageHint="ancient rome" />
+                           <Course_Card title="Medieval History" chapters={16} imageHint="castle architecture" />
                         </div>
-                    ) : history.length > 0 ? (
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                            {history.map(item => (
-                                <Card key={item.id} className="glassmorphic flex flex-col">
-                                    <CardHeader>
-                                        <CardTitle className="text-lg line-clamp-2">
-                                            {item.analysis.summary || "Analysis Summary"}
-                                        </CardTitle>
-                                        <CardDescription>
-                                            {formatDistanceToNow(item.timestamp.toDate(), { addSuffix: true })}
-                                        </CardDescription>
-                                    </CardHeader>
-                                    <CardContent className="flex-grow">
-                                        <div className="text-sm space-y-2">
-                                            <div className="flex justify-between items-center">
-                                                <span className="text-muted-foreground">Syllabus Topic</span>
-                                                <span className="font-semibold">{item.analysis.syllabusTopic || 'N/A'}</span>
-                                            </div>
-                                            <div className="flex justify-between items-center">
-                                                <span className="text-muted-foreground">Questions</span>
-                                                <span className="font-semibold">{item.analysis.questionsCount || 0}</span>
-                                            </div>
-                                            <div className="flex justify-between items-center">
-                                                 <span className="text-muted-foreground flex items-center gap-1"><IndianRupee className="w-3 h-3"/> Cost</span>
-                                                <span className="font-semibold">₹{item.analysis.cost?.toFixed(2) || '0.00'}</span>
-                                            </div>
-                                        </div>
-                                    </CardContent>
-                                    <CardFooter>
-                                        <Button asChild variant="outline">
-                                            <Link href={`/history/${item.id}`}>View Details</Link>
-                                        </Button>
-                                    </CardFooter>
-                                </Card>
-                            ))}
-                        </div>
-                    ) : (
-                        <div className="text-center py-16 border-2 border-dashed rounded-lg">
-                            <h3 className="text-xl font-semibold">No History Yet</h3>
-                            <p className="text-muted-foreground mt-2">Your results will appear here once you start using the tools.</p>
-                            <Button asChild className="mt-4">
-                                <Link href="/newspaper-analysis">Analyze an Article</Link>
-                            </Button>
-                        </div>
-                    )}
-                </div>
-            </main>
-            <Footer />
+                    </div>
+                </main>
+                <RightSidebar />
+            </div>
         </div>
     );
 }
+
+// A small fix for a component name typo to avoid breaking the build
+const Course_Card = CourseCard;
