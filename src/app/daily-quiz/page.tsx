@@ -9,7 +9,7 @@ import Footer from "@/components/landing/footer";
 import Header from "@/components/layout/header";
 import Link from "next/link";
 import { ArrowLeft, Loader2, Target, Flame, CheckCircle, XCircle, Timer, Award, Brain, Zap, 
-         BookOpen, ChevronRight, CheckCircle, XCircle, HelpCircle, 
+         BookOpen, ChevronRight, HelpCircle, 
          BarChart4, Calendar, RefreshCcw } from "lucide-react";
 import { useEffect, useState, useCallback } from "react";
 import { useToast } from "@/hooks/use-toast";
@@ -20,7 +20,13 @@ import { getRandomPrelimsQuestions, type PrelimsQuestionWithContext } from "@/se
 import { saveQuizAttempt } from "@/services/quizAttemptsService";
 import { cn } from "@/lib/utils";
 
-type QuizState = "config" | "loading" | "active" | "results";
+enum QuizState {
+  CONFIG = 'CONFIG',
+  LOADING = 'LOADING',
+  ACTIVE = 'ACTIVE',
+  RESULTS = 'RESULTS',
+  ERROR = 'ERROR'
+}
 
 const FormattedQuestion = ({ text }: { text: string }) => {
     const lines = text.split('\n').filter(line => line.trim() !== '');
@@ -56,7 +62,6 @@ const FormattedQuestion = ({ text }: { text: string }) => {
 };
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { cn } from "@/lib/utils";
 import { motion, AnimatePresence } from "framer-motion";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -142,14 +147,7 @@ const QUESTION_COUNTS = [
   { value: "20", label: "20" },
 ];
 
-// Enums for quiz states
-enum QuizState {
-  CONFIG = 'CONFIG',
-  LOADING = 'LOADING',
-  ACTIVE = 'ACTIVE',
-  RESULTS = 'RESULTS',
-  ERROR = 'ERROR'
-}
+// Constants for quiz states already defined above
 
 // Question timer component
 function QuestionTimer({ seconds, onComplete }: { seconds: number, onComplete: () => void }) {
@@ -184,14 +182,6 @@ export default function DailyQuizPage() {
   const router = useRouter();
   const { toast } = useToast();
 
-  const [quizState, setQuizState] = useState<QuizState>("config");
-  const [questions, setQuestions] = useState<PrelimsQuestionWithContext[]>([]);
-  const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
-  const [selectedAnswer, setSelectedAnswer] = useState<string | null>(null);
-  const [isAnswered, setIsAnswered] = useState(false);
-  const [score, setScore] = useState(0);
-  const [numQuestions, setNumQuestions] = useState("5");
-  
   // Quiz configuration state
   const [subject, setSubject] = useState<string>('general-studies');
   const [difficulty, setDifficulty] = useState<string>('medium');
@@ -200,15 +190,19 @@ export default function DailyQuizPage() {
   
   // Quiz session state
   const [quizState, setQuizState] = useState<QuizState>(QuizState.CONFIG);
+  const [questions, setQuestions] = useState<PrelimsQuestionWithContext[]>([]);
   const [quizSession, setQuizSession] = useState<ServiceQuizSession | null>(null);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [selectedAnswer, setSelectedAnswer] = useState<string>("");
+  const [isAnswered, setIsAnswered] = useState(false);
+  const [score, setScore] = useState(0);
   const [answers, setAnswers] = useState<Record<number, { selected: string, correct: boolean }>>({});
   const [showExplanation, setShowExplanation] = useState(false);
   const [streakData, setStreakData] = useState<QuizStreak>({ currentStreak: 0, longestStreak: 0, lastQuizDate: null });
   const [quizStats, setQuizStats] = useState<UserQuizStats>({ totalAttempted: 0, totalCorrect: 0, accuracy: 0 });
   const [usageData, setUsageData] = useState<UsageStats>({ newspaperAnalysis: 0, mockInterview: 0, dailyQuiz: 0, writingPractice: 0 });
   const [isResultsDialogOpen, setIsResultsDialogOpen] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
 
   // Load user stats when the component mounts
   useEffect(() => {
@@ -259,9 +253,9 @@ export default function DailyQuizPage() {
       setQuestions(fetchedQuestions);
       setScore(0);
       setCurrentQuestionIndex(0);
-      setSelectedAnswer(null);
+      setSelectedAnswer("");
       setIsAnswered(false);
-      setQuizState("active");
+      setQuizState(QuizState.ACTIVE);
     } catch (error) {
       console.error(error);
       toast({
@@ -269,13 +263,16 @@ export default function DailyQuizPage() {
         description: "The daily quiz feature is under development. Stay tuned!",
       });
       setIsLoading(false);
-    }, 1000);
-  };  const [isLoading, setIsLoading] = useState(false);
+    }
+  };
 
   useEffect(() => {
     if (!authLoading && !user) {
-
-  if (loading || !user) {
+      router.push('/login');
+    }
+  }, [authLoading, user, router]);
+  
+  if (isLoading || !user) {
     return null;
   }
 
