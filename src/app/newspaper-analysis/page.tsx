@@ -27,6 +27,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { useAuth } from "@/contexts/AuthContext";
 import { useRouter } from "next/navigation";
 import { addHistory } from "@/services/historyService";
+import { incrementToolUsage } from "@/services/usageService";
 
 
 const DifficultyGauge = ({ score }: { score: number }) => {
@@ -480,6 +481,7 @@ export default function NewspaperAnalysisPage() {
 
         if (user) {
             await addHistory(user.uid, result, activeTab === 'url' ? inputs.url : undefined);
+            await incrementToolUsage(user.uid, 'newspaperAnalysis');
         }
     } catch (error: any) {
         console.error("Analysis error:", error);

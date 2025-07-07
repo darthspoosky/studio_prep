@@ -8,13 +8,15 @@ import Header from '@/components/layout/header';
 import Footer from '@/components/landing/footer';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { Newspaper, Mic, FileQuestion, PenLine, History, IndianRupee } from 'lucide-react';
+import { Newspaper, Mic, FileQuestion, PenLine, History, IndianRupee, BarChart } from 'lucide-react';
 import { getHistory, type HistoryEntry } from '@/services/historyService';
+import { getUserUsage, type UsageStats } from '@/services/usageService';
 import { formatDistanceToNow } from 'date-fns';
 import { Skeleton } from '@/components/ui/skeleton';
 
 const tools = [
     {
+        id: 'newspaperAnalysis',
         icon: <Newspaper className="w-8 h-8 text-white" />,
         title: 'Newspaper Analysis',
         description: 'Analyze daily news and editorials.',
@@ -22,6 +24,7 @@ const tools = [
         gradient: 'from-orange-500 to-amber-500',
     },
     {
+        id: 'mockInterview',
         icon: <Mic className="w-8 h-8 text-white" />,
         title: 'Mock Interview',
         description: 'Practice with an AI interviewer.',
@@ -29,6 +32,7 @@ const tools = [
         gradient: 'from-purple-500 to-indigo-500',
     },
     {
+        id: 'dailyQuiz',
         icon: <FileQuestion className="w-8 h-8 text-white" />,
         title: 'Daily Quiz',
         description: 'Take adaptive quizzes.',
@@ -36,6 +40,7 @@ const tools = [
         gradient: 'from-sky-500 to-cyan-500',
     },
     {
+        id: 'writingPractice',
         icon: <PenLine className="w-8 h-8 text-white" />,
         title: 'Writing Practice',
         description: 'Get feedback on your essays.',
@@ -67,6 +72,8 @@ export default function DashboardPage() {
     const router = useRouter();
     const [history, setHistory] = useState<HistoryEntry[]>([]);
     const [historyLoading, setHistoryLoading] = useState(true);
+    const [userUsage, setUserUsage] = useState<UsageStats | null>(null);
+    const [usageLoading, setUsageLoading] = useState(true);
 
     useEffect(() => {
         if (!loading && !user) {
@@ -76,13 +83,19 @@ export default function DashboardPage() {
 
     useEffect(() => {
         if (user) {
-            const fetchHistory = async () => {
+            const fetchHistoryAndUsage = async () => {
                 setHistoryLoading(true);
-                const userHistory = await getHistory(user.uid);
+                setUsageLoading(true);
+                const [userHistory, usageData] = await Promise.all([
+                    getHistory(user.uid),
+                    getUserUsage(user.uid)
+                ]);
                 setHistory(userHistory);
+                setUserUsage(usageData);
                 setHistoryLoading(false);
+                setUsageLoading(false);
             };
-            fetchHistory();
+            fetchHistoryAndUsage();
         }
     }, [user]);
 
@@ -116,6 +129,41 @@ export default function DashboardPage() {
                         </Link>
                     ))}
                 </div>
+
+                <div className="mb-16">
+                    <div className="flex items-center gap-3 mb-8">
+                        <BarChart className="w-8 h-8 text-primary"/>
+                        <div>
+                            <h2 className="text-2xl font-bold font-headline">Your Stats</h2>
+                            <p className="text-muted-foreground">A look at your tool usage.</p>
+                        </div>
+                    </div>
+                    {usageLoading ? (
+                        <Card className="glassmorphic"><CardContent className="p-6"><Skeleton className="h-24 w-full" /></CardContent></Card>
+                    ) : (
+                        <Card className="glassmorphic">
+                            <CardContent className="p-6 grid grid-cols-2 md:grid-cols-4 gap-6 text-center">
+                                <div>
+                                    <p className="text-3xl font-bold">{userUsage?.newspaperAnalysis || 0}</p>
+                                    <p className="text-sm text-muted-foreground">Analyses</p>
+                                </div>
+                                <div>
+                                    <p className="text-3xl font-bold">{userUsage?.mockInterview || 0}</p>
+                                    <p className="text-sm text-muted-foreground">Interviews</p>
+                                </div>
+                                <div>
+                                    <p className="text-3xl font-bold">{userUsage?.dailyQuiz || 0}</p>
+                                    <p className="text-sm text-muted-foreground">Quizzes</p>
+                                </div>
+                                <div>
+                                    <p className="text-3xl font-bold">{userUsage?.writingPractice || 0}</p>
+                                    <p className="text-sm text-muted-foreground">Essays</p>
+                                </div>
+                            </CardContent>
+                        </Card>
+                    )}
+                </div>
+
 
                 <div>
                     <div className="flex items-center gap-3 mb-8">
