@@ -485,10 +485,17 @@ export default function NewspaperAnalysisPage() {
         }
     } catch (error: any) {
         console.error("Analysis error:", error);
+        let description = "The AI failed to analyze the article. Please try again later.";
+        if (error.code === 'permission-denied') {
+            description = "Could not save analysis history due to a permission error. Please check your Firestore security rules or contact support."
+        } else if (error.message) {
+            description = error.message;
+        }
+
         toast({
             variant: "destructive",
             title: "Analysis Failed",
-            description: error.message || "The AI failed to analyze the article. Please try again later.",
+            description: description,
         });
     } finally {
         setIsLoading(false);
@@ -601,6 +608,7 @@ export default function NewspaperAnalysisPage() {
                         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
                             <TabsList className="grid w-full grid-cols-2">
                                 <TabsTrigger value="url">From URL</TabsTrigger>
+
                                 <TabsTrigger value="text">Paste Text</TabsTrigger>
                             </TabsList>
                             <TabsContent value="url" className="pt-4">
