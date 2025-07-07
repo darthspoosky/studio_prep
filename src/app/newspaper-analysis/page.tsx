@@ -79,7 +79,7 @@ const FormattedQuestion = ({ text }: { text: string }) => {
     return (
         <div className="font-semibold leading-relaxed text-foreground">
             {preamble && <p className="mb-3" style={{ whiteSpace: 'pre-line' }}>{preamble}</p>}
-            <ol className="list-decimal list-outside space-y-2 pl-5 my-3">
+            <ol className="list-decimal list-inside space-y-2 my-3">
                 {statements.map((stmt, index) => (
                     <li key={index} className="pl-2">{stmt.trim().replace(/^\d+\.\s/, '')}</li>
                 ))}
@@ -404,7 +404,7 @@ export default function NewspaperAnalysisPage() {
   const { toast } = useToast();
 
   const handleInputChange = (field: keyof typeof inputs, value: string) => {
-    setInputs(prev => ({ ...prev, [field]: value }));
+    setInputs(prev => ({ ...prev, [field: value }));
   };
 
   const handleAnalyze = async () => {
@@ -809,5 +809,7 @@ export default function NewspaperAnalysisPage() {
     </div>
   );
 }
+
+    
 
     
