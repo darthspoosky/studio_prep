@@ -21,6 +21,7 @@ import { getUserQuizStats, type UserQuizStats } from '@/services/quizAttemptsSer
 import { getUserUsage, type UsageStats } from '@/services/usageService';
 import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
+import { motion } from 'framer-motion';
 
 
 // --- Local Components for Dashboard ---
@@ -37,33 +38,21 @@ const SidebarContent = ({ usageStats }: { usageStats: UsageStats | null }) => (
                 <BarChart3 className="w-5 h-5" />
                 <span>Dashboard</span>
             </Link>
-            <Link href="/newspaper-analysis" className="flex items-center justify-between gap-3 p-3 text-muted-foreground hover:bg-muted/50 hover:text-foreground rounded-lg transition-colors">
-                <div className="flex items-center gap-3">
-                    <Newspaper className="w-5 h-5" />
-                    <span>Newspaper Analysis</span>
-                </div>
-                {usageStats && usageStats.newspaperAnalysis && usageStats.newspaperAnalysis > 0 && <Badge variant="secondary">{usageStats.newspaperAnalysis}</Badge>}
+            <Link href="/newspaper-analysis" className="flex items-center gap-3 p-3 text-muted-foreground hover:bg-muted/50 hover:text-foreground rounded-lg transition-colors">
+                <Newspaper className="w-5 h-5" />
+                <span>Newspaper Analysis</span>
             </Link>
-             <Link href="/mock-interview" className="flex items-center justify-between gap-3 p-3 text-muted-foreground hover:bg-muted/50 hover:text-foreground rounded-lg transition-colors">
-                <div className="flex items-center gap-3">
-                    <Mic className="w-5 h-5" />
-                    <span>Mock Interview</span>
-                </div>
-                 {usageStats && usageStats.mockInterview && usageStats.mockInterview > 0 && <Badge variant="secondary">{usageStats.mockInterview}</Badge>}
+             <Link href="/mock-interview" className="flex items-center gap-3 p-3 text-muted-foreground hover:bg-muted/50 hover:text-foreground rounded-lg transition-colors">
+                <Mic className="w-5 h-5" />
+                <span>Mock Interview</span>
             </Link>
-             <Link href="/daily-quiz" className="flex items-center justify-between gap-3 p-3 text-muted-foreground hover:bg-muted/50 hover:text-foreground rounded-lg transition-colors">
-                <div className="flex items-center gap-3">
-                    <FileQuestion className="w-5 h-5" />
-                    <span>Daily Quiz</span>
-                </div>
-                 {usageStats && usageStats.dailyQuiz && usageStats.dailyQuiz > 0 && <Badge variant="secondary">{usageStats.dailyQuiz}</Badge>}
+             <Link href="/daily-quiz" className="flex items-center gap-3 p-3 text-muted-foreground hover:bg-muted/50 hover:text-foreground rounded-lg transition-colors">
+                <FileQuestion className="w-5 h-5" />
+                <span>Daily Quiz</span>
             </Link>
-            <Link href="/writing-practice" className="flex items-center justify-between gap-3 p-3 text-muted-foreground hover:bg-muted/50 hover:text-foreground rounded-lg transition-colors">
-                <div className="flex items-center gap-3">
-                    <PenLine className="w-5 h-5" />
-                    <span>Writing Practice</span>
-                </div>
-                {usageStats && usageStats.writingPractice && usageStats.writingPractice > 0 && <Badge variant="secondary">{usageStats.writingPractice}</Badge>}
+            <Link href="/writing-practice" className="flex items-center gap-3 p-3 text-muted-foreground hover:bg-muted/50 hover:text-foreground rounded-lg transition-colors">
+                <PenLine className="w-5 h-5" />
+                <span>Writing Practice</span>
             </Link>
             <Separator className="my-2 bg-border/50" />
             <p className="px-3 text-xs font-semibold text-muted-foreground/80 tracking-wider">Question Bank</p>
@@ -130,6 +119,19 @@ const MobileHeader = ({ usageStats }: { usageStats: UsageStats | null }) => (
         </Link>
         <UserNav />
     </header>
+);
+
+const StatCard = ({ icon, title, value, color }: { icon: React.ReactNode, title: string, value: string, color: string }) => (
+    <Card className={`glassmorphic border-l-4 ${color}`}>
+        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">{title}</CardTitle>
+            {icon}
+        </CardHeader>
+        <CardContent>
+            <div className="text-2xl font-bold">{value}</div>
+            <p className="text-xs text-muted-foreground">Total uses</p>
+        </CardContent>
+    </Card>
 );
 
 const HistoryCard = ({ entry }: { entry: HistoryEntry }) => {
@@ -310,6 +312,33 @@ export default function ReimaginedDashboardPage() {
         }
     }, [user]);
 
+    const toolStats = [
+        {
+            title: 'Newspaper Analyses',
+            icon: <Newspaper className="h-4 w-4 text-muted-foreground" />,
+            value: usageStats?.newspaperAnalysis,
+            color: 'border-l-orange-500',
+        },
+        {
+            title: 'Mock Interviews',
+            icon: <Mic className="h-4 w-4 text-muted-foreground" />,
+            value: usageStats?.mockInterview,
+            color: 'border-l-purple-500',
+        },
+        {
+            title: 'Daily Quizzes',
+            icon: <FileQuestion className="h-4 w-4 text-muted-foreground" />,
+            value: usageStats?.dailyQuiz,
+            color: 'border-l-sky-500',
+        },
+        {
+            title: 'Writing Practices',
+            icon: <PenLine className="h-4 w-4 text-muted-foreground" />,
+            value: usageStats?.writingPractice,
+            color: 'border-l-emerald-500',
+        },
+    ];
+
     const scheduleContent = useMemo(() => {
         const lastActivity = history?.[0];
         const lastActivityWasToday = lastActivity ? isToday(new Date(lastActivity.timestamp.seconds * 1000)) : false;
@@ -425,6 +454,28 @@ export default function ReimaginedDashboardPage() {
                     <div className="hidden lg:block p-4">
                         <h2 className="text-2xl font-bold">Welcome back, {user.displayName || user.email?.split('@')[0] || 'Aspirant'}!</h2>
                         <p className="text-muted-foreground">You're doing great this week. Keep it up!</p>
+                    </div>
+
+                    {/* Activity Overview */}
+                     <div className="px-4 lg:px-0">
+                         <h3 className="text-lg font-semibold mb-3">Activity Overview</h3>
+                         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+                            {toolStats.map((stat, index) => (
+                                 <motion.div
+                                    key={stat.title}
+                                    initial={{ opacity: 0, y: 20 }}
+                                    animate={{ opacity: 1, y: 0 }}
+                                    transition={{ duration: 0.5, delay: index * 0.1 }}
+                                >
+                                    <StatCard
+                                        title={stat.title}
+                                        icon={stat.icon}
+                                        value={(stat.value || 0).toLocaleString()}
+                                        color={stat.color}
+                                    />
+                                </motion.div>
+                            ))}
+                        </div>
                     </div>
 
                     {/* Schedule */}
