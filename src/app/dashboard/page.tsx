@@ -7,12 +7,12 @@ import Link from 'next/link';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
-import { Newspaper, Mic, FileQuestion, PenLine, Book, BarChart3, HelpCircle, Users, Settings, LogOut, ChevronDown, CheckCircle, Flame, Target, PlayCircle, Library, Menu, ArrowUpRight, MoreVertical } from 'lucide-react';
+import { Newspaper, Mic, FileQuestion, PenLine, Book, BarChart3, HelpCircle, Users, Settings, LogOut, ChevronDown, CheckCircle, Flame, Target, PlayCircle, Library, Menu, ArrowUpRight, MoreVertical, Filter, ArrowUpDown } from 'lucide-react';
 import { getHistory, type HistoryEntry, getQuestionStats } from '@/services/historyService';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Calendar } from '@/components/ui/calendar';
 import { Progress } from '@/components/ui/progress';
-import { RadialBarChart, RadialBar, ResponsiveContainer, PolarAngleAxis, BarChart, XAxis, YAxis, Tooltip, Legend, Bar, CartesianGrid } from 'recharts';
+import { RadialBarChart, RadialBar, ResponsiveContainer, PolarAngleAxis, BarChart, XAxis, YAxis, Tooltip, Legend, Bar, CartesianGrid, Cell } from 'recharts';
 import { Skeleton } from '@/components/ui/skeleton';
 import { isToday } from 'date-fns';
 import { Sheet, SheetContent, SheetTrigger, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet';
@@ -22,7 +22,7 @@ import { getUserUsage, type UsageStats } from '@/services/usageService';
 import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
 import { motion } from 'framer-motion';
-import { ChartContainer, ChartTooltip, ChartTooltipContent, ChartConfig } from '@/components/ui/chart';
+import { ChartContainer, ChartTooltip, ChartTooltipContent, ChartConfig, ChartLegend, ChartLegendContent } from '@/components/ui/chart';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 
@@ -288,9 +288,9 @@ const questionsBySubjectData = [
 ];
 
 const questionsBySubjectConfig = {
-  History: { label: "History", color: "hsl(var(--chart-1))" },
-  Polity: { label: "Polity", color: "hsl(var(--chart-2))" },
-  Economy: { label: "Economy", color: "hsl(var(--chart-3))" },
+  History: { label: "History", color: "#5b5bff" },
+  Polity: { label: "Polity", color: "#6f6fff" },
+  Economy: { label: "Economy", color: "#1ecbd2" },
 } satisfies ChartConfig;
 
 const QuestionsBySubjectChart = () => (
@@ -299,32 +299,52 @@ const QuestionsBySubjectChart = () => (
             <div className="flex justify-between items-start">
                 <div>
                     <CardTitle>Questions by Subject</CardTitle>
-                    <CardDescription>Breakdown of generated questions in the last 4 weeks</CardDescription>
+                    <CardDescription>Breakdown of generated questions</CardDescription>
                 </div>
-                <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon" className="w-8 h-8">
-                            <MoreVertical className="w-4 h-4" />
-                        </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                        <DropdownMenuItem>View Details</DropdownMenuItem>
-                        <DropdownMenuItem>Export as PNG</DropdownMenuItem>
-                    </DropdownMenuContent>
-                </DropdownMenu>
+                <div className="flex items-center gap-2">
+                     <Button variant="outline" size="sm" className="h-8 hidden sm:flex">
+                        <Filter className="w-3 h-3 mr-1.5" /> Filter
+                    </Button>
+                    <Button variant="outline" size="sm" className="h-8 hidden sm:flex">
+                        <ArrowUpDown className="w-3 h-3 mr-1.5" /> Sort
+                    </Button>
+                    <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="icon" className="w-8 h-8">
+                                <MoreVertical className="w-4 h-4" />
+                            </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                            <DropdownMenuItem>View Details</DropdownMenuItem>
+                            <DropdownMenuItem>Export as PNG</DropdownMenuItem>
+                        </DropdownMenuContent>
+                    </DropdownMenu>
+                </div>
+            </div>
+             <div className="pt-4">
+                <div className="text-3xl font-bold">
+                    366 Total
+                </div>
+                <div className="flex items-center text-sm text-muted-foreground">
+                    <span className="flex items-center text-green-600 mr-2">
+                        <ArrowUpRight className="w-4 h-4" />
+                        +15.8%
+                    </span>
+                    +50 this month
+                </div>
             </div>
         </CardHeader>
-        <CardContent>
+        <CardContent className="pl-0">
              <ChartContainer config={questionsBySubjectConfig} className="min-h-[250px] w-full">
                 <BarChart accessibilityLayer data={questionsBySubjectData}>
                     <CartesianGrid vertical={false} />
                     <XAxis dataKey="week" tickLine={false} tickMargin={10} axisLine={false} />
-                    <YAxis tickLine={false} tickMargin={10} axisLine={false} />
+                    <YAxis tickLine={false} tickMargin={10} axisLine={false} tickFormatter={(value) => `${value}`} />
                     <ChartTooltip content={<ChartTooltipContent />} />
-                    <Legend />
+                    <Legend content={<ChartLegendContent />} />
                     <Bar dataKey="History" stackId="a" fill="var(--color-History)" radius={[4, 4, 0, 0]} />
-                    <Bar dataKey="Polity" stackId="a" fill="var(--color-Polity)" radius={[4, 4, 0, 0]} />
-                    <Bar dataKey="Economy" stackId="a" fill="var(--color-Economy)" radius={[4, 4, 0, 0]} />
+                    <Bar dataKey="Polity" stackId="a" fill="var(--color-Polity)" radius={[0, 0, 0, 0]} />
+                    <Bar dataKey="Economy" stackId="a" fill="var(--color-Economy)" radius={[0, 0, 0, 0]} />
                 </BarChart>
             </ChartContainer>
         </CardContent>
@@ -342,7 +362,7 @@ const weeklyAccuracyData = [
 ]
 
 const weeklyAccuracyConfig = {
-  accuracy: { label: "Accuracy", color: "hsl(var(--chart-1))" },
+  accuracy: { label: "Accuracy", color: "#4d4dff" },
 } satisfies ChartConfig
 
 const WeeklyAccuracyChart = () => (
@@ -367,11 +387,11 @@ const WeeklyAccuracyChart = () => (
     </CardHeader>
     <CardContent>
         <div className="mb-4">
-            <div className="text-3xl font-bold">85.4%</div>
+            <div className="text-3xl font-bold">84%</div>
             <div className="flex items-center text-sm text-muted-foreground">
                 <span className="flex items-center text-green-600 mr-2">
                     <ArrowUpRight className="w-4 h-4" />
-                    +3.2%
+                    +2.5%
                 </span>
                 vs last week
             </div>
@@ -384,11 +404,11 @@ const WeeklyAccuracyChart = () => (
                     cursor={false}
                     content={<ChartTooltipContent indicator="line" />}
                 />
-                <Bar
-                    dataKey="accuracy"
-                    fill="var(--color-accuracy)"
-                    radius={4}
-                />
+                <Bar dataKey="accuracy" radius={4}>
+                    {weeklyAccuracyData.map((_entry, index) => (
+                        <Cell key={`cell-${index}`} fill={index === 2 ? '#4d4dff' : '#e9e7ff'} />
+                    ))}
+                </Bar>
             </BarChart>
         </ChartContainer>
     </CardContent>
