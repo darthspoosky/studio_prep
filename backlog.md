@@ -15,3 +15,4 @@ This backlog captures improvements and fixes identified while reviewing the code
 - Improve documentation in `README.md` with setup and development instructions.
 - Add scripts for running lint and type checks without prompts.
 - Document AI flows and data models for easier onboarding.
+- **Major Quiz System Overhaul**: A complete redesign of the quiz feature to include three distinct modes (Past Year Papers, PDF-to-Quiz, Curated Bank), a dedicated performance analytics tab with AI insights, and new dashboard widgets. (See `quizpage.md` for full design document).

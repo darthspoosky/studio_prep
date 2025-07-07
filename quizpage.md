@@ -1,115 +1,73 @@
-# Daily Quiz Page: A Modern Approach
+# PrepTalk: The Ultimate Quiz System - Design Document
 
 ## 1. Vision
 
-The new Daily Quiz page will be a dynamic and engaging experience, moving beyond a simple static quiz to become a core part of the user's daily learning routine. It will leverage the existing AI infrastructure to provide fresh, relevant, and adaptive quizzes based on current events and UPSC syllabus.
+To evolve the Daily Quiz page into a comprehensive, multi-modal quiz system. It will be the central hub for practice, performance analysis, and personalized improvement, catering to diverse study needs from past-paper practice to user-generated content analysis.
 
-## 2. Key Features
+## 2. Core Feature Pillars: The Three Quiz Modes
 
-*   **Dynamic Content:** Quizzes will be generated daily from a curated list of news sources (via `newspaper-analysis-flow`) or based on specific UPSC subjects, ensuring that the content is always timely and relevant.
-*   **Themed Quizzes:** Users will be able to choose from a variety of quiz themes, such as:
-    *   **General Studies:** A mix of questions from various subjects (Polity, History, Geography, Economy).
-    *   **Subject-Specific:** Quizzes focused on a particular subject (e.g., Polity, History, Economy, Current Affairs).
-    *   **Newspaper-Specific:** Quizzes based on articles from a specific newspaper (e.g., The Hindu, The Indian Express) - *Future Integration with Newspaper Analysis Flow*.
-*   **Adaptive Difficulty:** The quiz difficulty will adjust based on the user's performance, providing a challenging but not overwhelming experience. This will be managed by the `daily-quiz-flow`.
-*   **Interactive UI:** The quiz interface will be modern, interactive, and visually appealing, consistent with the existing `newspaper-analysis` page design. Features will include:
-    *   A progress bar to track the user's progress through the quiz.
-    *   Instant feedback on each question (correct/incorrect).
-    *   Detailed explanations for each answer.
-    *   A comprehensive results page with performance analysis.
-*   **Gamification:** The quiz will incorporate gamification elements to make it more engaging, such as:
-    *   A scoring system with points for correct answers and bonus points for speed.
-    *   A leaderboard to foster a sense of competition (future).
-    *   Badges and achievements for reaching milestones (future).
-*   **Persistence:** Quiz attempts and results will be saved to the user's history.
+The new quiz page will be built around a tabbed interface offering three distinct modes of practice.
 
-## 3. User Flow
+### Pillar 1: Past Year Question Bank
 
-1.  **Quiz Configuration:** The user lands on the Daily Quiz page and is presented with options to select:
-    *   Subject (e.g., General Studies, Current Affairs, Polity)
-    *   Number of Questions (e.g., 5, 10, 15, 20)
-    *   Difficulty Level (Easy, Medium, Hard, Adaptive)
-2.  **Quiz Start:** The user confirms their selections and starts the quiz. The `daily-quiz-flow` is invoked to generate questions.
-3.  **Question Answering:** The user answers a series of multiple-choice questions, one at a time.
-4.  **Instant Feedback:** After each question, the user receives immediate feedback (correct/incorrect) and the explanation is revealed.
-5.  **Navigation:** The user can move to the next question or quit the quiz.
-6.  **Quiz Completion:** Once all questions are answered, the user is taken to the results page.
-7.  **Results Page:** The results page displays the user's score, a breakdown of their performance, and options to review answers or start a new quiz.
-8.  **History & Stats:** The quiz attempt is saved, and user stats (streak, accuracy) are updated and displayed.
+- **Objective**: Allow users to practice with official past UPSC question papers.
+- **Features**:
+    - **Browse by Year**: A grid or list view allowing users to select a specific year (e.g., "UPSC CSE 2023"). Each entry will show progress and number of questions.
+    - **Browse by Syllabus Section**: A collapsible accordion interface for users to drill down into specific GS paper sections (e.g., GS-I > Modern History > Freedom Struggle) and practice questions from that topic.
 
-## 4. Component Structure
+### Pillar 2: PDF/Image to Quiz Converter
 
-The Daily Quiz page will be built using existing `components/ui` and new components as needed, following the patterns observed in `src/app/newspaper-analysis/page.tsx`.
+- **Objective**: Empower users to turn their own study materials into interactive quizzes.
+- **Features**:
+    - **File Upload**: A drag-and-drop or file selection interface for uploading PDFs and images (JPEG, PNG).
+    - **AI-Powered Conversion**: A Genkit flow will process the uploaded document using OCR and NLP to identify questions, options, and correct answers.
+    - **Quiz Generation**: The system will create a new, playable quiz from the extracted content.
+    - **Configuration**: Users can set a time limit and choose whether the AI should attempt to generate explanations for answers.
 
-*   `DailyQuizPage` (src/app/daily-quiz/page.tsx): The main page component, orchestrating the quiz flow.
-*   `QuizConfigForm`: Component for selecting subject, number of questions, and difficulty.
-*   `QuizQuestionCard`: Displays a single question with options, handles user selection, and shows feedback/explanation. (Similar to `MCQ` component in newspaper analysis).
-*   `QuizProgressBar`: Visualizes progress through the quiz.
-*   `QuizResultsDisplay`: Shows the final score and performance summary.
-*   `UserStatsCard`: Displays daily streak, overall accuracy, and weekly goals.
+### Pillar 3: Curated Question Bank
 
-## 5. AI Integration
+- **Objective**: Provide a dynamic, searchable, and filterable library of all available questions.
+- **Features**:
+    - **Advanced Filtering**: Users can filter questions by subject (GS-I, CSAT, etc.), difficulty (Easy, Medium, Hard), and question type.
+    - **Full-Text Search**: A search bar to find questions containing specific keywords.
+    - **Question Sets**: Display questions grouped into logical sets (e.g., "Current Affairs: July 2024," "Polity: Fundamental Rights") with metadata like question count, estimated time, and number of attempts by other users.
 
-*   The `daily-quiz-flow.ts` (`src/ai/flows/daily-quiz-flow.ts`) will be the primary AI integration point for generating quiz questions.
-*   The flow will receive `subject`, `numQuestions`, and `difficulty` as input.
-*   The `quizGeneratorAgent` and `quizVerificationAgent` within the flow will ensure high-quality, relevant questions.
-*   Future integration: Potentially leverage `analyzeNewspaperArticleFlow` to generate quizzes directly from daily news articles.
+## 3. Performance Analytics Tab
 
-## 6. Design Inspiration
+A dedicated tab within the quiz system for deep performance analysis.
 
-The design of the Daily Quiz page will be consistent with the existing design of the PrepTalk platform, particularly drawing inspiration from `src/app/newspaper-analysis/page.tsx`.
+- **Key Metrics**: Display high-level stats like Total Questions Attempted, Overall Accuracy, Average Time Per Question, and Current Day Streak.
+- **Performance Trends**: An interactive line chart showing accuracy and other metrics over selectable timeframes (Week, Month, Year).
+- **Subject-wise Breakdown**: A bar chart visualizing accuracy for each subject (History, Polity, etc.) to quickly identify strengths and weaknesses.
+- **Question Type Analysis**: A radar chart showing performance across different question formats (e.g., Factual, Analytical, Statement-based).
+- **AI-Powered Insights**: A list of actionable suggestions generated by an AI agent that analyzes the user's performance data. It will recommend specific topics to focus on, suggest relevant practice sets, and highlight areas of improvement.
 
-*   **Layout:** Two-column layout for configuration/stats and the main quiz area, similar to the input/output sections of newspaper analysis.
-*   **Styling:** Utilize `Tailwind CSS` and `shadcn/ui` components for a clean, modern, and responsive design.
-*   **Animations:** Employ `framer-motion` for smooth transitions and interactive elements.
-*   **Visuals:** Use icons (`lucide-react`), badges, and progress indicators to enhance user engagement.
-*   **Theming:** Adhere to the existing light/dark mode theming.
+## 4. Dashboard Integration
 
-## 7. Technical Implementation
+Key insights from the quiz system will be surfaced on the main user dashboard via two new widgets:
+- **Quiz Performance Widget**: A compact card showing a weekly performance graph, average score, and total questions attempted.
+- **Weak Area Focus Widget**: An AI-driven card that highlights the top 3 subjects where the user has the lowest accuracy, suggesting specific topics to revise.
 
-### Service Architecture
+## 5. Full-Stack Technical Blueprint
 
-* **dailyQuizService.ts**: Core service handling quiz session management including:
-  * Creating and retrieving quiz sessions
-  * Managing user answers and scoring
-  * Tracking daily/weekly streaks
-  * Storing quiz attempt statistics
-* **daily-quiz-flow.ts**: AI flow responsible for generating quiz questions based on:
-  * Selected subject area
-  * Difficulty level (easy, medium, hard, adaptive)
-  * Number of questions requested
+### 5.1. Backend & AI
 
-### State Management
+- **New Genkit Flows**:
+    - `pdfToQuizFlow`: An AI flow that takes a file (as a data URI), performs OCR/parsing, identifies question-answer blocks, and outputs a structured JSON of quiz questions.
+    - `performanceAnalysisFlow`: An AI flow that takes a user's quiz history as input and generates personalized textual insights and recommendations.
+- **New Backend Services**:
+    - `quizService.ts`: To manage fetching questions from various sources (past papers database, custom bank).
+    - `analyticsService.ts`: To calculate and aggregate user performance statistics from `quizAttempts`.
+- **Database Schema Expansion**:
+    - `quizSessions` (Collection): To store metadata for each quiz attempt (e.g., `sessionId`, `userId`, `type`, `score`, `duration`).
+    - `pastYearQuestions` (Collection): A pre-populated collection with past UPSC questions, tagged by year, subject, and topic.
 
-* The Daily Quiz page uses React state hooks to manage the quiz flow:
-  * `QuizState` enum (`NOT_STARTED`, `LOADING`, `IN_PROGRESS`, `COMPLETED`, `ERROR`) to track the current stage
-  * `questionIndex` for navigating through questions
-  * `difficultyLevel` using both string representation (UI) and numeric value (API) to ensure type safety
-  * `score` and `scorePercentage` for tracking performance
-  * Custom state for subject selection, question count, and user selections
+### 5.2. Frontend
 
-### Type System
-
-* Strong TypeScript typing throughout the implementation:
-  * `ServiceQuizSession` interface defining the quiz session structure
-  * `QuizQuestion` and `QuizAnswer` types for question/answer data
-  * Explicit typing for all API responses and state variables
-  * Enum types for quiz states and difficulty levels
-
-### Error Handling
-
-* Comprehensive error handling approach:
-  * API call failures captured and displayed with user-friendly messages
-  * Fallback UI states for error conditions
-  * Graceful degradation when AI services are unavailable
-  * Type safety checks to prevent runtime errors
-
-## 8. Areas for Consideration
-
-*   **Quality Assurance:** Continue to monitor and improve the quality and accuracy of AI-generated questions.
-*   **Scalability:** Ensure the quiz generation and session management can scale with increasing user numbers.
-*   **Error Handling:** Robust error handling for AI flow failures or network issues.
-*   **User Feedback:** Implement mechanisms for users to report issues with questions or provide feedback.
-*   **Accessibility:** Ensure the quiz interface is accessible to all users.
-*   **Gamification Expansion:** Plan for future features like leaderboards, more diverse achievements, and social sharing.
-*   **Content Diversity:** Explore generating questions beyond multiple-choice, such as fill-in-the-blanks or true/false, in future iterations.
+- **New Page**: `/daily-quiz/analysis` for the dedicated analytics tab.
+- **Component Refactoring**: The main `/daily-quiz` page will be rebuilt to house the new three-tab system.
+- **New Components**:
+    - `PastYearQuizMode`, `PDFToQuizConverter`, `CuratedQuestionBank` components for each mode.
+    - `QuizAnalysisTab` for the analytics view.
+    - `QuizPerformanceWidget`, `WeakAreaFocusWidget` for the main dashboard.
+    - Various charting components using `recharts`.
