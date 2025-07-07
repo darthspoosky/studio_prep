@@ -24,6 +24,8 @@ import { cn } from "@/lib/utils";
 import { motion, AnimatePresence } from "framer-motion";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { useAuth } from "@/contexts/AuthContext";
+import { useRouter } from "next/navigation";
 
 
 const DifficultyGauge = ({ score }: { score: number }) => {
@@ -388,6 +390,15 @@ const UsageStats = ({
 
 
 export default function NewspaperAnalysisPage() {
+  const { user, loading } = useAuth();
+  const router = useRouter();
+
+  useEffect(() => {
+    if (!loading && !user) {
+      router.push('/login');
+    }
+  }, [user, loading, router]);
+
   const [isLoading, setIsLoading] = useState(false);
   const [isGeneratingAudio, setIsGeneratingAudio] = useState(false);
   const [analysisResult, setAnalysisResult] = useState<NewspaperAnalysisOutput | null>(null);
@@ -547,14 +558,18 @@ export default function NewspaperAnalysisPage() {
     </Button>
   );
 
+  if (loading || !user) {
+    return null;
+  }
+
 
   return (
     <div className="flex flex-col min-h-screen bg-gray-50 dark:bg-gray-900">
       <Header />
       <main className="flex-1 container mx-auto px-4 py-24 sm:py-32">
-        <Link href="/#tools" className="inline-flex items-center text-sm text-muted-foreground hover:text-primary transition-colors mb-8">
+        <Link href="/dashboard" className="inline-flex items-center text-sm text-muted-foreground hover:text-primary transition-colors mb-8">
             <ArrowLeft className="mr-2 h-4 w-4" />
-            Back to Home
+            Back to Dashboard
         </Link>
         <div className="text-center mb-16">
             <h1 className="font-headline text-4xl sm:text-5xl font-bold tracking-tighter">
@@ -809,7 +824,3 @@ export default function NewspaperAnalysisPage() {
     </div>
   );
 }
-
-    
-
-    
