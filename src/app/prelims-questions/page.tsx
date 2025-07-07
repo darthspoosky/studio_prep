@@ -5,7 +5,7 @@ import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useAuth } from '@/contexts/AuthContext';
 import { getPrelimsQuestions, type PrelimsQuestionWithContext } from '@/services/historyService';
-import { saveQuizAttempt, getQuizAttemptsForHistory } from '@/services/quizAttemptsService';
+import { saveQuizAttempt, getAllUserAttempts } from '@/services/quizAttemptsService';
 import { useRouter } from 'next/navigation';
 
 import Header from '@/components/layout/header';
@@ -187,17 +187,13 @@ export default function PrelimsQuestionBankPage() {
             setIsLoading(true);
             Promise.all([
                 getPrelimsQuestions(user.uid),
-                // This is a bit inefficient as it fetches all attempts. A better approach for scale
-                // would be to fetch attempts only for the questions being displayed.
-                // For now, this is acceptable for a user's question bank.
-                getQuizAttemptsForHistory(user.uid) // We need a new function to get all attempts for a user
+                getAllUserAttempts(user.uid) 
             ]).then(([prelimsQuestions, savedAttempts]) => {
                 setQuestions(prelimsQuestions);
-                // The `getQuizAttemptsForHistory` function needs to be updated to fetch all attempts for a user, not just for one historyId
-                // For now, let's assume it returns a map of { question: selectedOption }
-                // I'll need to update quizAttemptsService as well.
-                // TODO: Update quizAttemptsService. For now, let's simulate this.
                 setAttempts(savedAttempts);
+                setIsLoading(false);
+            }).catch(error => {
+                console.error("Failed to load question bank:", error);
                 setIsLoading(false);
             });
         }
@@ -206,7 +202,6 @@ export default function PrelimsQuestionBankPage() {
     const handleAnswer = (question: string, selectedOption: string, isCorrect: boolean, subject?: string, difficulty?: number) => {
         if (!user) return;
         setAttempts(prev => ({ ...prev, [question]: selectedOption }));
-        // This is tricky without the historyId. The save function needs it. The question object has it.
         const questionData = questions.find(q => q.question === question);
         if (questionData) {
             saveQuizAttempt(user.uid, questionData.historyId, question, selectedOption, isCorrect, subject, difficulty);
@@ -275,4 +270,3 @@ export default function PrelimsQuestionBankPage() {
         </div>
     );
 }
-

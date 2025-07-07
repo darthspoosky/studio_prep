@@ -405,7 +405,7 @@ export default function ReimaginedDashboardPage() {
                 <main className="flex flex-col gap-6 p-4 lg:p-0">
                     {/* Main Header */}
                     <div className="hidden lg:block p-4">
-                        <h2 className="text-2xl font-bold">Welcome back, {user.email?.split('@')[0] || 'Aspirant'}!</h2>
+                        <h2 className="text-2xl font-bold">Welcome back, {user.displayName || user.email?.split('@')[0] || 'Aspirant'}!</h2>
                         <p className="text-muted-foreground">You're doing great this week. Keep it up!</p>
                     </div>
 

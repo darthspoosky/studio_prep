@@ -44,12 +44,12 @@ export async function saveQuizAttempt(userId: string, historyId: string, questio
   }
 }
 
-export async function getQuizAttemptsForHistory(historyId: string): Promise<{[question: string]: string}> {
+export async function getQuizAttemptsForHistory(userId: string, historyId: string): Promise<{[question: string]: string}> {
   if (!db) return {};
   
   const attempts: {[question: string]: string} = {};
   try {
-    const q = query(collection(db, 'quizAttempts'), where('historyId', '==', historyId));
+    const q = query(collection(db, 'quizAttempts'), where('userId', '==', userId), where('historyId', '==', historyId));
     const querySnapshot = await getDocs(q);
     querySnapshot.forEach((doc) => {
       const data = doc.data();
@@ -58,6 +58,27 @@ export async function getQuizAttemptsForHistory(historyId: string): Promise<{[qu
     return attempts;
   } catch (error) {
     console.error("Error fetching quiz attempts: ", error);
+    return {};
+  }
+}
+
+export async function getAllUserAttempts(userId: string): Promise<{[question: string]: string}> {
+  if (!db) return {};
+  
+  const attempts: {[question: string]: string} = {};
+  try {
+    const q = query(collection(db, 'quizAttempts'), where('userId', '==', userId));
+    const querySnapshot = await getDocs(q);
+    querySnapshot.forEach((doc) => {
+      const data = doc.data();
+      attempts[data.question] = data.selectedOption;
+    });
+    return attempts;
+  } catch (error) {
+    console.error("Error fetching all user quiz attempts: ", error);
+    if ((error as any).code === 'permission-denied') {
+        throw new Error("Could not read quiz attempts due to a permission error. Please check your Firestore security rules.");
+    }
     return {};
   }
 }

@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useEffect, useState, useRef } from 'react';
@@ -88,13 +89,11 @@ export default function ProfilePage() {
     }
 
     setIsSaving(true);
-    let success = true;
 
-    try {
-        const textUpdatePromises: Promise<any>[] = [];
-        
-        // Save text-based profile details
-        if (hasTextChanged) {
+    // --- Handle Text Changes Immediately ---
+    if (hasTextChanged) {
+        try {
+            const textUpdatePromises: Promise<any>[] = [];
             if (displayName !== initialState.displayName) {
                 textUpdatePromises.push(updateProfile(user, { displayName }));
             }
@@ -102,46 +101,57 @@ export default function ProfilePage() {
                 textUpdatePromises.push(updateUserProfile(user.uid, { examPreference }));
             }
             await Promise.all(textUpdatePromises);
-            toast({ title: 'Profile details saved.' });
+            
             setInitialState({ displayName, examPreference });
-        }
-        
-        // Handle avatar upload and update
-        if (hasAvatarChanged && avatarFile) {
-            setIsUploading(true);
-            toast({ title: 'Uploading new avatar...', description: 'This may take a moment.' });
-            
-            const storageRef = ref(storage, `avatars/${user.uid}`);
-            await uploadBytes(storageRef, avatarFile);
-            const photoURL = await getDownloadURL(storageRef);
-            
-            await updateProfile(user, { photoURL });
-            setAvatarFile(null);
-            
-            toast({ title: 'Avatar updated successfully!' });
-        }
-    } catch (error: any) {
-        success = false;
-        console.error('Profile update error:', error);
-        toast({
-            variant: 'destructive',
-            title: 'Update failed',
-            description: error.message || 'An unexpected error occurred.',
-        });
-    } finally {
-        setIsSaving(false);
-        setIsUploading(false);
-        if (success && (hasTextChanged || hasAvatarChanged)) {
-             toast({ title: 'Profile updated successfully!' });
+            toast({ title: 'Profile details saved.' });
+        } catch (error: any) {
+            console.error('Profile text update error:', error);
+            toast({
+                variant: 'destructive',
+                title: 'Update failed',
+                description: error.message || 'Could not save text-based details.',
+            });
         }
     }
+
+    // --- Handle Avatar Upload in the "Background" ---
+    if (hasAvatarChanged && avatarFile) {
+        setIsUploading(true);
+        toast({ title: 'Uploading new avatar...', description: 'This may take a moment. You can continue using the app.' });
+        
+        const currentAvatarFile = avatarFile;
+        setAvatarFile(null);
+
+        (async () => {
+            try {
+                const storageRef = ref(storage, `avatars/${user.uid}`);
+                await uploadBytes(storageRef, currentAvatarFile);
+                const photoURL = await getDownloadURL(storageRef);
+                
+                await updateProfile(user, { photoURL });
+                
+                toast({ title: 'Avatar updated successfully!' });
+            } catch (error: any) {
+                 console.error('Avatar upload error:', error);
+                 toast({
+                    variant: 'destructive',
+                    title: 'Avatar upload failed',
+                    description: error.message || 'An unexpected error occurred.',
+                });
+            } finally {
+                setIsUploading(false);
+            }
+        })();
+    }
+
+    setIsSaving(false);
   };
 
   if (loading || !user) {
     return null;
   }
 
-  const isSavingChanges = isSaving || isUploading;
+  const isSavingChanges = isSaving;
 
   return (
     <div className="flex flex-col min-h-screen bg-gray-50 dark:bg-gray-900">
@@ -173,7 +183,8 @@ export default function ProfilePage() {
                             className="hidden"
                             accept="image/png, image/jpeg, image/gif"
                         />
-                        <Button variant="outline" onClick={() => fileInputRef.current?.click()} disabled={isSavingChanges}>
+                        <Button variant="outline" onClick={() => fileInputRef.current?.click()} disabled={isSavingChanges || isUploading}>
+                            {isUploading ? <Loader2 className="animate-spin" /> : null}
                             {isUploading ? 'Uploading...' : 'Change Avatar'}
                         </Button>
                         <p className="text-xs text-muted-foreground mt-2">JPG, GIF or PNG. 2MB max.</p>

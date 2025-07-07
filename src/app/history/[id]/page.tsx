@@ -175,19 +175,19 @@ const MCQList = ({ mcqs, userId, historyId }: { mcqs: MCQType[], userId: string,
 
     useEffect(() => {
         const fetchAttempts = async () => {
-            if (historyId) {
+            if (userId && historyId) {
                 setLoadingAttempts(true);
-                const savedAttempts = await getQuizAttemptsForHistory(historyId);
+                const savedAttempts = await getQuizAttemptsForHistory(userId, historyId);
                 setAttempts(savedAttempts);
                 setLoadingAttempts(false);
             }
         };
         fetchAttempts();
-    }, [historyId]);
+    }, [userId, historyId]);
 
     const handleAnswer = (question: string, selectedOption: string, isCorrect: boolean, subject?: string, difficulty?: number) => {
-        setAttempts(prev => ({ ...prev, [question]: selectedOption }));
         saveQuizAttempt(userId, historyId, question, selectedOption, isCorrect, subject, difficulty);
+        setAttempts(prev => ({ ...prev, [question]: selectedOption }));
     };
 
     if (!mcqs || mcqs.length === 0) {
