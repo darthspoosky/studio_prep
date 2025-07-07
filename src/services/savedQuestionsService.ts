@@ -72,20 +72,24 @@ export async function getSavedQuestions(userId: string): Promise<SavedQuestion[]
   }
   const savedQuestions: SavedQuestion[] = [];
   try {
+    // Removed orderBy to prevent needing a composite index. Sorting is now done on the client.
     const q = query(
       collection(db, 'savedQuestions'),
-      where('userId', '==', userId),
-      orderBy('savedAt', 'desc')
+      where('userId', '==', userId)
     );
     const querySnapshot = await getDocs(q);
     querySnapshot.forEach((doc) => {
       // The doc.id is the reproducible ID we created.
       savedQuestions.push({ ...(doc.data() as SavedQuestion), id: doc.id });
     });
+    
+    // Sort the questions by saved date on the client side.
+    savedQuestions.sort((a, b) => b.savedAt.toMillis() - a.savedAt.toMillis());
+
   } catch (error) {
     console.error("Error fetching saved questions:", error);
     if ((error as any).code === 'permission-denied') {
-        throw new Error("Could not read your saved questions. This may require a composite index in Firestore. Please check your browser's developer console for a link to create it.");
+        throw new Error("Could not read your saved questions due to a permission error. Please check your Firestore security rules.");
     }
   }
   return savedQuestions;
