@@ -18,12 +18,14 @@ import { isToday } from 'date-fns';
 import { Sheet, SheetContent, SheetTrigger, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet';
 import { UserNav } from '@/components/layout/user-nav';
 import { getUserQuizStats, type UserQuizStats } from '@/services/quizAttemptsService';
+import { getUserUsage, type UsageStats } from '@/services/usageService';
 import { Separator } from '@/components/ui/separator';
+import { Badge } from '@/components/ui/badge';
 
 
 // --- Local Components for Dashboard ---
 
-const SidebarContent = () => (
+const SidebarContent = ({ usageStats }: { usageStats: UsageStats | null }) => (
     <div className="flex flex-col h-full">
         <div className="p-4">
             <Link href="/dashboard" className="font-headline text-2xl font-bold animate-gradient-anim bg-[length:200%_auto] bg-gradient-to-r from-primary via-accent to-pink-500 bg-clip-text text-transparent">
@@ -35,21 +37,33 @@ const SidebarContent = () => (
                 <BarChart3 className="w-5 h-5" />
                 <span>Dashboard</span>
             </Link>
-            <Link href="/newspaper-analysis" className="flex items-center gap-3 p-3 text-muted-foreground hover:bg-muted/50 hover:text-foreground rounded-lg transition-colors">
-                <Newspaper className="w-5 h-5" />
-                <span>Newspaper Analysis</span>
+            <Link href="/newspaper-analysis" className="flex items-center justify-between gap-3 p-3 text-muted-foreground hover:bg-muted/50 hover:text-foreground rounded-lg transition-colors">
+                <div className="flex items-center gap-3">
+                    <Newspaper className="w-5 h-5" />
+                    <span>Newspaper Analysis</span>
+                </div>
+                {usageStats && usageStats.newspaperAnalysis && usageStats.newspaperAnalysis > 0 && <Badge variant="secondary">{usageStats.newspaperAnalysis}</Badge>}
             </Link>
-             <Link href="/mock-interview" className="flex items-center gap-3 p-3 text-muted-foreground hover:bg-muted/50 hover:text-foreground rounded-lg transition-colors">
-                <Mic className="w-5 h-5" />
-                <span>Mock Interview</span>
+             <Link href="/mock-interview" className="flex items-center justify-between gap-3 p-3 text-muted-foreground hover:bg-muted/50 hover:text-foreground rounded-lg transition-colors">
+                <div className="flex items-center gap-3">
+                    <Mic className="w-5 h-5" />
+                    <span>Mock Interview</span>
+                </div>
+                 {usageStats && usageStats.mockInterview && usageStats.mockInterview > 0 && <Badge variant="secondary">{usageStats.mockInterview}</Badge>}
             </Link>
-             <Link href="/daily-quiz" className="flex items-center gap-3 p-3 text-muted-foreground hover:bg-muted/50 hover:text-foreground rounded-lg transition-colors">
-                <FileQuestion className="w-5 h-5" />
-                <span>Daily Quiz</span>
+             <Link href="/daily-quiz" className="flex items-center justify-between gap-3 p-3 text-muted-foreground hover:bg-muted/50 hover:text-foreground rounded-lg transition-colors">
+                <div className="flex items-center gap-3">
+                    <FileQuestion className="w-5 h-5" />
+                    <span>Daily Quiz</span>
+                </div>
+                 {usageStats && usageStats.dailyQuiz && usageStats.dailyQuiz > 0 && <Badge variant="secondary">{usageStats.dailyQuiz}</Badge>}
             </Link>
-            <Link href="/writing-practice" className="flex items-center gap-3 p-3 text-muted-foreground hover:bg-muted/50 hover:text-foreground rounded-lg transition-colors">
-                <PenLine className="w-5 h-5" />
-                <span>Writing Practice</span>
+            <Link href="/writing-practice" className="flex items-center justify-between gap-3 p-3 text-muted-foreground hover:bg-muted/50 hover:text-foreground rounded-lg transition-colors">
+                <div className="flex items-center gap-3">
+                    <PenLine className="w-5 h-5" />
+                    <span>Writing Practice</span>
+                </div>
+                {usageStats && usageStats.writingPractice && usageStats.writingPractice > 0 && <Badge variant="secondary">{usageStats.writingPractice}</Badge>}
             </Link>
             <Separator className="my-2 bg-border/50" />
             <p className="px-3 text-xs font-semibold text-muted-foreground/80 tracking-wider">Question Bank</p>
@@ -86,13 +100,13 @@ const SidebarContent = () => (
 );
 
 
-const LeftSidebar = () => (
+const LeftSidebar = ({ usageStats }: { usageStats: UsageStats | null }) => (
     <div className="hidden lg:flex flex-col gap-4 p-4 bg-card rounded-2xl h-full">
-        <SidebarContent />
+        <SidebarContent usageStats={usageStats} />
     </div>
 );
 
-const MobileHeader = () => (
+const MobileHeader = ({ usageStats }: { usageStats: UsageStats | null }) => (
     <header className="lg:hidden sticky top-0 z-40 flex h-16 items-center justify-between border-b bg-background/80 backdrop-blur-sm px-4">
         <Sheet>
             <SheetTrigger asChild>
@@ -108,7 +122,7 @@ const MobileHeader = () => (
                         Main menu for the PrepTalk application, containing links to dashboard, tools, and other resources.
                     </SheetDescription>
                 </SheetHeader>
-                <SidebarContent />
+                <SidebarContent usageStats={usageStats} />
             </SheetContent>
         </Sheet>
         <Link href="/dashboard" className="font-headline text-xl font-bold animate-gradient-anim bg-[length:200%_auto] bg-gradient-to-r from-primary via-accent to-pink-500 bg-clip-text text-transparent">
@@ -266,6 +280,7 @@ export default function ReimaginedDashboardPage() {
     const [historyLoading, setHistoryLoading] = useState(true);
     const [quizStats, setQuizStats] = useState<UserQuizStats | null>(null);
     const [questionStats, setQuestionStats] = useState<{ prelimsCount: number; mainsCount: number } | null>(null);
+    const [usageStats, setUsageStats] = useState<UsageStats | null>(null);
 
 
     useEffect(() => {
@@ -288,6 +303,9 @@ export default function ReimaginedDashboardPage() {
             });
             getQuestionStats(user.uid).then(stats => {
                 setQuestionStats(stats);
+            });
+            getUserUsage(user.uid).then(stats => {
+                setUsageStats(stats);
             });
         }
     }, [user]);
@@ -399,9 +417,9 @@ export default function ReimaginedDashboardPage() {
 
     return (
         <div className="min-h-screen bg-muted/30 dark:bg-muted/10">
-            <MobileHeader />
+            <MobileHeader usageStats={usageStats} />
             <div className="lg:grid lg:grid-cols-[280px_1fr] xl:grid-cols-[280px_1fr_320px] lg:gap-4 lg:p-4 h-full">
-                <LeftSidebar />
+                <LeftSidebar usageStats={usageStats} />
                 <main className="flex flex-col gap-6 p-4 lg:p-0">
                     {/* Main Header */}
                     <div className="hidden lg:block p-4">
