@@ -16,18 +16,22 @@ import { useToast } from '@/hooks/use-toast';
 import { storage } from '@/lib/firebase';
 import { updateProfile } from 'firebase/auth';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { getUserProfile, updateUserProfile } from '@/services/profileService';
 
 export default function ProfilePage() {
   const { user, loading } = useAuth();
   const router = useRouter();
   const { toast } = useToast();
   const [isSaving, setIsSaving] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
   
-  // State for form fields
   const [displayName, setDisplayName] = useState('');
   const [examPreference, setExamPreference] = useState('');
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
+  const [initialState, setInitialState] = useState({ displayName: '', examPreference: '' });
+
   const fileInputRef = useRef<HTMLInputElement>(null);
   
   useEffect(() => {
@@ -37,6 +41,12 @@ export default function ProfilePage() {
     if (user) {
         setDisplayName(user.displayName || '');
         setAvatarPreview(user.photoURL || null);
+        
+        getUserProfile(user.uid).then(profile => {
+          const loadedExamPref = profile?.examPreference || '';
+          setExamPreference(loadedExamPref);
+          setInitialState({ displayName: user.displayName || '', examPreference: loadedExamPref });
+        });
     }
   }, [user, loading, router]);
 
@@ -53,11 +63,11 @@ export default function ProfilePage() {
   const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
         const file = e.target.files[0];
-        if (file.size > 1024 * 1024) { // 1MB limit
+        if (file.size > 2 * 1024 * 1024) { // 2MB limit
             toast({
                 variant: 'destructive',
                 title: 'Image too large',
-                description: 'Please select an image smaller than 1MB.',
+                description: 'Please select an image smaller than 2MB.',
             });
             return;
         }
@@ -68,42 +78,50 @@ export default function ProfilePage() {
 
   const handleSaveChanges = async () => {
     if (!user) return;
+
+    const hasTextChanged = displayName !== initialState.displayName || examPreference !== initialState.examPreference;
+    const hasAvatarChanged = !!avatarFile;
+
+    if (!hasTextChanged && !hasAvatarChanged) {
+        toast({ title: 'No changes to save.' });
+        return;
+    }
+
     setIsSaving(true);
+    let success = true;
 
     try {
-        let photoURL = user.photoURL;
-        let profileUpdated = false;
-
-        // 1. Upload new avatar if it exists
-        if (avatarFile) {
+        const textUpdatePromises: Promise<any>[] = [];
+        
+        // Save text-based profile details
+        if (hasTextChanged) {
+            if (displayName !== initialState.displayName) {
+                textUpdatePromises.push(updateProfile(user, { displayName }));
+            }
+            if (examPreference !== initialState.examPreference) {
+                textUpdatePromises.push(updateUserProfile(user.uid, { examPreference }));
+            }
+            await Promise.all(textUpdatePromises);
+            toast({ title: 'Profile details saved.' });
+            setInitialState({ displayName, examPreference });
+        }
+        
+        // Handle avatar upload and update
+        if (hasAvatarChanged && avatarFile) {
+            setIsUploading(true);
+            toast({ title: 'Uploading new avatar...', description: 'This may take a moment.' });
+            
             const storageRef = ref(storage, `avatars/${user.uid}`);
             await uploadBytes(storageRef, avatarFile);
-            photoURL = await getDownloadURL(storageRef);
-            profileUpdated = true;
-        }
-
-        // 2. Check if display name has changed
-        if (displayName !== (user.displayName || '')) {
-            profileUpdated = true;
-        }
-
-        // 3. Update profile if anything changed
-        if (profileUpdated) {
-            await updateProfile(user, {
-                displayName: displayName,
-                photoURL: photoURL,
-            });
-            toast({
-                title: 'Profile updated!',
-                description: 'Your changes have been saved successfully.',
-            });
-        } else {
-             toast({
-                title: 'No changes detected.',
-                description: 'Your profile information is already up to date.',
-            });
+            const photoURL = await getDownloadURL(storageRef);
+            
+            await updateProfile(user, { photoURL });
+            setAvatarFile(null);
+            
+            toast({ title: 'Avatar updated successfully!' });
         }
     } catch (error: any) {
+        success = false;
         console.error('Profile update error:', error);
         toast({
             variant: 'destructive',
@@ -112,12 +130,18 @@ export default function ProfilePage() {
         });
     } finally {
         setIsSaving(false);
+        setIsUploading(false);
+        if (success && (hasTextChanged || hasAvatarChanged)) {
+             toast({ title: 'Profile updated successfully!' });
+        }
     }
   };
 
   if (loading || !user) {
-    return null; // or a loading spinner
+    return null;
   }
+
+  const isSavingChanges = isSaving || isUploading;
 
   return (
     <div className="flex flex-col min-h-screen bg-gray-50 dark:bg-gray-900">
@@ -149,15 +173,17 @@ export default function ProfilePage() {
                             className="hidden"
                             accept="image/png, image/jpeg, image/gif"
                         />
-                        <Button variant="outline" onClick={() => fileInputRef.current?.click()}>Change Avatar</Button>
-                        <p className="text-xs text-muted-foreground mt-2">JPG, GIF or PNG. 1MB max.</p>
+                        <Button variant="outline" onClick={() => fileInputRef.current?.click()} disabled={isSavingChanges}>
+                            {isUploading ? 'Uploading...' : 'Change Avatar'}
+                        </Button>
+                        <p className="text-xs text-muted-foreground mt-2">JPG, GIF or PNG. 2MB max.</p>
                     </div>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div className="space-y-2">
                         <Label htmlFor="fullName">Full Name</Label>
-                        <Input id="fullName" placeholder="Your Name" value={displayName} onChange={(e) => setDisplayName(e.target.value)} />
+                        <Input id="fullName" placeholder="Your Name" value={displayName} onChange={(e) => setDisplayName(e.target.value)} disabled={isSavingChanges} />
                     </div>
                     <div className="space-y-2">
                         <Label htmlFor="email">Email Address</Label>
@@ -165,14 +191,26 @@ export default function ProfilePage() {
                     </div>
                     <div className="space-y-2 md:col-span-2">
                         <Label htmlFor="exam-preference">Primary Exam Preference</Label>
-                        <Input id="exam-preference" placeholder="e.g., UPSC Civil Services" value={examPreference} onChange={(e) => setExamPreference(e.target.value)} />
+                        <Select value={examPreference} onValueChange={setExamPreference} disabled={isSavingChanges}>
+                            <SelectTrigger id="exam-preference">
+                                <SelectValue placeholder="Select your primary exam" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="UPSC Civil Services">UPSC Civil Services</SelectItem>
+                                <SelectItem value="State PSC">State PSC</SelectItem>
+                                <SelectItem value="RBI Grade B">RBI Grade B</SelectItem>
+                                <SelectItem value="CAT / MBA Entrance">CAT / MBA Entrance</SelectItem>
+                                <SelectItem value="Bank PO / Clerk">Bank PO / Clerk</SelectItem>
+                                <SelectItem value="Other Competitive Exams">Other Competitive Exams</SelectItem>
+                            </SelectContent>
+                        </Select>
                     </div>
                 </div>
             </CardContent>
             <CardFooter>
-                <Button onClick={handleSaveChanges} disabled={isSaving}>
-                    {isSaving && <Loader2 className="animate-spin" />}
-                    Save Changes
+                <Button onClick={handleSaveChanges} disabled={isSavingChanges}>
+                    {isSavingChanges && <Loader2 className="animate-spin" />}
+                    {isSavingChanges ? 'Saving...' : 'Save Changes'}
                 </Button>
             </CardFooter>
           </Card>
