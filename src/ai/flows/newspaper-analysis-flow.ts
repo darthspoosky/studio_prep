@@ -80,7 +80,7 @@ const KnowledgeGraphEdgeSchema = z.object({
 const KnowledgeGraphSchema = z.object({
   nodes: z.array(KnowledgeGraphNodeSchema),
   edges: z.array(KnowledgeGraphEdgeSchema),
-});
+}).optional();
 export type KnowledgeGraph = z.infer<typeof KnowledgeGraphSchema>;
 
 
@@ -89,7 +89,7 @@ const NewspaperAnalysisOutputSchema = z.object({
   summary: z.string().optional(),
   prelims: z.object({ mcqs: z.array(MCQSchema) }),
   mains: z.object({ questions: z.array(MainsQuestionSchema) }).optional(),
-  knowledgeGraph: KnowledgeGraphSchema.optional(),
+  knowledgeGraph: KnowledgeGraphSchema,
   syllabusTopic: z.string().optional().nullable(),
   qualityScore: z.number().optional(),
   questionsCount: z.number().optional(),
@@ -214,15 +214,25 @@ Adhere strictly to authentic UPSC Civil Services (P) Examination patterns. Gener
 
 ## **UPSC MAINS**
 - **Directives:** Use words like "Critically analyze," "Examine," "Discuss."
-- **Guidance:** For each question, provide structured guidance in markdown:
+- **Guidance:** For each question, provide structured guidance in markdown. The guidance should be a mini-essay plan that a top-ranker would create before writing.
+
   ### Guidance for Answer
-  **Key Concepts:** ...
-  **Ideal Structure:**
-  - **Introduction:** ...
-  - **Body:** ...
-  - **Conclusion:** ...
-  **Examples from Article:** ...
-  **Keywords:** ...
+  **1. Deconstruct the Question:**
+  - **Core Subject:** (e.g., Polity, International Relations)
+  - **Key Directive:** (e.g., Critically Analyze, Discuss)
+  - **Main Theme/Topic:** (e.g., India's Neighbourhood Policy)
+  - **Specific Scope:** (e.g., Focusing on the impact of recent agreements)
+
+  **2. Answer Structure Blueprint:**
+  - **Introduction (Hook):** Start with a relevant fact from the article, a constitutional article, or a recent report to set the context. State the main argument or scope of the answer.
+  - **Body Paragraph 1 (Dimension A):** [Explain the first dimension of the answer, e.g., Political Implications]. Use 1-2 examples from the article.
+  - **Body Paragraph 2 (Dimension B):** [Explain the second dimension, e.g., Economic Impact]. Use 1-2 examples from the article.
+  - **Body Paragraph 3 (Counter-Argument/Challenge - for 'Critically Analyze' type questions):** Present a counter-viewpoint or a significant challenge.
+  - **Conclusion (Forward-Looking):** Summarize the key arguments and provide a balanced, futuristic, or solution-oriented conclusion. Avoid introducing new points.
+
+  **3. Key Data & Keywords:**
+  - **Data Points to Use:** [List 2-3 specific statistics, names of reports, or dates from the article].
+  - **Relevant Keywords:** [List 5-7 keywords for Mains answer writing, e.g., 'Cooperative Federalism', 'Strategic Autonomy', 'Inclusive Growth'].
 
 ## **ADDITIONAL TASK: KNOWLEDGE GRAPH EXTRACTION**
 From the article, identify the key entities and the relationships between them. Structure this as a knowledge graph with nodes and edges.
@@ -315,6 +325,7 @@ const analyzeNewspaperArticleFlow = ai.defineFlow(
         summary: relevanceResult?.reasoning || 'Article assessed as not relevant for UPSC preparation.',
         prelims: { mcqs: [] },
         mains: { questions: [] },
+        knowledgeGraph: { nodes: [], edges: [] },
         syllabusTopic: null,
         qualityScore: 0,
         questionsCount: 0,
@@ -358,7 +369,7 @@ const analyzeNewspaperArticleFlow = ai.defineFlow(
     const finalAnalysis = verifiedAnalysis || initialAnalysis; // Fallback to initial if verification fails
     
     // STEP 4: Final Processing and Packaging
-    const questionsCount = finalAnalysis.prelims.mcqs?.length || 0;
+    const questionsCount = (finalAnalysis.prelims?.mcqs?.length || 0) + (finalAnalysis.mains?.questions?.length || 0);
     const cleanSummary = (finalAnalysis.summary || '').replace(/<[^>]+>/g, '').trim();
 
     const totalTokens = totalInputTokens + totalOutputTokens;
@@ -367,6 +378,9 @@ const analyzeNewspaperArticleFlow = ai.defineFlow(
     return {
       ...finalAnalysis,
       summary: cleanSummary || 'Analysis completed successfully.',
+      prelims: finalAnalysis.prelims || { mcqs: [] },
+      mains: finalAnalysis.mains || { questions: [] },
+      knowledgeGraph: finalAnalysis.knowledgeGraph || { nodes: [], edges: [] },
       syllabusTopic: relevanceResult.syllabusTopic,
       questionsCount,
       totalTokens,
