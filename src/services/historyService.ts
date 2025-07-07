@@ -55,7 +55,6 @@ async function getAllHistory(userId: string): Promise<HistoryEntry[]> {
   
   const history: HistoryEntry[] = [];
   try {
-    // Simplified query to prevent index-related permission errors
     const q = query(collection(db, 'userHistory'), where('userId', '==', userId));
     
     const querySnapshot = await getDocs(q);
@@ -63,14 +62,12 @@ async function getAllHistory(userId: string): Promise<HistoryEntry[]> {
       history.push({ id: doc.id, ...doc.data() } as HistoryEntry);
     });
 
-    // Perform sorting in the application code after fetching.
     history.sort((a, b) => b.timestamp.toMillis() - a.timestamp.toMillis());
 
   } catch(error) {
       console.error("Error fetching all history: ", error);
       if ((error as any).code === 'permission-denied') {
-          // This error message now points to a potential index issue that the user might have to create if Firestore prompts them.
-          throw new Error("Could not read history due to a permission error. This usually happens when a Firestore index is missing. Please check your browser's developer console for a link to create the required index.");
+          throw new Error("Could not read history due to a permission error. Please ensure your Firestore security rules allow 'list' operations on the 'userHistory' collection for authenticated users.");
       }
       throw error;
   }
@@ -84,7 +81,6 @@ export async function getHistory(userId: string): Promise<HistoryEntry[]> {
     return [];
   }
   const allHistory = await getAllHistory(userId);
-  // Return the most recent 20 entries
   return allHistory.slice(0, 20);
 }
 
@@ -112,7 +108,6 @@ export async function getHistoryEntry(id: string): Promise<HistoryEntry | null> 
 
 export async function getPrelimsQuestions(userId: string): Promise<PrelimsQuestionWithContext[]> {
     const allHistory = await getAllHistory(userId);
-    // Data from getAllHistory is now sorted chronologically
     const prelimsQuestions = allHistory.flatMap(entry => 
         (entry.analysis.prelims?.mcqs || []).map(mcq => ({
             ...mcq,
@@ -124,9 +119,18 @@ export async function getPrelimsQuestions(userId: string): Promise<PrelimsQuesti
     return prelimsQuestions;
 }
 
+export async function getRandomPrelimsQuestions(userId: string, count: number): Promise<PrelimsQuestionWithContext[]> {
+    const allQuestions = await getPrelimsQuestions(userId);
+    if (allQuestions.length === 0) {
+        return [];
+    }
+    const shuffled = allQuestions.sort(() => 0.5 - Math.random());
+    return shuffled.slice(0, count);
+}
+
+
 export async function getMainsQuestions(userId: string): Promise<MainsQuestionWithContext[]> {
     const allHistory = await getAllHistory(userId);
-    // Data from getAllHistory is now sorted chronologically
     const mainsQuestions = allHistory.flatMap(entry => 
         (entry.analysis.mains?.questions || []).map(question => ({
             ...question,

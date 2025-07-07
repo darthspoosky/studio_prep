@@ -22,8 +22,6 @@ export async function saveQuizAttempt(userId: string, historyId: string, questio
     return;
   }
   
-  // Create a reproducible ID to prevent duplicate attempts for the same question by the same user on the same analysis.
-  // This uses a simple hash and is not cryptographically secure, but sufficient for this purpose.
   const questionHash = btoa(unescape(encodeURIComponent(question))).substring(0, 20);
   const attemptId = `${userId}_${historyId}_${questionHash}`;
 
@@ -38,7 +36,7 @@ export async function saveQuizAttempt(userId: string, historyId: string, questio
       subject: subject || 'General',
       difficulty: difficulty || 5,
       timestamp: new Date(),
-    });
+    }, { merge: true }); // Use merge to avoid overwriting old attempts completely
   } catch (error) {
     console.error("Error saving quiz attempt: ", error);
   }
@@ -66,13 +64,26 @@ export async function getAllUserAttempts(userId: string): Promise<{[question: st
   if (!db) return {};
   
   const attempts: {[question: string]: string} = {};
+  const allAttempts: any[] = []; 
+
   try {
-    const q = query(collection(db, 'quizAttempts'), where('userId', '==', userId), orderBy('timestamp', 'desc'));
+    // Removed orderBy to prevent needing a composite index. Sorting is now done on the client.
+    const q = query(collection(db, 'quizAttempts'), where('userId', '==', userId));
     const querySnapshot = await getDocs(q);
     querySnapshot.forEach((doc) => {
-      const data = doc.data();
-      attempts[data.question] = data.selectedOption;
+      allAttempts.push(doc.data());
     });
+    
+    // Sort client-side by timestamp, most recent first
+    allAttempts.sort((a,b) => b.timestamp.toMillis() - a.timestamp.toMillis());
+
+    // Populate the attempts object, ensuring only the most recent attempt for each question is stored.
+    allAttempts.forEach(data => {
+        if (!attempts[data.question]) {
+            attempts[data.question] = data.selectedOption;
+        }
+    });
+
     return attempts;
   } catch (error) {
     console.error("Error fetching all user quiz attempts: ", error);
@@ -96,12 +107,19 @@ export async function getUserQuizStats(userId: string): Promise<UserQuizStats> {
     const q = query(collection(db, 'quizAttempts'), where('userId', '==', userId));
     const querySnapshot = await getDocs(q);
     
-    let totalAttempted = 0;
+    const uniqueQuestions = new Map<string, { isCorrect: boolean }>();
+    
+    querySnapshot.forEach((doc) => {
+        const data = doc.data();
+        // Store the most recent attempt for each unique question
+        uniqueQuestions.set(data.question, { isCorrect: data.isCorrect });
+    });
+
+    const totalAttempted = uniqueQuestions.size;
     let totalCorrect = 0;
 
-    querySnapshot.forEach((doc) => {
-        totalAttempted++;
-        if (doc.data().isCorrect) {
+    uniqueQuestions.forEach(attempt => {
+        if (attempt.isCorrect) {
             totalCorrect++;
         }
     });
