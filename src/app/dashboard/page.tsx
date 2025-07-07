@@ -7,12 +7,12 @@ import Link from 'next/link';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
-import { Newspaper, Mic, FileQuestion, PenLine, Book, BarChart3, HelpCircle, Users, Settings, LogOut, ChevronDown, CheckCircle, Flame, Target, PlayCircle, Library, Menu } from 'lucide-react';
+import { Newspaper, Mic, FileQuestion, PenLine, Book, BarChart3, HelpCircle, Users, Settings, LogOut, ChevronDown, CheckCircle, Flame, Target, PlayCircle, Library, Menu, ArrowUpRight, MoreVertical } from 'lucide-react';
 import { getHistory, type HistoryEntry, getQuestionStats } from '@/services/historyService';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Calendar } from '@/components/ui/calendar';
 import { Progress } from '@/components/ui/progress';
-import { RadialBarChart, RadialBar, ResponsiveContainer, PolarAngleAxis } from 'recharts';
+import { RadialBarChart, RadialBar, ResponsiveContainer, PolarAngleAxis, BarChart, XAxis, YAxis, Tooltip, Legend, Bar } from 'recharts';
 import { Skeleton } from '@/components/ui/skeleton';
 import { isToday } from 'date-fns';
 import { Sheet, SheetContent, SheetTrigger, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet';
@@ -22,6 +22,9 @@ import { getUserUsage, type UsageStats } from '@/services/usageService';
 import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
 import { motion } from 'framer-motion';
+import { ChartContainer, ChartTooltip, ChartTooltipContent, ChartConfig } from '@/components/ui/chart';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 
 
 // --- Local Components for Dashboard ---
@@ -275,6 +278,124 @@ const RightSidebar = ({ quizStats }: { quizStats: UserQuizStats | null }) => {
     );
 }
 
+// --- NEW CHART COMPONENTS ---
+
+const questionsBySubjectData = [
+  { week: "Week 1", History: 40, Polity: 24, Economy: 24 },
+  { week: "Week 2", History: 30, Polity: 13, Economy: 22 },
+  { week: "Week 3", History: 20, Polity: 78, Economy: 29 },
+  { week: "Week 4", History: 27, Polity: 39, Economy: 20 },
+];
+
+const questionsBySubjectConfig = {
+  History: { label: "History", color: "hsl(var(--chart-1))" },
+  Polity: { label: "Polity", color: "hsl(var(--chart-2))" },
+  Economy: { label: "Economy", color: "hsl(var(--chart-3))" },
+} satisfies ChartConfig;
+
+const QuestionsBySubjectChart = () => (
+    <Card className="glassmorphic">
+        <CardHeader>
+            <div className="flex justify-between items-start">
+                <div>
+                    <CardTitle>Questions by Subject</CardTitle>
+                    <CardDescription>Breakdown of generated questions in the last 4 weeks</CardDescription>
+                </div>
+                <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="icon" className="w-8 h-8">
+                            <MoreVertical className="w-4 h-4" />
+                        </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                        <DropdownMenuItem>View Details</DropdownMenuItem>
+                        <DropdownMenuItem>Export as PNG</DropdownMenuItem>
+                    </DropdownMenuContent>
+                </DropdownMenu>
+            </div>
+        </CardHeader>
+        <CardContent>
+             <ChartContainer config={questionsBySubjectConfig} className="min-h-[250px] w-full">
+                <BarChart accessibilityLayer data={questionsBySubjectData}>
+                    <CartesianGrid vertical={false} />
+                    <XAxis dataKey="week" tickLine={false} tickMargin={10} axisLine={false} />
+                    <YAxis tickLine={false} tickMargin={10} axisLine={false} />
+                    <ChartTooltip content={<ChartTooltipContent />} />
+                    <Legend />
+                    <Bar dataKey="History" stackId="a" fill="var(--color-History)" radius={[4, 4, 0, 0]} />
+                    <Bar dataKey="Polity" stackId="a" fill="var(--color-Polity)" radius={[4, 4, 0, 0]} />
+                    <Bar dataKey="Economy" stackId="a" fill="var(--color-Economy)" radius={[4, 4, 0, 0]} />
+                </BarChart>
+            </ChartContainer>
+        </CardContent>
+    </Card>
+);
+
+const weeklyAccuracyData = [
+  { day: 'Sun', accuracy: 82 },
+  { day: 'Mon', accuracy: 75 },
+  { day: 'Tue', accuracy: 91 },
+  { day: 'Wed', accuracy: 88 },
+  { day: 'Thu', accuracy: 72 },
+  { day: 'Fri', accuracy: 85 },
+  { day: 'Sat', accuracy: 93 },
+]
+
+const weeklyAccuracyConfig = {
+  accuracy: { label: "Accuracy", color: "hsl(var(--chart-1))" },
+} satisfies ChartConfig
+
+const WeeklyAccuracyChart = () => (
+  <Card className="glassmorphic">
+    <CardHeader>
+      <div className="flex justify-between items-start">
+        <div>
+            <CardTitle>Weekly Quiz Accuracy</CardTitle>
+            <CardDescription>Your performance over the last 7 days</CardDescription>
+        </div>
+        <Select defaultValue="weekly">
+            <SelectTrigger className="w-[100px]">
+                <SelectValue placeholder="Select"/>
+            </SelectTrigger>
+            <SelectContent>
+                <SelectItem value="daily">Daily</SelectItem>
+                <SelectItem value="weekly">Weekly</SelectItem>
+                <SelectItem value="monthly">Monthly</SelectItem>
+            </SelectContent>
+        </Select>
+      </div>
+    </CardHeader>
+    <CardContent>
+        <div className="mb-4">
+            <div className="text-3xl font-bold">85.4%</div>
+            <div className="flex items-center text-sm text-muted-foreground">
+                <span className="flex items-center text-green-600 mr-2">
+                    <ArrowUpRight className="w-4 h-4" />
+                    +3.2%
+                </span>
+                vs last week
+            </div>
+        </div>
+        <ChartContainer config={weeklyAccuracyConfig} className="min-h-[200px] w-full">
+            <BarChart accessibilityLayer data={weeklyAccuracyData}>
+                <CartesianGrid vertical={false} />
+                <XAxis dataKey="day" tickLine={false} tickMargin={10} axisLine={false} />
+                <ChartTooltip
+                    cursor={false}
+                    content={<ChartTooltipContent indicator="line" />}
+                />
+                <Bar
+                    dataKey="accuracy"
+                    fill="var(--color-accuracy)"
+                    radius={4}
+                />
+            </BarChart>
+        </ChartContainer>
+    </CardContent>
+  </Card>
+);
+
+
 export default function ReimaginedDashboardPage() {
     const { user, loading } = useAuth();
     const router = useRouter();
@@ -475,6 +596,15 @@ export default function ReimaginedDashboardPage() {
                                     />
                                 </motion.div>
                             ))}
+                        </div>
+                    </div>
+                    
+                    {/* Performance Analytics */}
+                    <div className="px-4 lg:px-0">
+                        <h3 className="text-lg font-semibold mb-3">Performance Analytics</h3>
+                        <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+                            <QuestionsBySubjectChart />
+                            <WeeklyAccuracyChart />
                         </div>
                     </div>
 
