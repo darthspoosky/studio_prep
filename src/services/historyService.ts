@@ -1,6 +1,6 @@
 
 import { db } from '@/lib/firebase';
-import { collection, addDoc, query, where, orderBy, limit, getDocs, Timestamp, doc, getDoc } from 'firebase/firestore';
+import { collection, addDoc, query, where, orderBy, getDocs, Timestamp, doc, getDoc } from 'firebase/firestore';
 import type { NewspaperAnalysisOutput, MCQ, MainsQuestion } from '@/ai/flows/newspaper-analysis-flow';
 
 export interface HistoryEntry {
@@ -55,11 +55,7 @@ async function getAllHistory(userId: string): Promise<HistoryEntry[]> {
   
   const history: HistoryEntry[] = [];
   try {
-    // Simplified query: a single 'where' clause. Firestore can handle this without a manual composite index.
-    const q = query(
-        collection(db, 'userHistory'), 
-        where('userId', '==', userId)
-    );
+    const q = query(collection(db, 'userHistory'), where('userId', '==', userId));
     
     const querySnapshot = await getDocs(q);
     querySnapshot.forEach((doc) => {
