@@ -169,8 +169,8 @@ export default function DashboardPage() {
                     <div className="flex items-center gap-3 mb-8">
                         <History className="w-8 h-8 text-primary"/>
                         <div>
-                            <h2 className="text-2xl font-bold font-headline">Analysis History</h2>
-                            <p className="text-muted-foreground">Review your past newspaper analyses.</p>
+                            <h2 className="text-2xl font-bold font-headline">Activity History</h2>
+                            <p className="text-muted-foreground">Review your past activities from all our tools.</p>
                         </div>
                     </div>
                     {historyLoading ? (
@@ -218,7 +218,7 @@ export default function DashboardPage() {
                     ) : (
                         <div className="text-center py-16 border-2 border-dashed rounded-lg">
                             <h3 className="text-xl font-semibold">No History Yet</h3>
-                            <p className="text-muted-foreground mt-2">Your newspaper analysis results will appear here.</p>
+                            <p className="text-muted-foreground mt-2">Your results will appear here once you start using the tools.</p>
                             <Button asChild className="mt-4">
                                 <Link href="/newspaper-analysis">Analyze an Article</Link>
                             </Button>
