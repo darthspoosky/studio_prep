@@ -18,7 +18,7 @@ import {
 import { useAuth } from '@/contexts/AuthContext';
 import { auth } from '@/lib/firebase';
 import { signOut } from 'firebase/auth';
-import { LayoutDashboard, LogOut } from 'lucide-react';
+import { LayoutDashboard, LogOut, User } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useToast } from '@/hooks/use-toast';
@@ -73,6 +73,12 @@ export function UserNav() {
             <DropdownMenuItem>
               <LayoutDashboard className="mr-2 h-4 w-4" />
               <span>Dashboard</span>
+            </DropdownMenuItem>
+          </Link>
+          <Link href="/profile">
+            <DropdownMenuItem>
+              <User className="mr-2 h-4 w-4" />
+              <span>Profile</span>
             </DropdownMenuItem>
           </Link>
         </DropdownMenuGroup>
