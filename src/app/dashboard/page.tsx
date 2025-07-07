@@ -208,7 +208,9 @@ export default function DashboardPage() {
                                         </div>
                                     </CardContent>
                                     <CardFooter>
-                                        <Button variant="outline" disabled>View Details (Soon)</Button>
+                                        <Button asChild variant="outline">
+                                            <Link href={`/history/${item.id}`}>View Details</Link>
+                                        </Button>
                                     </CardFooter>
                                 </Card>
                             ))}
