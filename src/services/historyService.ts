@@ -45,9 +45,9 @@ export async function addHistory(userId: string, analysis: NewspaperAnalysisOutp
   }
 }
 
-// Fetches all history for a user. The ordering clause has been removed from the query
-// to prevent errors on databases without a composite index. Sorting is now handled
-// by the calling functions.
+// Fetches all history for a user, sorted by timestamp. This query requires a composite index.
+// If the index is missing, Firestore will return a permission-denied error and a link
+// in the console to create it.
 async function getAllHistory(userId: string): Promise<HistoryEntry[]> {
   if (!db) {
     console.log("Firestore not initialized. Skipping getAllHistory.");
@@ -58,7 +58,8 @@ async function getAllHistory(userId: string): Promise<HistoryEntry[]> {
   try {
     const q = query(
         collection(db, 'userHistory'), 
-        where('userId', '==', userId)
+        where('userId', '==', userId),
+        orderBy('timestamp', 'desc')
     );
     
     const querySnapshot = await getDocs(q);
@@ -68,8 +69,9 @@ async function getAllHistory(userId: string): Promise<HistoryEntry[]> {
   } catch(error) {
       console.error("Error fetching all history: ", error);
       if ((error as any).code === 'permission-denied') {
-          throw new Error("Could not read history due to a permission error. Please ensure your Firestore security rules allow 'list' operations on the 'userHistory' collection for authenticated users.");
+          throw new Error("Could not read history due to a permission error. This usually happens when a Firestore index is missing. Please check your browser's developer console for a link to create the required index.");
       }
+      throw error;
   }
   return history;
 }
@@ -81,8 +83,7 @@ export async function getHistory(userId: string): Promise<HistoryEntry[]> {
     return [];
   }
   const allHistory = await getAllHistory(userId);
-  // Sort by timestamp descending to get the most recent entries
-  allHistory.sort((a, b) => b.timestamp.seconds - a.timestamp.seconds);
+  // Return the most recent 20 entries
   return allHistory.slice(0, 20);
 }
 
@@ -110,8 +111,7 @@ export async function getHistoryEntry(id: string): Promise<HistoryEntry | null> 
 
 export async function getPrelimsQuestions(userId: string): Promise<PrelimsQuestionWithContext[]> {
     const allHistory = await getAllHistory(userId);
-    // Sort by timestamp descending to ensure chronological order
-    allHistory.sort((a, b) => b.timestamp.seconds - a.timestamp.seconds);
+    // Data from getAllHistory is already sorted chronologically
     const prelimsQuestions = allHistory.flatMap(entry => 
         (entry.analysis.prelims?.mcqs || []).map(mcq => ({
             ...mcq,
@@ -125,8 +125,7 @@ export async function getPrelimsQuestions(userId: string): Promise<PrelimsQuesti
 
 export async function getMainsQuestions(userId: string): Promise<MainsQuestionWithContext[]> {
     const allHistory = await getAllHistory(userId);
-    // Sort by timestamp descending to ensure chronological order
-    allHistory.sort((a, b) => b.timestamp.seconds - a.timestamp.seconds);
+    // Data from getAllHistory is already sorted chronologically
     const mainsQuestions = allHistory.flatMap(entry => 
         (entry.analysis.mains?.questions || []).map(question => ({
             ...question,
