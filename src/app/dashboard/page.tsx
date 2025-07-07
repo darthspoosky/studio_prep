@@ -7,7 +7,7 @@ import Link from 'next/link';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
-import { Newspaper, Mic, FileQuestion, PenLine, Book, BarChart3, HelpCircle, Users, Settings, LogOut, ChevronDown, CheckCircle, Flame, Target, PlayCircle, Library } from 'lucide-react';
+import { Newspaper, Mic, FileQuestion, PenLine, Book, BarChart3, HelpCircle, Users, Settings, LogOut, ChevronDown, CheckCircle, Flame, Target, PlayCircle, Library, Menu } from 'lucide-react';
 import { getHistory, type HistoryEntry } from '@/services/historyService';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Calendar } from '@/components/ui/calendar';
@@ -15,16 +15,20 @@ import { Progress } from '@/components/ui/progress';
 import { RadialBarChart, RadialBar, ResponsiveContainer, PolarAngleAxis } from 'recharts';
 import { Skeleton } from '@/components/ui/skeleton';
 import { isToday } from 'date-fns';
+import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
+import { UserNav } from '@/components/layout/user-nav';
 
 
 // --- Local Components for Dashboard ---
 
-const LeftSidebar = () => (
-    <div className="hidden lg:flex flex-col gap-4 p-4 bg-card rounded-2xl h-full">
+const SidebarContent = () => (
+    <div className="flex flex-col h-full">
         <div className="p-4">
-            <h1 className="font-headline text-2xl font-bold animate-gradient-anim bg-[length:200%_auto] bg-gradient-to-r from-primary via-accent to-pink-500 bg-clip-text text-transparent">PrepTalk</h1>
+            <Link href="/dashboard" className="font-headline text-2xl font-bold animate-gradient-anim bg-[length:200%_auto] bg-gradient-to-r from-primary via-accent to-pink-500 bg-clip-text text-transparent">
+                PrepTalk
+            </Link>
         </div>
-        <nav className="flex flex-col gap-2 flex-grow">
+        <nav className="flex flex-col gap-2 flex-grow p-4 pt-0">
             <Link href="/dashboard" className="flex items-center gap-3 p-3 bg-primary/10 text-primary rounded-lg font-semibold">
                 <BarChart3 className="w-5 h-5" />
                 <span>Dashboard</span>
@@ -54,7 +58,7 @@ const LeftSidebar = () => (
                 <span>Group Study</span>
             </Link>
         </nav>
-        <div className="mt-auto space-y-2">
+        <div className="mt-auto space-y-2 p-4 pt-0">
             <div className="p-4 bg-muted rounded-lg text-center">
                 <HelpCircle className="mx-auto w-8 h-8 text-primary mb-2"/>
                 <p className="font-semibold text-sm">Need Help?</p>
@@ -66,6 +70,33 @@ const LeftSidebar = () => (
             </Button>
         </div>
     </div>
+);
+
+
+const LeftSidebar = () => (
+    <div className="hidden lg:flex flex-col gap-4 p-4 bg-card rounded-2xl h-full">
+        <SidebarContent />
+    </div>
+);
+
+const MobileHeader = () => (
+    <header className="lg:hidden sticky top-0 z-40 flex h-16 items-center justify-between border-b bg-background/80 backdrop-blur-sm px-4">
+        <Sheet>
+            <SheetTrigger asChild>
+                <Button size="icon" variant="outline">
+                    <Menu className="h-5 w-5" />
+                    <span className="sr-only">Toggle Menu</span>
+                </Button>
+            </SheetTrigger>
+            <SheetContent side="left" className="w-72 p-0 border-r">
+                <SidebarContent />
+            </SheetContent>
+        </Sheet>
+        <Link href="/dashboard" className="font-headline text-xl font-bold animate-gradient-anim bg-[length:200%_auto] bg-gradient-to-r from-primary via-accent to-pink-500 bg-clip-text text-transparent">
+            PrepTalk
+        </Link>
+        <UserNav />
+    </header>
 );
 
 const HistoryCard = ({ entry }: { entry: HistoryEntry }) => {
@@ -144,15 +175,12 @@ const DailyGoalChart = ({ progress }: { progress: number }) => {
 const RightSidebar = () => {
     const [date, setDate] = useState<Date | undefined>(new Date());
     return (
-        <div className="hidden lg:flex flex-col gap-6 p-4 bg-card rounded-2xl h-full">
-            <div className="flex items-center justify-between p-2">
+        <div className="flex flex-col gap-6 lg:p-4 lg:bg-card lg:rounded-2xl lg:h-full">
+            <div className="hidden lg:flex items-center justify-between p-2">
                  <Button variant="outline" className="h-auto">
                     UPSC Civil Services <ChevronDown className="w-4 h-4 ml-2"/>
                  </Button>
-                 <Avatar>
-                    <AvatarImage src="https://placehold.co/40x40.png" data-ai-hint="person" />
-                    <AvatarFallback>U</AvatarFallback>
-                </Avatar>
+                 <UserNav />
             </div>
             <div>
                 <h3 className="font-semibold px-2 mb-2">Statistics</h3>
@@ -294,28 +322,31 @@ export default function ReimaginedDashboardPage() {
     }
 
     return (
-        <div className="min-h-screen bg-muted/30 dark:bg-muted/10 p-4">
-            <div className="grid grid-cols-1 lg:grid-cols-[280px_1fr] xl:grid-cols-[280px_1fr_320px] gap-4 h-full">
+        <div className="min-h-screen bg-muted/30 dark:bg-muted/10">
+            <MobileHeader>
+                <SidebarContent />
+            </MobileHeader>
+            <div className="lg:grid lg:grid-cols-[280px_1fr] xl:grid-cols-[280px_1fr_320px] lg:gap-4 lg:p-4 h-full">
                 <LeftSidebar />
-                <main className="flex flex-col gap-6">
+                <main className="flex flex-col gap-6 p-4 lg:p-0">
                     {/* Main Header */}
-                    <div className="p-4">
+                    <div className="hidden lg:block p-4">
                         <h2 className="text-2xl font-bold">Welcome back, {user.email?.split('@')[0] || 'Aspirant'}!</h2>
                         <p className="text-muted-foreground">You're doing great this week. Keep it up!</p>
                     </div>
 
                     {/* Schedule */}
                     <div>
-                        <h3 className="text-lg font-semibold px-4 mb-3">Your Schedule for today</h3>
-                        <div className="flex flex-col md:flex-row gap-4 px-4">
+                        <h3 className="text-lg font-semibold px-4 lg:px-0 mb-3">Your Schedule for today</h3>
+                        <div className="flex flex-col md:flex-row gap-4 px-4 lg:px-0">
                             {scheduleContent}
                         </div>
                     </div>
                     
                     {/* Activity History */}
                      <div>
-                        <h3 className="text-lg font-semibold px-4 mb-3">Activity History</h3>
-                        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 px-4">
+                        <h3 className="text-lg font-semibold px-4 lg:px-0 mb-3">Activity History</h3>
+                        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 px-4 lg:px-0">
                            {historyLoading ? (
                                 Array.from({ length: 3 }).map((_, i) => (
                                     <Card key={i}>
@@ -344,12 +375,10 @@ export default function ReimaginedDashboardPage() {
                     </div>
 
                 </main>
-                <RightSidebar />
+                <div className="p-4 lg:p-0">
+                    <RightSidebar />
+                </div>
             </div>
         </div>
     );
 }
-
-// A small fix for a component name typo to avoid breaking the build
-const Course_Card = HistoryCard;
-
