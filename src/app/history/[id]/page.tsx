@@ -232,12 +232,12 @@ const MainsQuestionList = ({ questions, userId, historyId }: { questions: MainsQ
     const [saving, setSaving] = useState<string | null>(null);
 
     useEffect(() => {
-        getMainsAnswersForHistory(historyId).then(fetchedAnswers => {
+        getMainsAnswersForHistory(userId, historyId).then(fetchedAnswers => {
             setAnswers(fetchedAnswers);
             setSavedAnswers(fetchedAnswers);
             setLoading(false);
         });
-    }, [historyId]);
+    }, [userId, historyId]);
 
     const handleAnswerChange = (question: string, answer: string) => {
         setAnswers(prev => ({...prev, [question]: answer}));

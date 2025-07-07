@@ -5,7 +5,7 @@ import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useAuth } from '@/contexts/AuthContext';
 import { getMainsQuestions, type MainsQuestionWithContext } from '@/services/historyService';
-import { getMainsAnswersForHistory, saveMainsAnswer } from '@/services/mainsAnswerService';
+import { getAllMainsAnswers, saveMainsAnswer } from '@/services/mainsAnswerService';
 import { useRouter } from 'next/navigation';
 import Header from '@/components/layout/header';
 import Footer from '@/components/landing/footer';
@@ -28,23 +28,11 @@ const markdownComponents = {
   strong: (props: any) => <strong className="font-bold text-foreground" {...props} />,
 };
 
-const MainsQuestionCard = ({ question, userId }: { question: MainsQuestionWithContext; userId: string }) => {
+const MainsQuestionCard = ({ question, userId, savedAnswer: initialSavedAnswer }: { question: MainsQuestionWithContext; userId: string; savedAnswer: string }) => {
     const { toast } = useToast();
-    const [answer, setAnswer] = useState('');
-    const [savedAnswer, setSavedAnswer] = useState('');
-    const [isLoading, setIsLoading] = useState(true);
+    const [answer, setAnswer] = useState(initialSavedAnswer);
+    const [savedAnswer, setSavedAnswer] = useState(initialSavedAnswer);
     const [isSaving, setIsSaving] = useState(false);
-
-    useEffect(() => {
-        // This fetches answer for a single question based on historyId.
-        // It could be optimized to fetch all answers for the page at once.
-        getMainsAnswersForHistory(question.historyId).then(answers => {
-            const currentAnswer = answers[question.question] || '';
-            setAnswer(currentAnswer);
-            setSavedAnswer(currentAnswer);
-            setIsLoading(false);
-        });
-    }, [question.historyId, question.question]);
 
     const handleSave = async () => {
         setIsSaving(true);
@@ -85,21 +73,17 @@ const MainsQuestionCard = ({ question, userId }: { question: MainsQuestionWithCo
                 )}
                 <div className="space-y-2">
                     <Label htmlFor={`answer-${question.historyId}`} className="font-semibold">Your Answer</Label>
-                    {isLoading ? (
-                        <Skeleton className="h-48 w-full" />
-                    ) : (
-                        <Textarea
-                            id={`answer-${question.historyId}`}
-                            placeholder="Draft your response here..."
-                            className="h-48 bg-background"
-                            value={answer}
-                            onChange={(e) => setAnswer(e.target.value)}
-                        />
-                    )}
+                    <Textarea
+                        id={`answer-${question.historyId}`}
+                        placeholder="Draft your response here..."
+                        className="h-48 bg-background"
+                        value={answer}
+                        onChange={(e) => setAnswer(e.target.value)}
+                    />
                 </div>
             </CardContent>
             <CardFooter>
-                 <Button onClick={handleSave} disabled={isSaving || isLoading || isSaved || answer.length < 20}>
+                 <Button onClick={handleSave} disabled={isSaving || isSaved || answer.length < 20}>
                     {isSaving && <Loader2 className="animate-spin" />}
                     {isSaving ? 'Saving...' : isSaved && answer.length > 0 ? 'Saved' : 'Save Answer'}
                 </Button>
@@ -112,6 +96,7 @@ export default function MainsQuestionBankPage() {
     const { user, loading: authLoading } = useAuth();
     const router = useRouter();
     const [questions, setQuestions] = useState<MainsQuestionWithContext[]>([]);
+    const [answers, setAnswers] = useState<Record<string, string>>({});
     const [isLoading, setIsLoading] = useState(true);
 
     useEffect(() => {
@@ -119,8 +104,15 @@ export default function MainsQuestionBankPage() {
             router.push('/login');
         } else if (user) {
             setIsLoading(true);
-            getMainsQuestions(user.uid).then(data => {
-                setQuestions(data);
+            Promise.all([
+                getMainsQuestions(user.uid),
+                getAllMainsAnswers(user.uid)
+            ]).then(([fetchedQuestions, fetchedAnswers]) => {
+                setQuestions(fetchedQuestions);
+                setAnswers(fetchedAnswers);
+                setIsLoading(false);
+            }).catch(error => {
+                console.error("Failed to load question bank:", error);
                 setIsLoading(false);
             });
         }
@@ -157,7 +149,7 @@ export default function MainsQuestionBankPage() {
                             </Card>
                         ))
                     ) : questions.length > 0 ? (
-                        questions.map((q, i) => <MainsQuestionCard key={`${q.historyId}-${i}`} question={q} userId={user.uid} />)
+                        questions.map((q, i) => <MainsQuestionCard key={`${q.historyId}-${i}`} question={q} userId={user.uid} savedAnswer={answers[q.question] || ''} />)
                     ) : (
                         <Card className="text-center p-8 glassmorphic">
                             <CardHeader>
