@@ -12,9 +12,9 @@ import { Textarea } from "@/components/ui/textarea";
 import Footer from "@/components/landing/footer";
 import Header from "@/components/layout/header";
 import Link from "next/link";
-import { ArrowLeft, Loader2, Sparkles, CheckCircle, XCircle, Circle, Info, Maximize, Volume2, Gauge, IndianRupee } from "lucide-react";
+import { ArrowLeft, Loader2, Sparkles, CheckCircle, XCircle, Circle, Info, Maximize, Volume2, Gauge, IndianRupee, MoveRight, Share2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { analyzeNewspaperArticle, type NewspaperAnalysisInput, type NewspaperAnalysisOutput, type MCQ as MCQType, type MainsQuestion } from "@/ai/flows/newspaper-analysis-flow";
+import { analyzeNewspaperArticle, type NewspaperAnalysisInput, type NewspaperAnalysisOutput, type MCQ as MCQType, type MainsQuestion, type KnowledgeGraph } from "@/ai/flows/newspaper-analysis-flow";
 import { textToSpeech } from "@/ai/flows/text-to-speech-flow";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import ReactMarkdown from "react-markdown";
@@ -255,6 +255,75 @@ const MainsQuestionList = ({ questions }: { questions: MainsQuestion[] }) => {
     );
 };
 
+const entityColors: { [key: string]: string } = {
+  Person: "bg-blue-100 text-blue-800 dark:bg-blue-900/50 dark:text-blue-200",
+  Organization: "bg-purple-100 text-purple-800 dark:bg-purple-900/50 dark:text-purple-200",
+  Location: "bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-200",
+  Policy: "bg-orange-100 text-orange-800 dark:bg-orange-900/50 dark:text-orange-200",
+  Concept: "bg-pink-100 text-pink-800 dark:bg-pink-900/50 dark:text-pink-200",
+  Date: "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/50 dark:text-yellow-200",
+  Statistic: "bg-indigo-100 text-indigo-800 dark:bg-indigo-900/50 dark:text-indigo-200",
+};
+
+const KnowledgeGraphVisualizer = ({ graphData }: { graphData?: KnowledgeGraph }) => {
+  if (!graphData || !graphData.nodes || graphData.nodes.length === 0) {
+    return <div className="text-center text-muted-foreground p-8">No key connections were identified in this article.</div>;
+  }
+
+  const nodesByType = graphData.nodes.reduce((acc, node) => {
+    if (!acc[node.type]) {
+      acc[node.type] = [];
+    }
+    acc[node.type].push(node);
+    return acc;
+  }, {} as { [key: string]: typeof graphData.nodes });
+
+  const getNode = (nodeId: string) => {
+    return graphData.nodes.find(n => n.id === nodeId);
+  };
+
+  return (
+    <div className="space-y-8">
+      <div>
+        <h3 className="text-lg font-semibold mb-4 flex items-center gap-2"><Share2 className="w-5 h-5 text-primary"/> Key Entities</h3>
+        <div className="space-y-4">
+          {Object.entries(nodesByType).map(([type, nodes]) => (
+            <div key={type}>
+              <h4 className={cn("font-semibold mb-2", entityColors[type])}>{type}</h4>
+              <div className="flex flex-wrap gap-2">
+                {nodes.map(node => (
+                  <Badge key={node.id} variant="secondary" className={cn("text-base", entityColors[type])}>{node.label}</Badge>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+      <div>
+        <h3 className="text-lg font-semibold mb-4 flex items-center gap-2"><MoveRight className="w-5 h-5 text-primary"/> Key Relationships</h3>
+        <div className="space-y-3">
+          {graphData.edges.map((edge, index) => {
+            const sourceNode = getNode(edge.source);
+            const targetNode = getNode(edge.target);
+            if (!sourceNode || !targetNode) return null;
+            
+            return (
+              <div key={index} className="flex items-center gap-3 text-sm p-3 bg-primary/5 border border-primary/20 rounded-lg">
+                <Badge variant="outline" className={cn(entityColors[sourceNode.type])}>{sourceNode.label}</Badge>
+                <div className="flex-1 text-center text-primary font-medium text-xs tracking-wider uppercase">
+                  {edge.label}
+                </div>
+                <Badge variant="outline" className={cn(entityColors[targetNode.type])}>{targetNode.label}</Badge>
+              </div>
+            )
+          })}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+
 const UsageStats = ({
   totalTokens,
   inputTokens,
@@ -347,6 +416,7 @@ export default function NewspaperAnalysisPage() {
             return;
         }
         try {
+            setIsLoading(true);
             const res = await fetch(`/api/readArticle?url=${encodeURIComponent(inputs.url)}`);
             if (!res.ok) {
                 const err = await res.json().catch(() => ({}));
@@ -361,6 +431,7 @@ export default function NewspaperAnalysisPage() {
                 title: 'Fetch Failed',
                 description: 'Could not retrieve the article. Please check the URL and try again.',
             });
+            setIsLoading(false);
             return;
         }
     } else {
@@ -380,7 +451,7 @@ export default function NewspaperAnalysisPage() {
         return;
     }
     
-    setIsLoading(true);
+    if(!isLoading) setIsLoading(true);
     setAnalysisResult(null);
     setAudioSrc(null);
     setCurrentAnalysisTab('prelims');
@@ -426,26 +497,44 @@ export default function NewspaperAnalysisPage() {
     }
   };
 
-  const { prelimsContent, mainsContent } = useMemo(() => {
+  const { prelimsContent, mainsContent, knowledgeGraphContent } = useMemo(() => {
     if (!analysisResult) {
-        return { prelimsContent: [], mainsContent: [] };
+        return { prelimsContent: [], mainsContent: [], knowledgeGraphContent: undefined };
     }
+    const hasPrelims = (analysisResult.prelims?.mcqs?.length || 0) > 0;
+    const hasMains = (analysisResult.mains?.questions?.length || 0) > 0;
+    const hasGraph = (analysisResult.knowledgeGraph?.nodes?.length || 0) > 0;
+
+    let defaultTab = 'prelims';
+    if (hasPrelims) defaultTab = 'prelims';
+    else if (hasMains) defaultTab = 'mains';
+    else if (hasGraph) defaultTab = 'connections';
+
     return {
         prelimsContent: analysisResult.prelims?.mcqs || [],
         mainsContent: analysisResult.mains?.questions || [],
+        knowledgeGraphContent: analysisResult.knowledgeGraph,
+        defaultTab
     };
   }, [analysisResult]);
 
   useEffect(() => {
-    if (prelimsContent.length === 0 && mainsContent.length > 0) {
-        setCurrentAnalysisTab('mains');
-    } else {
-        setCurrentAnalysisTab('prelims');
-    }
-  }, [prelimsContent, mainsContent]);
+    if (analysisResult) {
+        const hasPrelims = (analysisResult.prelims?.mcqs?.length || 0) > 0;
+        const hasMains = (analysisResult.mains?.questions?.length || 0) > 0;
+        const hasGraph = (analysisResult.knowledgeGraph?.nodes?.length || 0) > 0;
 
-  const showTabs = prelimsContent.length > 0 && mainsContent.length > 0;
-  
+        if (hasPrelims) setCurrentAnalysisTab('prelims');
+        else if (hasMains) setCurrentAnalysisTab('mains');
+        else if (hasGraph) setCurrentAnalysisTab('connections');
+        else setCurrentAnalysisTab('prelims'); // fallback
+    }
+  }, [analysisResult]);
+
+  const showPrelims = prelimsContent.length > 0;
+  const showMains = mainsContent.length > 0;
+  const showGraph = knowledgeGraphContent && knowledgeGraphContent.nodes.length > 0;
+
   const audioButton = (
     <Button 
         onClick={handleGenerateAudio} 
@@ -641,43 +730,55 @@ export default function NewspaperAnalysisPage() {
                                   </motion.div>
                                 )}
 
-                                {showTabs ? (
-                                    <Tabs value={currentAnalysisTab} onValueChange={setCurrentAnalysisTab} className="w-full flex-1 flex flex-col mt-4">
-                                        <TabsList>
+                                <Tabs value={currentAnalysisTab} onValueChange={setCurrentAnalysisTab} className="w-full flex-1 flex flex-col mt-4">
+                                    <TabsList>
+                                        {showPrelims && (
                                             <TabsTrigger 
                                                 value="prelims"
                                                 className="data-[state=active]:bg-blue-100 data-[state=active]:text-blue-800 dark:data-[state=active]:bg-blue-900/50 dark:data-[state=active]:text-blue-200"
                                             >
                                                 Prelims Questions
                                             </TabsTrigger>
-                                            {mainsContent && 
-                                                <TabsTrigger 
-                                                    value="mains"
-                                                    className="data-[state=active]:bg-purple-100 data-[state=active]:text-purple-800 dark:data-[state=active]:bg-purple-900/50 dark:data-[state=active]:text-purple-200"
-                                                >
-                                                    Mains Questions
-                                                </TabsTrigger>
-                                            }
-                                        </TabsList>
+                                        )}
+                                        {showMains && (
+                                            <TabsTrigger 
+                                                value="mains"
+                                                className="data-[state=active]:bg-purple-100 data-[state=active]:text-purple-800 dark:data-[state=active]:bg-purple-900/50 dark:data-[state=active]:text-purple-200"
+                                            >
+                                                Mains Questions
+                                            </TabsTrigger>
+                                        )}
+                                        {showGraph && (
+                                            <TabsTrigger 
+                                                value="connections"
+                                                className="data-[state=active]:bg-teal-100 data-[state=active]:text-teal-800 dark:data-[state=active]:bg-teal-900/50 dark:data-[state=active]:text-teal-200"
+                                            >
+                                                Key Connections
+                                            </TabsTrigger>
+                                        )}
+                                    </TabsList>
+                                    {showPrelims && (
                                         <TabsContent value="prelims" className="flex-1 mt-4">
                                             <ScrollArea className="h-[400px] w-full pr-4 -mr-4">
                                                 <MCQList mcqs={prelimsContent} />
                                             </ScrollArea>
                                         </TabsContent>
-                                        {mainsContent && (
-                                            <TabsContent value="mains" className="flex-1 mt-4">
-                                                <ScrollArea className="h-[400px] w-full pr-4 -mr-4">
-                                                    <MainsQuestionList questions={mainsContent} />
-                                                </ScrollArea>
-                                            </TabsContent>
-                                        )}
-                                    </Tabs>
-                                ) : (
-                                    <ScrollArea className="h-[450px] w-full pr-4 -mr-4">
-                                        {prelimsContent.length > 0 && <MCQList mcqs={prelimsContent} />}
-                                        {mainsContent.length > 0 && <MainsQuestionList questions={mainsContent} />}
-                                    </ScrollArea>
-                                )}
+                                    )}
+                                    {showMains && (
+                                        <TabsContent value="mains" className="flex-1 mt-4">
+                                            <ScrollArea className="h-[400px] w-full pr-4 -mr-4">
+                                                <MainsQuestionList questions={mainsContent} />
+                                            </ScrollArea>
+                                        </TabsContent>
+                                    )}
+                                    {showGraph && (
+                                         <TabsContent value="connections" className="flex-1 mt-4">
+                                            <ScrollArea className="h-[400px] w-full pr-4 -mr-4">
+                                                <KnowledgeGraphVisualizer graphData={knowledgeGraphContent} />
+                                            </ScrollArea>
+                                        </TabsContent>
+                                    )}
+                                </Tabs>
                               </div>
                             )}
                         </div>
@@ -692,6 +793,11 @@ export default function NewspaperAnalysisPage() {
                            )}
                            {analysisResult?.mains && (
                              <MainsQuestionList questions={analysisResult.mains.questions} />
+                           )}
+                           {analysisResult?.knowledgeGraph && (
+                            <div className="mt-8">
+                                <KnowledgeGraphVisualizer graphData={analysisResult.knowledgeGraph} />
+                            </div>
                            )}
                         </ScrollArea>
                     </DialogContent>

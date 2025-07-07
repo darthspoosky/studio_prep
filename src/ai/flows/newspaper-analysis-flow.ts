@@ -44,13 +44,6 @@ const AnalysisWithTopicInputSchema = SyllabusInputSchema.extend({
   identifiedSyllabusTopic: z.string(),
 });
 
-const VerificationInputSchema = z.object({
-  sourceText: z.string(),
-  generatedAnalysisString: z.string(),
-  outputLanguage: z.string(),
-  analysisFocus: z.string(),
-});
-
 // Schemas for structured question generation
 const OptionSchema = z.object({
   text: z.string(),
@@ -73,11 +66,30 @@ const MainsQuestionSchema = z.object({
 });
 export type MainsQuestion = z.infer<typeof MainsQuestionSchema>;
 
+// Schemas for Knowledge Graph
+const KnowledgeGraphNodeSchema = z.object({
+  id: z.string().describe("A unique, descriptive ID for the node (e.g., 'NarendraModi', 'SupremeCourtOfIndia')."),
+  label: z.string().describe("The full name of the entity."),
+  type: z.enum(["Person", "Organization", "Location", "Policy", "Concept", "Date", "Statistic"]).describe("The type of entity."),
+});
+const KnowledgeGraphEdgeSchema = z.object({
+  source: z.string().describe("The ID of the source node."),
+  target: z.string().describe("The ID of the target node."),
+  label: z.string().min(3).max(40).describe("A concise description of the relationship (e.g., 'criticized by', 'announced', 'impacts')."),
+});
+const KnowledgeGraphSchema = z.object({
+  nodes: z.array(KnowledgeGraphNodeSchema),
+  edges: z.array(KnowledgeGraphEdgeSchema),
+});
+export type KnowledgeGraph = z.infer<typeof KnowledgeGraphSchema>;
+
+
 // Final output schema for the entire flow
 const NewspaperAnalysisOutputSchema = z.object({
   summary: z.string(),
   prelims: z.object({ mcqs: z.array(MCQSchema) }),
   mains: z.object({ questions: z.array(MainsQuestionSchema) }).optional(),
+  knowledgeGraph: KnowledgeGraphSchema.optional(),
   syllabusTopic: z.string().optional().nullable(),
   qualityScore: z.number().optional(),
   questionsCount: z.number().optional(),
@@ -88,6 +100,12 @@ const NewspaperAnalysisOutputSchema = z.object({
   processingTime: z.number().optional(),
 });
 export type NewspaperAnalysisOutput = z.infer<typeof NewspaperAnalysisOutputSchema>;
+
+const VerificationInputSchema = NewspaperAnalysisOutputSchema.extend({
+    sourceText: z.string(),
+    outputLanguage: z.string(),
+    analysisFocus: z.string(),
+});
 
 
 // --- AGENT 1: Relevance Analyst ---
@@ -206,7 +224,14 @@ Adhere strictly to authentic UPSC Civil Services (P) Examination patterns. Gener
   **Examples from Article:** ...
   **Keywords:** ...
 
-Generate the questions now.`,
+## **ADDITIONAL TASK: KNOWLEDGE GRAPH EXTRACTION**
+From the article, identify the key entities and the relationships between them. Structure this as a knowledge graph with nodes and edges.
+- **Nodes**: Each node must have a unique 'id' (camelCase or PascalCase), a 'label' (the entity's name), and a 'type' (Person, Organization, Location, Policy, Concept, Date, Statistic).
+- **Edges**: Each edge must link two nodes by their 'id's and have a concise 'label' describing their relationship (e.g., "criticized by", "announced", "impacts", "located in").
+
+This information should be populated in the 'knowledgeGraph' field of the JSON output.
+
+Generate the questions and knowledge graph now.`,
 });
 
 // --- AGENT 3: Verification Editor ---
@@ -225,7 +250,8 @@ const verificationEditorAgent = ai.definePrompt({
    - **Mains:** Is the 'guidance' structured and genuinely helpful for writing a high-scoring answer?
    - **Difficulty:** Adjust if questions are too easy or too obscure.
 **3. SUMMARY SANITIZATION**: The 'summary' MUST be 2-3 sentences of clean text. Strip all tags.
-**4. METRICS**: Calculate and include 'questionsCount' and a 'qualityScore' (0-1).
+**4. KNOWLEDGE GRAPH VERIFICATION**: Ensure the extracted nodes and edges are factual and directly supported by the article text. The graph should be coherent and relationships logical. Node IDs must be valid identifiers.
+**5. METRICS**: Calculate and include 'questionsCount' and a 'qualityScore' (0-1).
 
 Return the perfected analysis as a valid JSON object.
 
@@ -315,12 +341,14 @@ const analyzeNewspaperArticleFlow = ai.defineFlow(
     }
 
     // STEP 3: Run Verification Editor Agent
-    const { response: verificationResponse, output: verifiedAnalysis } = await verificationEditorAgent({
-      sourceText: input.sourceText,
-      generatedAnalysisString: JSON.stringify(initialAnalysis),
-      outputLanguage: input.outputLanguage,
-      analysisFocus: input.analysisFocus,
-    });
+    const verificationInput = {
+        ...initialAnalysis,
+        sourceText: input.sourceText,
+        generatedAnalysisString: JSON.stringify(initialAnalysis),
+        outputLanguage: input.outputLanguage,
+        analysisFocus: input.analysisFocus,
+    }
+    const { response: verificationResponse, output: verifiedAnalysis } = await verificationEditorAgent(verificationInput);
 
     if (verificationResponse?.usage) {
         totalInputTokens += verificationResponse.usage.inputTokens || 0;
