@@ -1,5 +1,5 @@
+import { Firestore, collection, addDoc, onSnapshot, query, orderBy, limit, Timestamp } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
-import { collection, addDoc, onSnapshot, query, orderBy, limit, Timestamp } from 'firebase/firestore';
 
 export interface Idea {
   id?: string;
@@ -22,14 +22,16 @@ export async function addIdea(idea: Omit<Idea, 'id'>) {
     console.log("Firestore not initialized. Skipping addIdea.");
     return null;
   }
+  // Explicitly cast db to Firestore type
+  const firestore = db as Firestore;
   try {
-    const docRef = await addDoc(collection(db, 'ideas'), {
+    const docRef = await addDoc(collection(firestore, 'ideas'), {
         ...idea,
-        timestamp: new Date(),
+        timestamp: Timestamp.now(),
     });
-    return docRef.id;
+    return { id: docRef.id, ...idea };
   } catch (error) {
-    console.error("Error adding document: ", error);
+    console.error("Error adding idea: ", error);
     return null;
   }
 }
@@ -42,15 +44,19 @@ export function onIdeasUpdate(callback: (ideas: Idea[]) => void) {
     return () => {};
   }
   
-  const q = query(collection(db, 'ideas'), orderBy('timestamp', 'desc'), limit(20));
+  // Explicitly cast db to Firestore type
+  const firestore = db as Firestore;
+  
+  const q = query(collection(firestore, 'ideas'), orderBy('timestamp', 'desc'), limit(20));
   
   const unsubscribe = onSnapshot(q, (querySnapshot) => {
     const ideas: Idea[] = [];
     querySnapshot.forEach((doc) => {
-      ideas.push({ id: doc.id, ...doc.data() } as Idea);
+      const data = doc.data();
+      ideas.push({ id: doc.id, ...data } as Idea);
     });
     callback(ideas);
-  }, (error) => {
+  }, (error: Error) => {
       console.error("Error listening to ideas collection: ", error);
   });
 

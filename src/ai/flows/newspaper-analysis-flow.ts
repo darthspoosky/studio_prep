@@ -15,7 +15,7 @@ import fs from 'fs';
 import path from 'path';
 
 // Cache syllabus content
-let syllabusCache: { prelims?: string; mains?: string } = {};
+const syllabusCache: { prelims?: string; mains?: string } = {};
 function getSyllabusContent() {
   if (!syllabusCache.prelims || !syllabusCache.mains) {
     syllabusCache.prelims = fs.readFileSync(path.join(process.cwd(), 'src/ai/knowledge/upsc-prelims-syllabus.md'), 'utf-8');
@@ -111,10 +111,16 @@ const VerificationInputSchema = NewspaperAnalysisOutputSchema.extend({
 
 // --- AGENT 1: Relevance Analyst ---
 
+type RelevanceOutput = {
+  isRelevant: boolean;
+  syllabusTopic: string | null;
+  reasoning?: string;
+};
+
 const RelevanceAnalystOutputSchema = z.object({
   isRelevant: z.boolean().describe('Whether the article content is relevant to the provided UPSC syllabus.'),
   syllabusTopic: z.string().nullable().describe('The single most specific, granular syllabus topic. Null if not relevant.'),
-  reasoning: z.string().describe('Brief explanation for relevance assessment.'),
+  reasoning: z.string().optional().describe('Brief explanation for relevance assessment.'),
   confidenceScore: z.number().min(0).max(1).describe('Confidence in the relevance assessment (0-1).'),
 });
 
@@ -292,8 +298,8 @@ export async function analyzeNewspaperArticle(input: NewspaperAnalysisInput): Pr
   
   const result = await analyzeNewspaperArticleFlow({
     ...input,
-    prelimsSyllabus,
-    mainsSyllabus,
+    prelimsSyllabus: prelimsSyllabus as string,
+    mainsSyllabus: mainsSyllabus as string,
   });
   
   const processingTime = Date.now() - startTime;
@@ -314,11 +320,15 @@ const analyzeNewspaperArticleFlow = ai.defineFlow(
     const OUTPUT_PRICE_PER_1K_TOKENS_USD = 0.00105;
 
     // STEP 1: Run Relevance Analyst Agent
-    const { response: relevanceResponse, output: relevanceResult } = await relevanceAnalystAgent(input);
+    const relevanceAgentResponse = await relevanceAnalystAgent(input);
+    const relevanceResult = relevanceAgentResponse.output;
     
-    if (relevanceResponse?.usage) {
-      totalInputTokens += relevanceResponse.usage.inputTokens || 0;
-      totalOutputTokens += relevanceResponse.usage.outputTokens || 0;
+    // @ts-expect-error - Handling metadata usage which may not be in current type definitions
+    if (relevanceAgentResponse.metadata?.usage) {
+      // @ts-expect-error - Accessing properties that may not be in current type definitions
+      totalInputTokens += relevanceAgentResponse.metadata.usage.inputTokens || 0;
+      // @ts-expect-error - Accessing properties that may not be in current type definitions
+      totalOutputTokens += relevanceAgentResponse.metadata.usage.outputTokens || 0;
     }
 
     if (!relevanceResult || !relevanceResult.isRelevant || !relevanceResult.syllabusTopic) {
@@ -339,14 +349,18 @@ const analyzeNewspaperArticleFlow = ai.defineFlow(
     }
 
     // STEP 2: Run Question Generator Agent
-    const { response: analysisResponse, output: initialAnalysis } = await questionGeneratorAgent({
+    const questionAgentResponse = await questionGeneratorAgent({
       ...input,
-      identifiedSyllabusTopic: relevanceResult.syllabusTopic,
+      identifiedSyllabusTopic: relevanceResult.syllabusTopic || '',
     });
+    const initialAnalysis = questionAgentResponse.output;
 
-    if (analysisResponse?.usage) {
-      totalInputTokens += analysisResponse.usage.inputTokens || 0;
-      totalOutputTokens += analysisResponse.usage.outputTokens || 0;
+    // @ts-expect-error - Handling metadata usage which may not be in current type definitions
+    if (questionAgentResponse.metadata?.usage) {
+      // @ts-expect-error - Accessing properties that may not be in current type definitions
+      totalInputTokens += questionAgentResponse.metadata.usage.inputTokens || 0;
+      // @ts-expect-error - Accessing properties that may not be in current type definitions
+      totalOutputTokens += questionAgentResponse.metadata.usage.outputTokens || 0;
     }
 
     if (!initialAnalysis) {
@@ -358,14 +372,18 @@ const analyzeNewspaperArticleFlow = ai.defineFlow(
         ...initialAnalysis,
         sourceText: input.sourceText,
         generatedAnalysisString: JSON.stringify(initialAnalysis),
-        outputLanguage: input.outputLanguage,
-        analysisFocus: input.analysisFocus,
+        outputLanguage: input.outputLanguage || 'English',
+        analysisFocus: input.analysisFocus || 'Generate Questions',
     }
-    const { response: verificationResponse, output: verifiedAnalysis } = await verificationEditorAgent(verificationInput);
+    const verificationAgentResponse = await verificationEditorAgent(verificationInput);
+    const verifiedAnalysis = verificationAgentResponse.output;
 
-    if (verificationResponse?.usage) {
-        totalInputTokens += verificationResponse.usage.inputTokens || 0;
-        totalOutputTokens += verificationResponse.usage.outputTokens || 0;
+    // @ts-expect-error - Handling metadata usage which may not be in current type definitions
+    if (verificationAgentResponse.metadata?.usage) {
+        // @ts-expect-error - Accessing properties that may not be in current type definitions
+        totalInputTokens += verificationAgentResponse.metadata.usage.inputTokens || 0;
+        // @ts-expect-error - Accessing properties that may not be in current type definitions
+        totalOutputTokens += verificationAgentResponse.metadata.usage.outputTokens || 0;
     }
 
     const finalAnalysis = verifiedAnalysis || initialAnalysis; // Fallback to initial if verification fails

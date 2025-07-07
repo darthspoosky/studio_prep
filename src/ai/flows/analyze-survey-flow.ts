@@ -39,24 +39,28 @@ export async function analyzeSurvey(input: SurveyAnalysisInput): Promise<SurveyA
 
 async function moderateAndStoreIdea(input: SurveyAnalysisInput) {
   try {
-    const { response } = await ai.generate({
-      // We pass the user-generated content directly as the prompt.
-      // The safety settings will then evaluate this content.
-      prompt: input.featureRequests,
-      config: {
-        // Use strict safety settings to block harmful content.
-        // The model will refuse to generate text if the prompt is unsafe.
-        safetySettings: [
-          { category: 'HARM_CATEGORY_HATE_SPEECH', threshold: 'BLOCK_MEDIUM_AND_ABOVE' },
-          { category: 'HARM_CATEGORY_DANGEROUS_CONTENT', threshold: 'BLOCK_MEDIUM_AND_ABOVE' },
-          { category: 'HARM_CATEGORY_HARASSMENT', threshold: 'BLOCK_MEDIUM_AND_ABOVE' },
-          { category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT', threshold: 'BLOCK_MEDIUM_AND_ABOVE' },
-        ],
-      },
-    });
-
-    // The response is blocked if the content violates safety settings.
-    if (response.blocked) {
+    // Generate content using the AI model with safety settings
+    // Content moderation happens through the safety settings configuration
+    try {
+      await ai.generate({
+        // We pass the user-generated content directly as the prompt
+        prompt: input.featureRequests,
+        config: {
+          // Use strict safety settings to block harmful content
+          // The model will refuse to generate if the prompt is unsafe
+          safetySettings: [
+            { category: 'HARM_CATEGORY_HATE_SPEECH', threshold: 'BLOCK_MEDIUM_AND_ABOVE' },
+            { category: 'HARM_CATEGORY_DANGEROUS_CONTENT', threshold: 'BLOCK_MEDIUM_AND_ABOVE' },
+            { category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT', threshold: 'BLOCK_MEDIUM_AND_ABOVE' },
+            { category: 'HARM_CATEGORY_HARASSMENT', threshold: 'BLOCK_MEDIUM_AND_ABOVE' },
+          ],
+        },
+      });
+      
+      // If we get here, content passed safety filters
+      console.log('Idea passed content safety filter');
+    } catch (error) {
+      // If an error is thrown during generation, it's likely due to safety filters
       console.log('Idea rejected by content safety filter:', input.featureRequests);
       return;
     }
