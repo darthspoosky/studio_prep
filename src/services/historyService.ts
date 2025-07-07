@@ -1,3 +1,4 @@
+
 import { db } from '@/lib/firebase';
 import { collection, addDoc, query, where, orderBy, limit, getDocs, Timestamp, doc, getDoc } from 'firebase/firestore';
 import type { NewspaperAnalysisOutput, MCQ, MainsQuestion } from '@/ai/flows/newspaper-analysis-flow';
@@ -45,9 +46,7 @@ export async function addHistory(userId: string, analysis: NewspaperAnalysisOutp
   }
 }
 
-// Fetches all history for a user, sorted by timestamp. This query requires a composite index.
-// If the index is missing, Firestore will return a permission-denied error and a link
-// in the console to create it.
+// Fetches all history for a user.
 async function getAllHistory(userId: string): Promise<HistoryEntry[]> {
   if (!db) {
     console.log("Firestore not initialized. Skipping getAllHistory.");
@@ -56,19 +55,24 @@ async function getAllHistory(userId: string): Promise<HistoryEntry[]> {
   
   const history: HistoryEntry[] = [];
   try {
+    // Simplified query: a single 'where' clause. Firestore can handle this without a manual composite index.
     const q = query(
         collection(db, 'userHistory'), 
-        where('userId', '==', userId),
-        orderBy('timestamp', 'desc')
+        where('userId', '==', userId)
     );
     
     const querySnapshot = await getDocs(q);
     querySnapshot.forEach((doc) => {
       history.push({ id: doc.id, ...doc.data() } as HistoryEntry);
     });
+
+    // Perform sorting in the application code after fetching.
+    history.sort((a, b) => b.timestamp.toMillis() - a.timestamp.toMillis());
+
   } catch(error) {
       console.error("Error fetching all history: ", error);
       if ((error as any).code === 'permission-denied') {
+          // This error message now points to a potential index issue that the user might have to create if Firestore prompts them.
           throw new Error("Could not read history due to a permission error. This usually happens when a Firestore index is missing. Please check your browser's developer console for a link to create the required index.");
       }
       throw error;
@@ -111,7 +115,7 @@ export async function getHistoryEntry(id: string): Promise<HistoryEntry | null> 
 
 export async function getPrelimsQuestions(userId: string): Promise<PrelimsQuestionWithContext[]> {
     const allHistory = await getAllHistory(userId);
-    // Data from getAllHistory is already sorted chronologically
+    // Data from getAllHistory is now sorted chronologically
     const prelimsQuestions = allHistory.flatMap(entry => 
         (entry.analysis.prelims?.mcqs || []).map(mcq => ({
             ...mcq,
@@ -125,7 +129,7 @@ export async function getPrelimsQuestions(userId: string): Promise<PrelimsQuesti
 
 export async function getMainsQuestions(userId: string): Promise<MainsQuestionWithContext[]> {
     const allHistory = await getAllHistory(userId);
-    // Data from getAllHistory is already sorted chronologically
+    // Data from getAllHistory is now sorted chronologically
     const mainsQuestions = allHistory.flatMap(entry => 
         (entry.analysis.mains?.questions || []).map(question => ({
             ...question,
