@@ -71,3 +71,844 @@ Key insights from the quiz system will be surfaced on the main user dashboard vi
     - `QuizAnalysisTab` for the analytics view.
     - `QuizPerformanceWidget`, `WeakAreaFocusWidget` for the main dashboard.
     - Various charting components using `recharts`.
+
+
+plan to capture the new requirements for the quiz page (three quiz options: past year by year/section, PDF/image upload to MCQ, and user-curated bank), the need for an analysis tab with AI metrics, and suggestions for main dashboard integration and full-stack deployment considerations. Also updating the current goal and task list accordingly.
+
+Thought Process
+
+Enhanced Quiz System Design
+I'll outline a comprehensive approach for your three-option quiz system with integrated analysis and dashboard metrics.
+
+Quiz Page Structure with Three Options
+1. Past Year Questions Mode
+tsx
+const PastYearQuizMode = () => {
+  return (
+    <Tabs defaultValue="by-year">
+      <TabsList>
+        <TabsTrigger value="by-year">Browse by Year</TabsTrigger>
+        <TabsTrigger value="by-section">Browse by Syllabus Section</TabsTrigger>
+      </TabsList>
+      
+      <TabsContent value="by-year">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
+          {YEARS.map((year) => (
+            <Card key={year} className="hover:shadow-md transition-shadow cursor-pointer">
+              <CardHeader>
+                <CardTitle>UPSC CSE {year}</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="flex justify-between text-muted-foreground">
+                  <span>Questions: 100</span>
+                  <span>Attempted: 45</span>
+                </div>
+                <Progress className="mt-2" value={45} />
+              </CardContent>
+              <CardFooter>
+                <Button className="w-full">Start Practice</Button>
+              </CardFooter>
+            </Card>
+          ))}
+        </div>
+      </TabsContent>
+      
+      <TabsContent value="by-section">
+        <div className="space-y-4 mt-4">
+          {SYLLABUS_SECTIONS.map((section) => (
+            <Collapsible key={section.id}>
+              <CollapsibleTrigger asChild>
+                <div className="flex items-center justify-between p-3 bg-muted/50 rounded-md cursor-pointer">
+                  <div className="font-medium">{section.name}</div>
+                  <ChevronDown className="h-4 w-4" />
+                </div>
+              </CollapsibleTrigger>
+              <CollapsibleContent>
+                <div className="pl-6 pt-2 space-y-2">
+                  {section.topics.map((topic) => (
+                    <div key={topic.id} className="flex justify-between items-center">
+                      <div>{topic.name}</div>
+                      <Button size="sm">Practice</Button>
+                    </div>
+                  ))}
+                </div>
+              </CollapsibleContent>
+            </Collapsible>
+          ))}
+        </div>
+      </TabsContent>
+    </Tabs>
+  );
+};
+2. PDF/Image to Quiz Converter
+tsx
+const PDFToQuizConverter = () => {
+  const [file, setFile] = useState<File | null>(null);
+  const [isConverting, setIsConverting] = useState(false);
+  const [conversionComplete, setConversionComplete] = useState(false);
+  
+  const handleConversion = async () => {
+    if (!file) return;
+    setIsConverting(true);
+    
+    try {
+      // Upload file to API
+      const formData = new FormData();
+      formData.append('file', file);
+      
+      // Call to AI service to process PDF/image and generate quiz
+      const response = await fetch('/api/convert-to-quiz', {
+        method: 'POST',
+        body: formData
+      });
+      
+      const quiz = await response.json();
+      
+      // Store quiz in state management or context
+      
+      setConversionComplete(true);
+    } catch (error) {
+      console.error('Error converting document:', error);
+      toast({
+        variant: 'destructive',
+        title: 'Conversion Failed',
+        description: 'Unable to convert your document to a quiz. Please try again.'
+      });
+    } finally {
+      setIsConverting(false);
+    }
+  };
+  
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Convert Document to Quiz</CardTitle>
+        <CardDescription>
+          Upload PDF/Images of questions to automatically generate an interactive quiz
+        </CardDescription>
+      </CardHeader>
+      <CardContent>
+        <div className="flex flex-col items-center justify-center border-2 border-dashed border-muted p-10 rounded-md">
+          {!file ? (
+            <>
+              <FileUp className="h-10 w-10 text-muted-foreground mb-4" />
+              <Label htmlFor="file-upload" className="cursor-pointer">
+                <div className="bg-primary text-primary-foreground py-2 px-4 rounded-md">
+                  Select PDF or Image
+                </div>
+                <Input 
+                  id="file-upload"
+                  type="file" 
+                  className="hidden" 
+                  accept=".pdf,image/*"
+                  onChange={(e) => e.target.files && setFile(e.target.files[0])} 
+                />
+              </Label>
+              <span className="text-xs text-muted-foreground mt-2">
+                PDF, JPEG, PNG up to 10MB
+              </span>
+            </>
+          ) : (
+            <>
+              <FileText className="h-10 w-10 text-primary mb-4" />
+              <div className="font-medium">{file.name}</div>
+              <span className="text-xs text-muted-foreground mt-1">
+                {Math.round(file.size / 1024)} KB
+              </span>
+              <Button
+                variant="outline"
+                size="sm"
+                className="mt-4"
+                onClick={() => setFile(null)}
+              >
+                Change File
+              </Button>
+            </>
+          )}
+        </div>
+        
+        <div className="mt-6">
+          <h3 className="text-sm font-medium mb-2">Quiz Settings</h3>
+          <div className="space-y-4">
+            <div className="flex flex-col gap-2">
+              <Label htmlFor="time-limit">Time Limit (minutes)</Label>
+              <Select defaultValue="30">
+                <SelectTrigger id="time-limit">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="10">10 minutes</SelectItem>
+                  <SelectItem value="30">30 minutes</SelectItem>
+                  <SelectItem value="60">60 minutes</SelectItem>
+                  <SelectItem value="none">No Time Limit</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            
+            <div className="flex items-center gap-2">
+              <Checkbox id="explanation" />
+              <Label htmlFor="explanation">Auto-generate explanations for answers</Label>
+            </div>
+          </div>
+        </div>
+      </CardContent>
+      <CardFooter>
+        <Button 
+          className="w-full" 
+          disabled={!file || isConverting}
+          onClick={handleConversion}
+        >
+          {isConverting ? (
+            <>
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              Converting...
+            </>
+          ) : (
+            'Generate Quiz'
+          )}
+        </Button>
+      </CardFooter>
+    </Card>
+  );
+};
+3. Curated Question Bank
+tsx
+const CuratedQuestionBank = () => {
+  const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
+  const [difficulty, setDifficulty] = useState<string>("all");
+  const [searchQuery, setSearchQuery] = useState<string>("");
+  
+  const topics = [
+    { id: "gs1", name: "General Studies I" },
+    { id: "gs2", name: "General Studies II" },
+    { id: "gs3", name: "General Studies III" },
+    { id: "gs4", name: "General Studies IV" },
+    { id: "current", name: "Current Affairs" },
+    { id: "csat", name: "CSAT" }
+  ];
+  
+  return (
+    <div>
+      <div className="flex flex-col md:flex-row gap-4 mb-6">
+        <div className="flex-1">
+          <div className="relative">
+            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+            <Input 
+              placeholder="Search questions..." 
+              className="pl-8" 
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+            />
+          </div>
+        </div>
+        
+        <Select value={difficulty} onValueChange={setDifficulty}>
+          <SelectTrigger className="w-40">
+            <SelectValue placeholder="Difficulty" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Levels</SelectItem>
+            <SelectItem value="easy">Easy</SelectItem>
+            <SelectItem value="medium">Medium</SelectItem>
+            <SelectItem value="hard">Hard</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+      
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="lg:col-span-1">
+          <Card>
+            <CardHeader>
+              <CardTitle>Filter by Topics</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-2">
+                {topics.map((topic) => (
+                  <div key={topic.id} className="flex items-center space-x-2">
+                    <Checkbox 
+                      id={`topic-${topic.id}`} 
+                      checked={selectedCategories.includes(topic.id)}
+                      onCheckedChange={(checked) => {
+                        if (checked) {
+                          setSelectedCategories([...selectedCategories, topic.id]);
+                        } else {
+                          setSelectedCategories(
+                            selectedCategories.filter((id) => id !== topic.id)
+                          );
+                        }
+                      }}
+                    />
+                    <Label htmlFor={`topic-${topic.id}`}>{topic.name}</Label>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+        
+        <div className="lg:col-span-2">
+          <Card>
+            <CardHeader>
+              <div className="flex justify-between">
+                <CardTitle>Available Question Sets</CardTitle>
+                <Badge variant="outline">120 sets</Badge>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <ScrollArea className="h-[450px] pr-4">
+                <div className="space-y-4">
+                  {/* Question Sets would be mapped here */}
+                  {[1, 2, 3, 4, 5].map((set) => (
+                    <Card key={set}>
+                      <CardHeader className="py-3">
+                        <div className="flex justify-between items-center">
+                          <CardTitle className="text-base">Current Affairs: July 2025</CardTitle>
+                          <Badge>Medium</Badge>
+                        </div>
+                      </CardHeader>
+                      <CardContent className="py-2">
+                        <div className="flex justify-between text-sm">
+                          <span>20 questions</span>
+                          <span>30 min</span>
+                        </div>
+                      </CardContent>
+                      <CardFooter className="py-3 flex justify-between">
+                        <div className="flex items-center text-sm text-muted-foreground">
+                          <Users className="h-3 w-3 mr-1" />
+                          <span>842 attempts</span>
+                        </div>
+                        <Button size="sm">Start Quiz</Button>
+                      </CardFooter>
+                    </Card>
+                  ))}
+                </div>
+              </ScrollArea>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    </div>
+  );
+};
+Analysis Tab with Main Metrics
+tsx
+const QuizAnalysisTab = () => {
+  const [timeFrame, setTimeFrame] = useState<string>("week");
+  
+  return (
+    <div className="space-y-8">
+      <div className="flex justify-between items-center">
+        <h2 className="text-2xl font-bold">Performance Analytics</h2>
+        <Select value={timeFrame} onValueChange={setTimeFrame}>
+          <SelectTrigger className="w-36">
+            <SelectValue placeholder="Time Period" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="week">Last Week</SelectItem>
+            <SelectItem value="month">Last Month</SelectItem>
+            <SelectItem value="quarter">Last Quarter</SelectItem>
+            <SelectItem value="year">Last Year</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+      
+      {/* Key Performance Metrics */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        {[
+          { title: "Attempted Questions", value: "345", icon: <CheckSquare />, color: "text-blue-500" },
+          { title: "Accuracy Rate", value: "68%", icon: <BarChart />, color: "text-green-500" },
+          { title: "Time Per Question", value: "45s", icon: <Clock />, color: "text-amber-500" },
+          { title: "Streak", value: "7 days", icon: <Flame />, color: "text-red-500" }
+        ].map((metric) => (
+          <Card key={metric.title}>
+            <CardContent className="pt-6">
+              <div className="flex justify-between items-center">
+                <div>
+                  <p className="text-sm text-muted-foreground">{metric.title}</p>
+                  <p className="text-2xl font-bold mt-1">{metric.value}</p>
+                </div>
+                <div className={`p-2 rounded-full bg-muted ${metric.color}`}>
+                  {cloneElement(metric.icon, { className: "h-5 w-5" })}
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+      
+      {/* Performance Over Time Chart */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Performance Trends</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="h-80">
+            <ResponsiveContainer width="100%" height="100%">
+              <LineChart
+                data={[
+                  { date: '2025-06-01', accuracy: 62, attempts: 15, avgTime: 55 },
+                  { date: '2025-06-08', accuracy: 68, attempts: 22, avgTime: 52 },
+                  { date: '2025-06-15', accuracy: 73, attempts: 18, avgTime: 48 },
+                  { date: '2025-06-22', accuracy: 70, attempts: 25, avgTime: 50 },
+                  { date: '2025-06-29', accuracy: 75, attempts: 30, avgTime: 45 },
+                  { date: '2025-07-06', accuracy: 78, attempts: 28, avgTime: 42 },
+                ]}
+                margin={{ top: 10, right: 30, left: 0, bottom: 0 }}
+              >
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="date" />
+                <YAxis yAxisId="left" />
+                <YAxis yAxisId="right" orientation="right" />
+                <Tooltip />
+                <Legend />
+                <Line
+                  yAxisId="left"
+                  type="monotone"
+                  dataKey="accuracy"
+                  name="Accuracy (%)"
+                  stroke="#8884d8"
+                  activeDot={{ r: 8 }}
+                />
+                <Line
+                  yAxisId="right"
+                  type="monotone"
+                  dataKey="avgTime"
+                  name="Avg. Time (s)"
+                  stroke="#82ca9d"
+                />
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
+        </CardContent>
+      </Card>
+      
+      {/* Subject-wise Performance */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <Card>
+          <CardHeader>
+            <CardTitle>Performance by Subject</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="h-64">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart
+                  data={[
+                    { subject: "History", accuracy: 82 },
+                    { subject: "Geography", accuracy: 76 },
+                    { subject: "Polity", accuracy: 68 },
+                    { subject: "Economy", accuracy: 72 },
+                    { subject: "Science", accuracy: 65 },
+                    { subject: "Environment", accuracy: 79 },
+                    { subject: "Int'l Relations", accuracy: 70 },
+                  ]}
+                  margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
+                >
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="subject" />
+                  <YAxis />
+                  <Tooltip />
+                  <Legend />
+                  <Bar dataKey="accuracy" name="Accuracy %" fill="#8884d8" />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          </CardContent>
+        </Card>
+        
+        {/* AI-Powered Insights */}
+        <Card>
+          <CardHeader>
+            <div className="flex justify-between items-center">
+              <CardTitle>AI Improvement Suggestions</CardTitle>
+              <Badge variant="outline" className="bg-primary/10 text-primary">AI-Powered</Badge>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <ScrollArea className="h-64 pr-4">
+              <div className="space-y-4">
+                <div className="p-3 bg-muted/50 rounded-lg">
+                  <div className="flex items-start gap-3">
+                    <Brain className="h-5 w-5 text-primary mt-0.5" />
+                    <div>
+                      <h4 className="font-medium text-sm">Focus on Science & Technology</h4>
+                      <p className="text-sm text-muted-foreground mt-1">
+                        Your accuracy in Science & Tech topics is 15% lower than your average. 
+                        Consider focusing on recent developments in space technology and biotechnology.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+                
+                <div className="p-3 bg-muted/50 rounded-lg">
+                  <div className="flex items-start gap-3">
+                    <Clock className="h-5 w-5 text-amber-500 mt-0.5" />
+                    <div>
+                      <h4 className="font-medium text-sm">Improve Time Management</h4>
+                      <p className="text-sm text-muted-foreground mt-1">
+                        You spend 20% more time on Geography questions compared to other subjects.
+                        Try timed practice sessions focused on map-based questions.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+                
+                <div className="p-3 bg-muted/50 rounded-lg">
+                  <div className="flex items-start gap-3">
+                    <TrendingUp className="h-5 w-5 text-green-500 mt-0.5" />
+                    <div>
+                      <h4 className="font-medium text-sm">Strong Improvement in Economy</h4>
+                      <p className="text-sm text-muted-foreground mt-1">
+                        Your accuracy in Economy has improved by 12% in the last month.
+                        Maintain this progress with regular revision.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+                
+                <div className="p-3 bg-muted/50 rounded-lg">
+                  <div className="flex items-start gap-3">
+                    <Zap className="h-5 w-5 text-yellow-500 mt-0.5" />
+                    <div>
+                      <h4 className="font-medium text-sm">Recommended Practice Set</h4>
+                      <p className="text-sm text-muted-foreground mt-1">
+                        Based on your performance patterns, we recommend attempting 
+                        "Advanced International Relations" practice set next.
+                      </p>
+                      <Button variant="link" className="p-0 h-auto mt-1">
+                        View Practice Set
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </ScrollArea>
+          </CardContent>
+        </Card>
+      </div>
+      
+      {/* Question Type Analysis */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Performance by Question Type</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="h-64">
+              <ResponsiveContainer width="100%" height="100%">
+                <RadarChart 
+                  outerRadius={90} 
+                  data={[
+                    { type: 'Factual', value: 85 },
+                    { type: 'Conceptual', value: 72 },
+                    { type: 'Analytical', value: 65 },
+                    { type: 'Current Affairs', value: 78 },
+                    { type: 'Case Study', value: 60 },
+                  ]}
+                >
+                  <PolarGrid />
+                  <PolarAngleAxis dataKey="type" />
+                  <PolarRadiusAxis angle={30} domain={[0, 100]} />
+                  <Radar name="Accuracy" dataKey="value" stroke="#8884d8" fill="#8884d8" fillOpacity={0.6} />
+                  <Legend />
+                </RadarChart>
+              </ResponsiveContainer>
+            </div>
+            
+            <div className="space-y-4">
+              {[
+                { type: 'Factual', value: 85, suggestion: 'Strong recall. Keep practicing with spaced repetition.' },
+                { type: 'Conceptual', value: 72, suggestion: 'Review fundamental concepts before solving complex questions.' },
+                { type: 'Analytical', value: 65, suggestion: 'Focus on practice with comparative questions and linkages.' },
+                { type: 'Current Affairs', value: 78, suggestion: 'Maintain daily newspaper analysis for continued strength.' },
+                { type: 'Case Study', value: 60, suggestion: 'Practice more scenario-based questions, especially in Ethics paper.' },
+              ].map((item) => (
+                <div key={item.type} className="flex items-center">
+                  <div className="w-24 font-medium">{item.type}</div>
+                  <div className="flex-1 mx-4">
+                    <div className="flex items-center justify-between text-sm mb-1">
+                      <span className="text-muted-foreground">Accuracy</span>
+                      <span>{item.value}%</span>
+                    </div>
+                    <Progress value={item.value} />
+                  </div>
+                  <Tooltip delayDuration={0}>
+                    <TooltipTrigger asChild>
+                      <Button variant="ghost" size="sm" className="h-6 w-6 p-0">
+                        <HelpCircle className="h-4 w-4" />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent className="max-w-xs">
+                      <p className="text-sm">{item.suggestion}</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </div>
+              ))}
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  );
+};
+Dashboard Integration
+For your main dashboard, I recommend adding these quiz-specific widgets:
+
+tsx
+// Quiz Performance Widget for Main Dashboard
+const QuizPerformanceWidget = () => {
+  return (
+    <Card>
+      <CardHeader className="pb-2">
+        <div className="flex justify-between items-center">
+          <CardTitle className="text-base">Quiz Performance</CardTitle>
+          <Select defaultValue="week">
+            <SelectTrigger className="h-8 w-24">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="week">Week</SelectItem>
+              <SelectItem value="month">Month</SelectItem>
+              <SelectItem value="year">Year</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+      </CardHeader>
+      <CardContent>
+        <div className="h-48">
+          <ResponsiveContainer width="100%" height="100%">
+            <AreaChart
+              data={[
+                { day: 'Mon', score: 60 },
+                { day: 'Tue', score: 75 },
+                { day: 'Wed', score: 70 },
+                { day: 'Thu', score: 80 },
+                { day: 'Fri', score: 75 },
+                { day: 'Sat', score: 85 },
+                { day: 'Sun', score: 90 },
+              ]}
+              margin={{ top: 10, right: 0, left: 0, bottom: 0 }}
+            >
+              <defs>
+                <linearGradient id="colorScore" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor="#8884d8" stopOpacity={0.8}/>
+                  <stop offset="95%" stopColor="#8884d8" stopOpacity={0.1}/>
+                </linearGradient>
+              </defs>
+              <XAxis dataKey="day" />
+              <YAxis domain={[0, 100]} />
+              <Tooltip />
+              <Area 
+                type="monotone" 
+                dataKey="score" 
+                stroke="#8884d8" 
+                fillOpacity={1} 
+                fill="url(#colorScore)" 
+              />
+            </AreaChart>
+          </ResponsiveContainer>
+        </div>
+        
+        <div className="grid grid-cols-2 gap-4 mt-2">
+          <div className="bg-muted/50 p-3 rounded-md">
+            <div className="text-sm text-muted-foreground">Average Score</div>
+            <div className="flex items-center gap-2 mt-1">
+              <span className="text-xl font-bold">76%</span>
+              <Badge variant="outline" className="bg-green-500/10 text-green-500">
+                <ArrowUp className="h-3 w-3 mr-1" />
+                8%
+              </Badge>
+            </div>
+          </div>
+          <div className="bg-muted/50 p-3 rounded-md">
+            <div className="text-sm text-muted-foreground">Total Attempted</div>
+            <div className="flex items-center gap-2 mt-1">
+              <span className="text-xl font-bold">48</span>
+              <span className="text-xs text-muted-foreground">questions</span>
+            </div>
+          </div>
+        </div>
+      </CardContent>
+      <CardFooter>
+        <Button variant="ghost" size="sm" asChild className="w-full">
+          <Link href="/daily-quiz/analysis">
+            View Detailed Analysis
+            <ChevronRight className="h-4 w-4 ml-1" />
+          </Link>
+        </Button>
+      </CardFooter>
+    </Card>
+  );
+};
+
+// Weak Area Focus Widget for Main Dashboard
+const WeakAreaFocusWidget = () => {
+  return (
+    <Card>
+      <CardHeader>
+        <div className="flex justify-between items-center">
+          <CardTitle className="text-base">Focus Areas</CardTitle>
+          <Badge variant="outline">AI-Recommended</Badge>
+        </div>
+      </CardHeader>
+      <CardContent>
+        <div className="space-y-4">
+          {[
+            { area: "Science & Technology", score: 62, topics: ["Biotechnology", "Space Tech"] },
+            { area: "Indian Polity", score: 68, topics: ["Judiciary", "Local Governance"] },
+            { area: "Environment", score: 70, topics: ["Climate Agreements", "Biodiversity"] },
+          ].map((item) => (
+            <div key={item.area} className="space-y-2">
+              <div className="flex justify-between">
+                <span className="text-sm font-medium">{item.area}</span>
+                <span className="text-sm">{item.score}%</span>
+              </div>
+              <Progress value={item.score} />
+              <div className="flex gap-2">
+                {item.topics.map((topic) => (
+                  <Badge key={topic} variant="outline" className="bg-muted">
+                    {topic}
+                  </Badge>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+      </CardContent>
+      <CardFooter>
+        <Button size="sm" variant="outline" className="w-full">
+          Generate Practice Quiz
+        </Button>
+      </CardFooter>
+    </Card>
+  );
+};
+
+// Add this to your main dashboard grid layout
+<div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+  <div className="md:col-span-2">
+    <QuizPerformanceWidget />
+  </div>
+  <div>
+    <WeakAreaFocusWidget />
+  </div>
+</div>
+Full-Stack Considerations
+For a complete implementation, you'll need:
+
+1. Backend Services
+typescript
+// services/quizService.ts
+export interface QuizQuestion {
+  id: string;
+  question: string;
+  options: Array<{
+    id: string;
+    text: string;
+    isCorrect: boolean;
+  }>;
+  explanation: string;
+  subject: string;
+  topic: string;
+  subtopic?: string;
+  difficulty: 'easy' | 'medium' | 'hard';
+  source?: 'past_year' | 'custom' | 'user_generated';
+  year?: number;
+  timeEstimate: number; // seconds
+}
+
+export async function fetchPastYearQuestions(year: number, subject?: string): Promise<QuizQuestion[]> {
+  // Implementation
+}
+
+export async function fetchQuestionsByTopic(topic: string, difficulty?: string): Promise<QuizQuestion[]> {
+  // Implementation
+}
+
+export async function convertPdfToQuiz(fileData: FormData): Promise<QuizQuestion[]> {
+  // Implementation using AI service integration
+}
+2. Database Schema
+typescript
+// Key database collections/tables
+interface UserQuizAttempt {
+  id: string;
+  userId: string;
+  quizId: string;
+  questionId: string;
+  selectedOptionId: string;
+  isCorrect: boolean;
+  timeSpent: number; // seconds
+  timestamp: Date;
+}
+
+interface UserQuizSession {
+  id: string;
+  userId: string;
+  quizType: 'past_year' | 'pdf' | 'curated';
+  source: string; // year, pdf
+Cascade error
+The model produced an invalid tool call.
+name, or quiz bank name startTime: Date; endTime?: Date; totalQuestions: number; attemptedQuestions: number; correctAnswers: number; accuracy: number; averageTimePerQuestion: number; completed: boolean; }
+
+
+### 3. AI Integration
+
+For the PDF-to-Quiz feature:
+
+1. **Document Processing Pipeline**:
+   - OCR for image-based content
+   - PDF parsing for structured text
+   - Natural language understanding to identify questions and options
+
+2. **Question Generation**:
+   - Extract direct questions
+   - Infer multiple choices from context when not explicit
+   - Generate distractors when options aren't provided
+   - Create explanations based on surrounding context
+
+3. **Metadata Enrichment**:
+   - Automatically tag questions with subjects
+   - Determine difficulty level
+   - Categorize by question type
+
+### 4. Performance Analytics Engine
+
+```typescript
+// services/analyticsService.ts
+export async function getUserPerformanceAnalytics(userId: string, timeframe: string): Promise<{
+  totalQuestions: number;
+  accuracy: number;
+  averageTime: number;
+  subjectPerformance: Record<string, number>;
+  weakestSubjects: string[];
+  strongestSubjects: string[];
+  recommendedFocus: Array<{
+    subject: string;
+    topics: string[];
+    reason: string;
+  }>;
+  trendData: Array<{
+    date: string;
+    accuracy: number;
+    attempts: number;
+  }>;
+}> {
+  // Implementation
+}
+Implementation Roadmap
+Phase 1: Core Quiz Experience
+Build the three quiz modes infrastructure
+Implement basic question display and scoring
+Set up the quiz session management system
+Phase 2: PDF/Image to Quiz Converter
+Create the file upload and processing UI
+Implement the AI service for question extraction
+Add quiz generation from document content
+Phase 3: Analytics Integration
+Develop metrics tracking system
+Build visualization components
+Implement AI-powered improvement suggestions
+Phase 4: Dashboard Integration
+Add quiz performance widgets to main dashboard
+Implement cross-feature data correlation
+Create user journey recommendations
