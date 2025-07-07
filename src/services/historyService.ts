@@ -68,8 +68,7 @@ async function getAllHistory(userId: string): Promise<HistoryEntry[]> {
   } catch(error) {
       console.error("Error fetching all history: ", error);
       if ((error as any).code === 'permission-denied') {
-          // This error message now points to a potential index issue that the user might have to create if Firestore prompts them.
-          throw new Error("Could not read history due to a permission error. This usually happens when a Firestore index is missing. Please check your browser's developer console for a link to create the required index.");
+          throw new Error("Could not read history. Missing read permission is likely the cause. If the query ever uses orderBy, Firestore may show a link to create an index.");
       }
       throw error;
   }

@@ -64,3 +64,13 @@ This change isolates the unpredictable AI from the strict requirements of format
     *   The complex and unreliable `verificationPrompt` and `fixMCQFormatting` functions will be **removed**, as they are now obsolete.
 
 This architectural improvement ensures that the `explanation` is always present and correctly formatted, and allows us to focus the AI's power on making its *content* world-class.
+
+### Ticket-002: Clarify Firestore Permission Error
+- **Status**: Done
+- **Date**: 2024-07-26
+
+#### Affected Files
+1. `src/services/historyService.ts`
+
+#### Change
+- Updated permission-denied error message in `getAllHistory` to note missing read access and mention Firestore may show a link for creating an index when using orderBy.
