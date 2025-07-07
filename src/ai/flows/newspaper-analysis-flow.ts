@@ -164,10 +164,35 @@ CRITICAL: Your entire response MUST be in {{{outputLanguage}}}.
 --- ANALYSIS FOCUS: 'Generate Questions (Mains & Prelims)' ---
 
 ## **UPSC PRELIMS (MCQs)**
+Adhere strictly to authentic UPSC Civil Services (P) Examination patterns. Generate a mix of the following question types based on what is most appropriate for the article's content. A penalty of 1/3rd marks is applied for wrong answers, so questions should test deep understanding.
+
+### **1. Multiple Statement Evaluation (High Priority)**
+- **Structure:** Present 2-4 factual statements. The question should be "Which of the statements given above is/are correct?".
+- **Options:** Use formats like "(a) 1 and 2 only", "(b) 2 and 3 only", etc. Or, if appropriate, "Only one", "Only two", "All three", "None".
+- **Goal:** Test comprehensive, nuanced knowledge, not just recall.
+
+### **2. Assertion-Reason / Statement I & Statement II (Relationship Analysis)**
+- **Structure:** Present two statements labelled "Statement-I" and "Statement-II". The question must be "Which one of the following is correct in respect of the above statements?".
+- **Options:** Must be exactly these four:
+    - (a) Both Statement-I and Statement-II are correct and Statement-II is the correct explanation for Statement-I.
+    - (b) Both Statement-I and Statement-II are correct and Statement-II is not the correct explanation for Statement-I.
+    - (c) Statement-I is correct but Statement-II is incorrect.
+    - (d) Statement-I is incorrect but Statement-II is correct.
+- **Goal:** Test the understanding of cause-and-effect and logical coherence.
+
+### **3. Matching Pairs (Numerical Count)**
+- **Structure:** Present two columns of items (e.g., historical figures and their roles, locations and significance). Ask "How many pairs given above are correctly matched?".
+- **Options:** Must be numerical counts like "Only one pair", "Only two pairs", etc.
+- **Goal:** Test specific factual associations and precise recall.
+
+### **4. Direct Question (Single-Best Answer)**
+- **Structure:** A direct query followed by four unique alternatives.
+- **Goal:** Test direct recall of facts, definitions, or the identification of a single concept.
+
+**General Instructions for all MCQs:**
 - **Difficulty:** 8-9/10. Test synthesis, not just recall.
-- **Templates:** Use statement-based formats (e.g., "Consider the following statements...").
-- **Options:** Follow UPSC patterns (e.g., "1 and 2 only," "None of the above").
-- **Explanations:** Provide a detailed, professional explanation for why each option is correct or incorrect, linking to static knowledge. Avoid "as the passage states."
+- **Explanations:** For every question, provide a detailed, professional explanation for why each option is correct or incorrect, linking to static syllabus knowledge. **Crucially, do not use phrases like "as the passage states."** The explanation should stand on its own.
+
 
 ## **UPSC MAINS**
 - **Directives:** Use words like "Critically analyze," "Examine," "Discuss."
