@@ -44,8 +44,13 @@ export function UserNav() {
   };
 
   const getInitials = (email: string | null) => {
-    if (!email) return 'U';
-    return email[0].toUpperCase();
+    const name = user?.displayName || email;
+    if (!name) return 'U';
+    const parts = name.split(' ').filter(Boolean);
+    if (parts.length > 1) {
+      return `${parts[0][0]}${parts[parts.length - 1][0]}`.toUpperCase();
+    }
+    return name[0].toUpperCase();
   };
 
   return (
@@ -53,7 +58,7 @@ export function UserNav() {
       <DropdownMenuTrigger asChild>
         <Button variant="ghost" className="relative h-8 w-8 rounded-full">
           <Avatar className="h-8 w-8">
-             <AvatarImage data-ai-hint="person" src={`https://placehold.co/40x40.png`} />
+             <AvatarImage src={user.photoURL || ''} />
             <AvatarFallback>{getInitials(user.email)}</AvatarFallback>
           </Avatar>
         </Button>
@@ -61,7 +66,7 @@ export function UserNav() {
       <DropdownMenuContent className="w-56" align="end" forceMount>
         <DropdownMenuLabel className="font-normal">
           <div className="flex flex-col space-y-1">
-            <p className="text-sm font-medium leading-none">Hello!</p>
+            <p className="text-sm font-medium leading-none">{user.displayName || 'Hello!'}</p>
             <p className="text-xs leading-none text-muted-foreground">
               {user.email}
             </p>

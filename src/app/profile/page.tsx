@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useAuth } from '@/contexts/AuthContext';
@@ -13,6 +13,9 @@ import Header from '@/components/layout/header';
 import Footer from '@/components/landing/footer';
 import { ArrowLeft, Loader2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { storage } from '@/lib/firebase';
+import { updateProfile } from 'firebase/auth';
+import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 
 export default function ProfilePage() {
   const { user, loading } = useAuth();
@@ -20,27 +23,96 @@ export default function ProfilePage() {
   const { toast } = useToast();
   const [isSaving, setIsSaving] = useState(false);
   
+  // State for form fields
+  const [displayName, setDisplayName] = useState('');
+  const [examPreference, setExamPreference] = useState('');
+  const [avatarFile, setAvatarFile] = useState<File | null>(null);
+  const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  
   useEffect(() => {
     if (!loading && !user) {
       router.push('/login');
     }
+    if (user) {
+        setDisplayName(user.displayName || '');
+        setAvatarPreview(user.photoURL || null);
+    }
   }, [user, loading, router]);
 
   const getInitials = (email: string | null) => {
-    if (!email) return 'U';
-    return email[0].toUpperCase();
+    const name = user?.displayName || email;
+    if (!name) return 'U';
+    const parts = name.split(' ').filter(Boolean);
+    if (parts.length > 1) {
+      return `${parts[0][0]}${parts[parts.length - 1][0]}`.toUpperCase();
+    }
+    return name[0].toUpperCase();
   };
 
-  const handleSaveChanges = () => {
+  const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+        const file = e.target.files[0];
+        if (file.size > 1024 * 1024) { // 1MB limit
+            toast({
+                variant: 'destructive',
+                title: 'Image too large',
+                description: 'Please select an image smaller than 1MB.',
+            });
+            return;
+        }
+        setAvatarFile(file);
+        setAvatarPreview(URL.createObjectURL(file));
+    }
+  };
+
+  const handleSaveChanges = async () => {
+    if (!user) return;
     setIsSaving(true);
-    // Simulate API call while feature is in development
-    setTimeout(() => {
+
+    try {
+        let photoURL = user.photoURL;
+        let profileUpdated = false;
+
+        // 1. Upload new avatar if it exists
+        if (avatarFile) {
+            const storageRef = ref(storage, `avatars/${user.uid}`);
+            await uploadBytes(storageRef, avatarFile);
+            photoURL = await getDownloadURL(storageRef);
+            profileUpdated = true;
+        }
+
+        // 2. Check if display name has changed
+        if (displayName !== (user.displayName || '')) {
+            profileUpdated = true;
+        }
+
+        // 3. Update profile if anything changed
+        if (profileUpdated) {
+            await updateProfile(user, {
+                displayName: displayName,
+                photoURL: photoURL,
+            });
+            toast({
+                title: 'Profile updated!',
+                description: 'Your changes have been saved successfully.',
+            });
+        } else {
+             toast({
+                title: 'No changes detected.',
+                description: 'Your profile information is already up to date.',
+            });
+        }
+    } catch (error: any) {
+        console.error('Profile update error:', error);
         toast({
-            title: 'Coming Soon!',
-            description: 'Profile saving functionality is under development.',
+            variant: 'destructive',
+            title: 'Update failed',
+            description: error.message || 'An unexpected error occurred.',
         });
+    } finally {
         setIsSaving(false);
-    }, 1000);
+    }
   };
 
   if (loading || !user) {
@@ -64,13 +136,20 @@ export default function ProfilePage() {
             <CardContent className="space-y-8">
                 <div className="flex items-center gap-6">
                     <Avatar className="h-20 w-20">
-                        <AvatarImage data-ai-hint="person" src="https://placehold.co/80x80.png" />
+                        <AvatarImage src={avatarPreview || ''} />
                         <AvatarFallback className="text-3xl">
                             {getInitials(user.email)}
                         </AvatarFallback>
                     </Avatar>
                     <div className="flex-1">
-                        <Button variant="outline">Change Avatar (Soon)</Button>
+                         <input
+                            type="file"
+                            ref={fileInputRef}
+                            onChange={handleAvatarChange}
+                            className="hidden"
+                            accept="image/png, image/jpeg, image/gif"
+                        />
+                        <Button variant="outline" onClick={() => fileInputRef.current?.click()}>Change Avatar</Button>
                         <p className="text-xs text-muted-foreground mt-2">JPG, GIF or PNG. 1MB max.</p>
                     </div>
                 </div>
@@ -78,7 +157,7 @@ export default function ProfilePage() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div className="space-y-2">
                         <Label htmlFor="fullName">Full Name</Label>
-                        <Input id="fullName" placeholder="Your Name" defaultValue={user.displayName || ''} />
+                        <Input id="fullName" placeholder="Your Name" value={displayName} onChange={(e) => setDisplayName(e.target.value)} />
                     </div>
                     <div className="space-y-2">
                         <Label htmlFor="email">Email Address</Label>
@@ -86,7 +165,7 @@ export default function ProfilePage() {
                     </div>
                     <div className="space-y-2 md:col-span-2">
                         <Label htmlFor="exam-preference">Primary Exam Preference</Label>
-                        <Input id="exam-preference" placeholder="e.g., UPSC Civil Services" />
+                        <Input id="exam-preference" placeholder="e.g., UPSC Civil Services" value={examPreference} onChange={(e) => setExamPreference(e.target.value)} />
                     </div>
                 </div>
             </CardContent>
