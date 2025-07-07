@@ -1,6 +1,6 @@
 import { db } from '@/lib/firebase';
 import { collection, addDoc, query, where, orderBy, limit, getDocs, Timestamp, doc, getDoc } from 'firebase/firestore';
-import type { NewspaperAnalysisOutput } from '@/ai/flows/newspaper-analysis-flow';
+import type { NewspaperAnalysisOutput, MCQ, MainsQuestion } from '@/ai/flows/newspaper-analysis-flow';
 
 export interface HistoryEntry {
   id: string;
@@ -9,6 +9,19 @@ export interface HistoryEntry {
   timestamp: Timestamp;
   articleUrl?: string; // Optional: to link back to the source
 }
+
+export type PrelimsQuestionWithContext = MCQ & {
+    historyId: string;
+    timestamp: Timestamp;
+    articleUrl?: string;
+};
+
+export type MainsQuestionWithContext = MainsQuestion & {
+    historyId: string;
+    timestamp: Timestamp;
+    articleUrl?: string;
+};
+
 
 export async function addHistory(userId: string, analysis: NewspaperAnalysisOutput, articleUrl?: string) {
   if (!db) {
@@ -32,9 +45,9 @@ export async function addHistory(userId: string, analysis: NewspaperAnalysisOutp
   }
 }
 
-export async function getHistory(userId: string): Promise<HistoryEntry[]> {
+async function getAllHistory(userId: string): Promise<HistoryEntry[]> {
   if (!db) {
-    console.log("Firestore not initialized. Skipping getHistory.");
+    console.log("Firestore not initialized. Skipping getAllHistory.");
     return [];
   }
   
@@ -43,8 +56,7 @@ export async function getHistory(userId: string): Promise<HistoryEntry[]> {
     const q = query(
         collection(db, 'userHistory'), 
         where('userId', '==', userId), 
-        orderBy('timestamp', 'desc'), 
-        limit(20)
+        orderBy('timestamp', 'desc')
     );
     
     const querySnapshot = await getDocs(q);
@@ -52,9 +64,22 @@ export async function getHistory(userId: string): Promise<HistoryEntry[]> {
       history.push({ id: doc.id, ...doc.data() } as HistoryEntry);
     });
   } catch(error) {
-      console.error("Error fetching history: ", error);
+      console.error("Error fetching all history: ", error);
+      if ((error as any).code === 'permission-denied') {
+          throw new Error("Could not read history due to a permission error. Please ensure your Firestore security rules allow 'list' operations on the 'userHistory' collection for authenticated users.");
+      }
   }
   return history;
+}
+
+
+export async function getHistory(userId: string): Promise<HistoryEntry[]> {
+  if (!db) {
+    console.log("Firestore not initialized. Skipping getHistory.");
+    return [];
+  }
+  const allHistory = await getAllHistory(userId);
+  return allHistory.slice(0, 20);
 }
 
 
@@ -77,4 +102,41 @@ export async function getHistoryEntry(id: string): Promise<HistoryEntry | null> 
     console.error("Error fetching history entry: ", error);
     return null;
   }
+}
+
+export async function getPrelimsQuestions(userId: string): Promise<PrelimsQuestionWithContext[]> {
+    const allHistory = await getAllHistory(userId);
+    const prelimsQuestions = allHistory.flatMap(entry => 
+        (entry.analysis.prelims?.mcqs || []).map(mcq => ({
+            ...mcq,
+            historyId: entry.id,
+            timestamp: entry.timestamp,
+            articleUrl: entry.articleUrl
+        }))
+    );
+    return prelimsQuestions;
+}
+
+export async function getMainsQuestions(userId: string): Promise<MainsQuestionWithContext[]> {
+    const allHistory = await getAllHistory(userId);
+    const mainsQuestions = allHistory.flatMap(entry => 
+        (entry.analysis.mains?.questions || []).map(question => ({
+            ...question,
+            historyId: entry.id,
+            timestamp: entry.timestamp,
+            articleUrl: entry.articleUrl
+        }))
+    );
+    return mainsQuestions;
+}
+
+export async function getQuestionStats(userId:string) {
+    const allHistory = await getAllHistory(userId);
+    let prelimsCount = 0;
+    let mainsCount = 0;
+    allHistory.forEach(entry => {
+        prelimsCount += entry.analysis.prelims?.mcqs?.length || 0;
+        mainsCount += entry.analysis.mains?.questions?.length || 0;
+    });
+    return { prelimsCount, mainsCount };
 }

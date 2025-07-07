@@ -8,7 +8,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Newspaper, Mic, FileQuestion, PenLine, Book, BarChart3, HelpCircle, Users, Settings, LogOut, ChevronDown, CheckCircle, Flame, Target, PlayCircle, Library, Menu } from 'lucide-react';
-import { getHistory, type HistoryEntry } from '@/services/historyService';
+import { getHistory, type HistoryEntry, getQuestionStats } from '@/services/historyService';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Calendar } from '@/components/ui/calendar';
 import { Progress } from '@/components/ui/progress';
@@ -18,6 +18,7 @@ import { isToday } from 'date-fns';
 import { Sheet, SheetContent, SheetTrigger, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet';
 import { UserNav } from '@/components/layout/user-nav';
 import { getUserQuizStats, type UserQuizStats } from '@/services/quizAttemptsService';
+import { Separator } from '@/components/ui/separator';
 
 
 // --- Local Components for Dashboard ---
@@ -50,6 +51,17 @@ const SidebarContent = () => (
                 <PenLine className="w-5 h-5" />
                 <span>Writing Practice</span>
             </Link>
+            <Separator className="my-2 bg-border/50" />
+            <p className="px-3 text-xs font-semibold text-muted-foreground/80 tracking-wider">Question Bank</p>
+             <Link href="/prelims-questions" className="flex items-center gap-3 p-3 text-muted-foreground hover:bg-muted/50 hover:text-foreground rounded-lg transition-colors">
+                <FileQuestion className="w-5 h-5" />
+                <span>Prelims Q-Bank</span>
+            </Link>
+             <Link href="/mains-questions" className="flex items-center gap-3 p-3 text-muted-foreground hover:bg-muted/50 hover:text-foreground rounded-lg transition-colors">
+                <PenLine className="w-5 h-5" />
+                <span>Mains Q-Bank</span>
+            </Link>
+            <Separator className="my-2 bg-border/50" />
              <Link href="#" className="flex items-center gap-3 p-3 text-muted-foreground hover:bg-muted/50 hover:text-foreground rounded-lg transition-colors">
                 <Book className="w-5 h-5" />
                 <span>Syllabus</span>
@@ -253,6 +265,8 @@ export default function ReimaginedDashboardPage() {
     const [history, setHistory] = useState<HistoryEntry[]>([]);
     const [historyLoading, setHistoryLoading] = useState(true);
     const [quizStats, setQuizStats] = useState<UserQuizStats | null>(null);
+    const [questionStats, setQuestionStats] = useState<{ prelimsCount: number; mainsCount: number } | null>(null);
+
 
     useEffect(() => {
         if (!loading && !user) {
@@ -272,6 +286,9 @@ export default function ReimaginedDashboardPage() {
             getUserQuizStats(user.uid).then(stats => {
                 setQuizStats(stats);
             });
+            getQuestionStats(user.uid).then(stats => {
+                setQuestionStats(stats);
+            });
         }
     }, [user]);
 
@@ -279,10 +296,12 @@ export default function ReimaginedDashboardPage() {
         const lastActivity = history?.[0];
         const lastActivityWasToday = lastActivity ? isToday(new Date(lastActivity.timestamp.seconds * 1000)) : false;
 
+        let content = [];
+
         if (lastActivityWasToday) {
             const analysis = lastActivity.analysis;
-            return (
-                <Card className="flex-1 glassmorphic">
+            content.push(
+                <Card className="flex-1 glassmorphic" key="today-activity">
                     <CardHeader className="flex-row items-start gap-4">
                         <div className="p-2 bg-green-500/20 rounded-full">
                             <CheckCircle className="w-5 h-5 text-green-500"/>
@@ -305,44 +324,73 @@ export default function ReimaginedDashboardPage() {
                 </Card>
             );
         } else {
-            return (
-                <>
-                    <Card className="flex-1 glassmorphic">
-                        <CardHeader className="flex-row items-start gap-4">
-                            <div className="p-2 bg-primary/20 rounded-full">
-                                <Newspaper className="w-5 h-5 text-primary"/>
-                            </div>
-                            <div>
-                                <CardTitle className="text-base font-semibold">Analyze a News Article</CardTitle>
-                                <CardDescription className="text-xs">Stay updated and generate exam-ready questions from today&apos;s news.</CardDescription>
-                            </div>
-                        </CardHeader>
-                        <CardFooter>
-                            <Button asChild variant="default" size="sm">
-                                <Link href="/newspaper-analysis">Start Analyzing</Link>
-                            </Button>
-                        </CardFooter>
-                    </Card>
-                     <Card className="flex-1 glassmorphic">
-                        <CardHeader className="flex-row items-start gap-4">
-                            <div className="p-2 bg-primary/20 rounded-full">
-                                <FileQuestion className="w-5 h-5 text-primary"/>
-                            </div>
-                            <div>
-                                <CardTitle className="text-base font-semibold">Take a Daily Quiz</CardTitle>
-                                <CardDescription className="text-xs">Sharpen your knowledge with a quick, adaptive quiz.</CardDescription>
-                            </div>
-                        </CardHeader>
-                        <CardFooter>
-                            <Button asChild variant="outline" size="sm">
-                                <Link href="/daily-quiz">Start Quiz</Link>
-                            </Button>
-                        </CardFooter>
-                    </Card>
-                </>
+            content.push(
+                <Card className="flex-1 glassmorphic" key="analyze-article">
+                    <CardHeader className="flex-row items-start gap-4">
+                        <div className="p-2 bg-primary/20 rounded-full">
+                            <Newspaper className="w-5 h-5 text-primary"/>
+                        </div>
+                        <div>
+                            <CardTitle className="text-base font-semibold">Analyze a News Article</CardTitle>
+                            <CardDescription className="text-xs">Stay updated and generate exam-ready questions from today&apos;s news.</CardDescription>
+                        </div>
+                    </CardHeader>
+                    <CardFooter>
+                        <Button asChild variant="default" size="sm">
+                            <Link href="/newspaper-analysis">Start Analyzing</Link>
+                        </Button>
+                    </CardFooter>
+                </Card>,
+                 <Card className="flex-1 glassmorphic" key="take-quiz">
+                    <CardHeader className="flex-row items-start gap-4">
+                        <div className="p-2 bg-primary/20 rounded-full">
+                            <FileQuestion className="w-5 h-5 text-primary"/>
+                        </div>
+                        <div>
+                            <CardTitle className="text-base font-semibold">Take a Daily Quiz</CardTitle>
+                            <CardDescription className="text-xs">Sharpen your knowledge with a quick, adaptive quiz.</CardDescription>
+                        </div>
+                    </CardHeader>
+                    <CardFooter>
+                        <Button asChild variant="outline" size="sm">
+                            <Link href="/daily-quiz">Start Quiz</Link>
+                        </Button>
+                    </CardFooter>
+                </Card>
             );
         }
-    }, [history]);
+
+        if(questionStats && (questionStats.prelimsCount > 0 || questionStats.mainsCount > 0)) {
+            content.push(
+                <Card className="flex-1 glassmorphic" key="q-bank">
+                    <CardHeader className="flex-row items-start gap-4">
+                        <div className="p-2 bg-primary/20 rounded-full">
+                            <Library className="w-5 h-5 text-primary"/>
+                        </div>
+                        <div>
+                            <CardTitle className="text-base font-semibold">Your Question Bank</CardTitle>
+                            <CardDescription className="text-xs">A growing repository of your practice questions.</CardDescription>
+                        </div>
+                    </CardHeader>
+                    <CardContent>
+                        <div className="text-2xl font-bold">{questionStats.prelimsCount + questionStats.mainsCount}</div>
+                        <p className="text-xs text-muted-foreground">Total Questions Generated</p>
+                        <div className="mt-4 flex justify-between text-sm">
+                            <span className="text-muted-foreground">Prelims MCQs</span>
+                            <span className="font-semibold">{questionStats.prelimsCount}</span>
+                        </div>
+                        <div className="flex justify-between text-sm">
+                            <span className="text-muted-foreground">Mains Questions</span>
+                            <span className="font-semibold">{questionStats.mainsCount}</span>
+                        </div>
+                    </CardContent>
+                </Card>
+            )
+        }
+
+        return content;
+
+    }, [history, questionStats]);
 
 
     if (loading || !user) {
@@ -351,9 +399,7 @@ export default function ReimaginedDashboardPage() {
 
     return (
         <div className="min-h-screen bg-muted/30 dark:bg-muted/10">
-            <MobileHeader>
-                <SidebarContent />
-            </MobileHeader>
+            <MobileHeader />
             <div className="lg:grid lg:grid-cols-[280px_1fr] xl:grid-cols-[280px_1fr_320px] lg:gap-4 lg:p-4 h-full">
                 <LeftSidebar />
                 <main className="flex flex-col gap-6 p-4 lg:p-0">
