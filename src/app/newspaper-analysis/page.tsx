@@ -223,7 +223,7 @@ const markdownComponents = {
   h3: (props: any) => <h3 className="text-xl font-semibold font-headline mt-6 mb-2 text-primary/90" {...props} />,
   p: (props: any) => <p className="leading-relaxed my-4" {...props} />,
   ul: (props: any) => <ul className="list-disc list-outside pl-6 my-4 space-y-2 text-muted-foreground" {...props} />,
-  ol: (props: any) => <ol className="list-decimal list-outside pl-6 my-4 space-y-2" {...props} />,
+  ol: (props: any) => <ol className="list-decimal list-inside pl-6 my-4 space-y-2" {...props} />,
   li: (props: any) => <li className="pl-2" {...props} />,
   strong: (props: any) => <strong className="font-bold text-foreground" {...props} />,
 };
@@ -404,7 +404,7 @@ export default function NewspaperAnalysisPage() {
   const { toast } = useToast();
 
   const handleInputChange = (field: keyof typeof inputs, value: string) => {
-    setInputs(prev => ({ ...prev, [field: value }));
+    setInputs(prev => ({ ...prev, [field]: value }));
   };
 
   const handleAnalyze = async () => {
