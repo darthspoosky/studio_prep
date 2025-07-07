@@ -12,7 +12,7 @@ import { getHistory, type HistoryEntry, getQuestionStats } from '@/services/hist
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Calendar } from '@/components/ui/calendar';
 import { Progress } from '@/components/ui/progress';
-import { RadialBarChart, RadialBar, ResponsiveContainer, PolarAngleAxis, BarChart, XAxis, YAxis, Tooltip, Legend, Bar } from 'recharts';
+import { RadialBarChart, RadialBar, ResponsiveContainer, PolarAngleAxis, BarChart, XAxis, YAxis, Tooltip, Legend, Bar, CartesianGrid } from 'recharts';
 import { Skeleton } from '@/components/ui/skeleton';
 import { isToday } from 'date-fns';
 import { Sheet, SheetContent, SheetTrigger, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet';
