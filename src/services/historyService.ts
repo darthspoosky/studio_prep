@@ -55,6 +55,7 @@ async function getAllHistory(userId: string): Promise<HistoryEntry[]> {
   
   const history: HistoryEntry[] = [];
   try {
+    // Simplified query to prevent index-related permission errors
     const q = query(collection(db, 'userHistory'), where('userId', '==', userId));
     
     const querySnapshot = await getDocs(q);
