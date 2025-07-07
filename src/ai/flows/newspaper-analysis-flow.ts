@@ -294,18 +294,19 @@ const relevanceCheckPrompt = ai.definePrompt({
 1. **Direct Syllabus Mapping**: The article must relate to specific topics mentioned in UPSC Prelims or Mains syllabus
 2. **Exam Utility**: Content should be testable in UPSC format (factual knowledge, analytical thinking, current affairs)
 3. **Depth Requirement**: Article should provide enough content for meaningful question generation
+4. **Government Priority Signals**: High relevance for issues in Economic Survey, President’s Address, or major policy announcements.
 
 **GRANULAR TOPIC IDENTIFICATION:**
 - Instead of broad categories like "GS-II", specify exactly: "GS Paper II - Governance - Digital Governance and E-governance applications, models, successes, limitations, and potential"
 - For current affairs, connect to static syllabus topics: "GS Paper II - International Relations - India and its Neighborhood" + specific policy/event
 - For economy articles: "GS Paper III - Economics - Indian Economy and Planning" + specific sector/policy
 
-**RELEVANCE ASSESSMENT:**
-- **Highly Relevant (0.8-1.0)**: Directly testable, connects current affairs to static knowledge, multiple question possibilities
-- **Moderately Relevant (0.5-0.7)**: Tangentially related, limited question potential, requires significant context
-- **Not Relevant (0.0-0.4)**: Sports scores, celebrity news, purely local events, fiction, entertainment
+**RELEVANCE ASSESSMENT (Confidence Score):**
+- **Highly Relevant (0.8-1.0)**: Directly testable, connects current affairs to static knowledge, multiple question possibilities.
+- **Moderately Relevant (0.5-0.7)**: Tangentially related, limited question potential, requires significant context.
+- **Not Relevant (0.0-0.4)**: Sports scores, celebrity news, purely local events, fiction, entertainment.
 
-**QUALITY INDICATORS:**
+**QUALITY INDICATORS TO LOOK FOR:**
 ✅ Policy announcements, constitutional matters, international relations, economic developments, environmental issues, governance reforms
 ❌ Entertainment news, sports results, personal controversies, purely speculative content
 
@@ -329,7 +330,7 @@ const analysisPrompt = ai.definePrompt({
 
 **CORE MISSION**: Create questions that would seamlessly fit into an actual UPSC paper and challenge aspirants at the appropriate analytical level.
 
-CRITICAL: Your entire response, including all analysis, questions, summaries, and explanations, MUST be in the following language: {{{outputLanguage}}}. The only exception is the structural heading '## Potential Mains Questions', which must ALWAYS be in English.
+CRITICAL: Your entire response, including all analysis, questions, summaries, and explanations, MUST be in the following language: {{{outputLanguage}}}.
 
 **ARTICLE CONTEXT:**
 - Identified Syllabus Topic: '{{{identifiedSyllabusTopic}}}'
@@ -351,14 +352,14 @@ CRITICAL: Your entire response, including all analysis, questions, summaries, an
 
 **QUALITY STANDARDS (NON-NEGOTIABLE):**
 - Difficulty: 8-9 out of 10 (actual UPSC standard)
-- Questions must test synthesis and analysis, NOT mere factual recall
-- Integrate article facts with static syllabus knowledge
-- Each question should have a 40-50% success rate among serious aspirants
+- Questions must test synthesis and analysis, NOT mere factual recall.
+- Integrate article facts with static syllabus knowledge.
+- Each question should have a 40-50% success rate among serious aspirants.
 
 **STATEMENT CREATION HIERARCHY:**
-1. **Statement 1** (Moderate - 60% aspirants should know): Based on article + basic static knowledge
-2. **Statement 2** (Difficult - 30% aspirants should know): Requires deeper analysis + policy understanding  
-3. **Statement 3** (Expert - 15% aspirants should know): Tests advanced synthesis + nuanced understanding
+1. **Statement 1** (Moderate - 60% aspirants should know): Based on article + basic static knowledge.
+2. **Statement 2** (Difficult - 30% aspirants should know): Requires deeper analysis + policy understanding.
+3. **Statement 3** (Expert - 15% aspirants should know): Tests advanced synthesis + nuanced understanding.
 
 **UPSC QUESTION TEMPLATES TO FOLLOW:**
 
@@ -374,32 +375,14 @@ CRITICAL: Your entire response, including all analysis, questions, summaries, an
 2. [Broader implications] + [Connection to other policies/sectors]
 3. [Critical assessment] + [Long-term strategic significance]"
 
-**EXACT FORMATTING REQUIREMENTS:**
-
-<mcq question="Consider the following statements regarding [specific topic]:
-1. [Statement integrating article fact with static knowledge]
-2. [Statement requiring analytical thinking beyond the article]
-3. [Statement testing deep conceptual understanding]
-Which of the statements given above is/are correct?" subject="{{{identifiedSyllabusTopic}}}" explanation="Statement 1: [Detailed reasoning with article references and static knowledge]. Statement 2: [Analysis requiring synthesis of multiple concepts]. Statement 3: [Expert-level explanation with broader implications]." difficultyScore="8">
-<option>1 only</option>
-<option>2 only</option>
-<option correct="true">1 and 2 only</option>
-<option>1, 2 and 3</option>
-</mcq>
-
 **OPTION STRATEGY (UPSC PATTERN):**
-- '1 only': Use as distractor (rarely correct in actual UPSC)
-- '2 only': Moderate frequency
-- '1 and 2 only': HIGH frequency (most common correct answer)
-- '2 and 3 only': HIGH frequency  
-- '1 and 3 only': Moderate frequency
-- '1, 2 and 3': Use sparingly (when genuinely all are correct)
-
-**CRITICAL FORMATTING RULES:**
-❌ NEVER: "1 only2 only1 and 3 only" (concatenated)
-✅ ALWAYS: Separate <option> tags on individual lines
-❌ NEVER: Skip closing </mcq> tag
-✅ ALWAYS: Include difficultyScore="8" or "9"
+- '1 only': Use as distractor (rarely correct in actual UPSC).
+- '2 only': Moderate frequency.
+- '1 and 2 only': HIGH frequency (most common correct answer).
+- '2 and 3 only': HIGH frequency.
+- '1 and 3 only': Moderate frequency.
+- '1, 2 and 3': Use sparingly (when genuinely all are correct).
+- Ensure variety in correct options across questions.
 
 **Return ALL Prelims MCQs inside the JSON field \`prelims.mcqs\`.**
 
@@ -407,7 +390,7 @@ Which of the statements given above is/are correct?" subject="{{{identifiedSylla
 
 **DIRECTIVE WORDS TO USE:**
 - "Critically analyze" (for balanced assessment)
-- "Examine" (for detailed study)  
+- "Examine" (for detailed study)
 - "Discuss" (for multi-faceted analysis)
 - "Evaluate" (for assessment with judgment)
 - "Comment" (for opinion with justification)
@@ -419,9 +402,8 @@ Each question must demand:
 - Current affairs + static knowledge integration
 - Balanced arguments with conclusion
 
-**MANDATORY FORMATTING:**
-## [Complete Question with directive word]? (Difficulty: 8/10)
-
+**MANDATORY FORMAT FOR THE 'guidance' FIELD:**
+The 'guidance' for each Mains question must be a markdown string with this EXACT structure:
 ### Guidance for Answer
 **Key Concepts:** [List 5-6 core syllabus concepts essential for the answer]
 **Ideal Structure:**
@@ -439,12 +421,12 @@ Each question must demand:
 
 **QUALITY ASSURANCE CHECKLIST:**
 Before finalizing, ensure:
-✅ All questions integrate article content with broader syllabus knowledge
-✅ Difficulty appropriate for UPSC (no obvious/too easy questions)
-✅ Options follow genuine UPSC patterns
-✅ Explanations demonstrate deep understanding
-✅ Language consistency throughout
-✅ Proper formatting with all required tags
+✅ All questions integrate article content with broader syllabus knowledge.
+✅ Difficulty appropriate for UPSC (no obvious/too easy questions).
+✅ Options follow genuine UPSC patterns.
+✅ Explanations demonstrate deep understanding.
+✅ Language consistency throughout.
+✅ Proper JSON formatting.
 `,
 });
 
@@ -459,83 +441,38 @@ const verificationPrompt = ai.definePrompt({
   name: 'enhancedVerificationPrompt',
   input: { schema: VerificationInputSchema },
   output: { schema: NewspaperAnalysisOutputSchema },
-  prompt: `You are a Senior Quality Assurance Editor for a premium UPSC preparation platform. Your role is critical - any errors you miss will break the user interface and damage user experience. You have zero tolerance for formatting errors, factual inconsistencies, or quality issues.
+  prompt: `You are a Senior Quality Assurance Editor for a premium UPSC preparation platform. Your role is critical - any errors you miss will damage user experience. You have zero tolerance for factual inconsistencies or quality issues.
 
-**CRITICAL MISSION**: Transform the AI-generated analysis into a flawless, publication-ready output that meets the highest standards.
+**CRITICAL MISSION**: Verify the AI-generated analysis and enhance it to meet the highest standards.
 
 **PRIMARY QUALITY CHECKPOINTS:**
 
-## **1. COHERENCY VERIFICATION (CRITICAL)**
-- Verify the entire analysis discusses ONLY the provided source article
-- If content seems to merge multiple articles or introduce external information not in the source, REWRITE to focus exclusively on the provided text
-- Ensure all examples, statistics, and references come directly from the source article
+## **1. COHERENCY VERIFICATION**
+- Verify the entire analysis discusses ONLY the provided source article.
+- If content seems to merge multiple articles or introduce external information not in the source, REWRITE to focus exclusively on the provided text.
+- Ensure all examples, statistics, and references come directly from the source article.
 
-## **2. MCQ FORMATTING REPAIR (EMERGENCY PROTOCOL)**
-
-**COMMON CRITICAL ERROR - AUTO-FIX REQUIRED:**
-If you encounter this broken pattern:
-\`\`\`
-<mcq question="..." difficultyScore="7">
-1 only2 only1 and 3 only1, 2 and 3
-</mcq>
-\`\`\`
-
-**MANDATORY AUTO-FIX TO:**
-\`\`\`
-<mcq question="..." difficultyScore="7">
-<option correct="true">1 only</option>
-<option>2 only</option>
-<option>1 and 3 only</option>
-<option>1, 2 and 3</option>
-</mcq>
-\`\`\`
-
-**MCQ VALIDATION CHECKLIST (EVERY MCQ MUST PASS):**
-✅ Has opening <mcq> tag with all required attributes
-✅ Has closing </mcq> tag  
-✅ Contains 'difficultyScore' attribute (value 7-10)
-✅ Has exactly 4 <option> tags, each on separate lines
-✅ Has ONE option with correct="true" attribute
-✅ Question follows "Consider the following statements" format
-✅ Explanation is comprehensive (minimum 150 characters)
-
-## **3. MAINS QUESTIONS FORMATTING (IF APPLICABLE)**
-**MANDATORY FORMAT VALIDATION:**
-✅ Every question starts with ## heading
-✅ Difficulty rating included: "(Difficulty: X/10)"
-✅ "### Guidance for Answer" section present after each question
-✅ All subsections properly formatted (Key Concepts, Ideal Structure, etc.)
-
-## **4. CONTENT QUALITY ENHANCEMENT**
+## **2. CONTENT QUALITY ENHANCEMENT**
 
 **UPSC REALISM CHECK:**
-- Questions should test analysis, not just factual recall
-- Options must follow authentic UPSC patterns
-- Difficulty must be appropriate (8-9 for actual UPSC level)
-- Explanations must demonstrate why each statement is correct/incorrect
+- **Prelims:** Do questions test analysis, not just factual recall? Do options follow authentic UPSC patterns (e.g., "1 and 2 only", "All of the above")? Are explanations comprehensive and analytical, explaining why each statement is correct/incorrect?
+- **Mains:** Do questions use appropriate directive words ("Critically analyze", "Examine")? Is the 'guidance' field structured, providing a clear path to a high-scoring answer?
+- **Difficulty:** Is the difficulty appropriate (7-9/10 for UPSC level)? Adjust if questions are too easy or obscure.
 
-**LANGUAGE CONSISTENCY:**
-- Entire content in {{{outputLanguage}}} except structural headings
-- Technical terms used appropriately
-- Professional, examination-appropriate tone
-
-## **5. SUMMARY SANITIZATION**
+## **3. SUMMARY SANITIZATION**
 **CRITICAL**: The 'summary' field must be:
-- Clean plain text (NO HTML/XML/custom tags)
-- 2-3 sentences maximum
-- Suitable for text-to-speech conversion
+- Clean plain text (NO HTML/XML/custom tags).
+- 2-3 sentences maximum.
+- Suitable for text-to-speech conversion.
 - Strip ANY markup: <tags>, &entities;, etc.
 
-## **6. FINAL QUALITY METRICS**
+## **4. FINAL QUALITY METRICS**
 Calculate and include:
-- questionsCount: Number of MCQs generated
-- qualityScore: Based on formatting compliance (0-1 scale)
+- questionsCount: Number of MCQs generated.
+- qualityScore: Based on compliance with UPSC standards (0-1 scale).
 
 **ERROR RECOVERY PROTOCOL:**
-If critical errors cannot be fixed:
-- Flag the issue in the analysis
-- Provide partial content rather than complete failure
-- Include clear guidance for user next steps
+If the generated analysis is poor quality or irrelevant, replace it with a graceful failure message within the JSON structure. Do not fail completely. Provide partial content if some parts are good.
 
 **VERIFICATION COMPLETE - OUTPUT REQUIREMENTS:**
 Return ONLY valid JSON matching the output schema. This JSON should be polished and error-free, ready for use in the application.
