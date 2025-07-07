@@ -12,7 +12,7 @@ import { Textarea } from "@/components/ui/textarea";
 import Footer from "@/components/landing/footer";
 import Header from "@/components/layout/header";
 import Link from "next/link";
-import { ArrowLeft, Loader2, Sparkles, CheckCircle, XCircle, Circle, Info, Maximize, Volume2, Gauge, IndianRupee, MoveRight, Share2 } from "lucide-react";
+import { ArrowLeft, Loader2, Sparkles, CheckCircle, XCircle, Circle, Info, Maximize, Volume2, Gauge, IndianRupee, MoveRight, Share2, Bookmark } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { analyzeNewspaperArticle, type NewspaperAnalysisInput, type NewspaperAnalysisOutput, type MCQ as MCQType, type MainsQuestion, type KnowledgeGraph } from "@/ai/flows/newspaper-analysis-flow";
 import { textToSpeech } from "@/ai/flows/text-to-speech-flow";
@@ -26,10 +26,11 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { useAuth } from "@/contexts/AuthContext";
 import { useRouter } from "next/navigation";
-import { addHistory } from "@/services/historyService";
+import { addHistory, type PrelimsQuestionWithContext } from "@/services/historyService";
 import { incrementToolUsage } from "@/services/usageService";
 import { saveQuizAttempt } from "@/services/quizAttemptsService";
 import { saveMainsAnswer } from "@/services/mainsAnswerService";
+import { saveQuestion, unsaveQuestion, getSavedStatus, getSavedQuestionId } from "@/services/savedQuestionsService";
 import { Skeleton } from "@/components/ui/skeleton";
 
 
@@ -62,20 +63,17 @@ const FormattedQuestion = ({ text }: { text: string }) => {
 
     const firstStatementIndex = lines.findIndex(line => /^\d+\.\s/.test(line.trim()));
 
-    // If no numbered statements are found, render with preserved line breaks.
     if (firstStatementIndex === -1) {
         return <p className="font-semibold leading-relaxed text-foreground" style={{ whiteSpace: 'pre-line' }}>{text}</p>;
     }
 
     const preamble = lines.slice(0, firstStatementIndex).join('\n');
     
-    // Find where the statements end
     let lastStatementIndex = firstStatementIndex;
     for (let i = firstStatementIndex + 1; i < lines.length; i++) {
         if (/^\d+\.\s/.test(lines[i].trim())) {
             lastStatementIndex = i;
         } else {
-            // Stop at the first line that is not a numbered statement
             break; 
         }
     }
@@ -97,7 +95,7 @@ const FormattedQuestion = ({ text }: { text: string }) => {
 };
 
 
-const MCQ = ({ mcq, onAnswer }: { mcq: MCQType, onAnswer: (question: string, selectedOption: string, isCorrect: boolean, subject?: string, difficulty?: number) => void }) => {
+const MCQ = ({ mcq, onAnswer, isSaved, onSaveToggle }: { mcq: MCQType, onAnswer: (question: string, selectedOption: string, isCorrect: boolean, subject?: string, difficulty?: number) => void, isSaved: boolean, onSaveToggle: (mcq: MCQType) => void }) => {
   const { question, subject, explanation, options, difficulty } = mcq;
   const [selected, setSelected] = useState<string | null>(null);
   const [isAnswered, setIsAnswered] = useState(false);
@@ -114,7 +112,22 @@ const MCQ = ({ mcq, onAnswer }: { mcq: MCQType, onAnswer: (question: string, sel
   const hasSelectedCorrect = options.some(o => o.text === selected && o.correct);
 
   return (
-    <div className="my-6 p-4 border rounded-lg bg-background/50 shadow-sm">
+    <div className="my-6 p-4 border rounded-lg bg-background/50 shadow-sm relative">
+       <div className="absolute top-2 right-2 flex items-center gap-2">
+         <TooltipProvider>
+            <Tooltip>
+                <TooltipTrigger asChild>
+                    <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-primary" onClick={() => onSaveToggle(mcq)}>
+                        <Bookmark className={cn("w-4 h-4", isSaved && "fill-primary text-primary")} />
+                    </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                    <p>{isSaved ? 'Remove from Question Wall' : 'Save to Question Wall'}</p>
+                </TooltipContent>
+            </Tooltip>
+        </TooltipProvider>
+      </div>
+
       {score && <DifficultyGauge score={score} />}
       <FormattedQuestion text={question} />
       {subject && <Badge variant="secondary" className="mb-4 mt-2 font-normal">{subject}</Badge>}
@@ -196,7 +209,7 @@ const MCQ = ({ mcq, onAnswer }: { mcq: MCQType, onAnswer: (question: string, sel
   );
 };
 
-const MCQList = ({ mcqs, onAnswer }: { mcqs: MCQType[], onAnswer: (question: string, selectedOption: string, isCorrect: boolean, subject?: string, difficulty?: number) => void }) => {
+const MCQList = ({ mcqs, onAnswer, onSaveToggle, savedQuestionIds }: { mcqs: MCQType[], onAnswer: (question: string, selectedOption: string, isCorrect: boolean, subject?: string, difficulty?: number) => void, onSaveToggle: (mcq: MCQType) => void, savedQuestionIds: Set<string> }) => {
     if (!mcqs || mcqs.length === 0) {
         return (
             <div className="text-center text-muted-foreground p-8">
@@ -206,9 +219,17 @@ const MCQList = ({ mcqs, onAnswer }: { mcqs: MCQType[], onAnswer: (question: str
     }
     return (
         <div>
-            {mcqs.map((q, idx) => (
-                <MCQ key={idx} mcq={q} onAnswer={onAnswer} />
-            ))}
+            {mcqs.map((q, idx) => {
+                const mcqWithContext = q as PrelimsQuestionWithContext;
+                const savedQuestionId = getSavedQuestionId(mcqWithContext.userId, mcqWithContext);
+                return <MCQ 
+                    key={idx} 
+                    mcq={q} 
+                    onAnswer={onAnswer}
+                    onSaveToggle={onSaveToggle} 
+                    isSaved={savedQuestionIds.has(savedQuestionId)} 
+                />
+            })}
         </div>
     );
 };
@@ -462,6 +483,7 @@ export default function NewspaperAnalysisPage() {
   const [audioSrc, setAudioSrc] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState("url");
   const [currentAnalysisTab, setCurrentAnalysisTab] = useState('prelims');
+  const [savedQuestionIds, setSavedQuestionIds] = useState(new Set<string>());
   const [inputs, setInputs] = useState({
     url: "",
     text: "",
@@ -476,6 +498,10 @@ export default function NewspaperAnalysisPage() {
   };
 
   const handleAnalyze = async () => {
+    if (!user) {
+        toast({ variant: 'destructive', title: "Not logged in", description: "You need to be logged in to analyze articles." });
+        return;
+    }
     let sourceText = inputs.text;
 
     if (activeTab === 'url') {
@@ -523,6 +549,7 @@ export default function NewspaperAnalysisPage() {
     setAnalysisResult(null);
     setHistoryId(null);
     setAudioSrc(null);
+    setSavedQuestionIds(new Set());
     setCurrentAnalysisTab('prelims');
 
     try {
@@ -534,12 +561,23 @@ export default function NewspaperAnalysisPage() {
         };
         const result = await analyzeNewspaperArticle(flowInput);
         setAnalysisResult(result);
-
-        if (user) {
-            const newHistoryId = await addHistory(user.uid, result, activeTab === 'url' ? inputs.url : undefined);
-            if (newHistoryId) setHistoryId(newHistoryId);
-            await incrementToolUsage(user.uid, 'newspaperAnalysis');
+        
+        const newHistoryId = await addHistory(user.uid, result, activeTab === 'url' ? inputs.url : undefined);
+        if (newHistoryId) {
+            setHistoryId(newHistoryId);
+            // Now that history is saved, we can check saved status for new questions
+            const prelimsQuestions = result.prelims?.mcqs || [];
+            if (prelimsQuestions.length > 0) {
+                const questionIds = prelimsQuestions.map(mcq => {
+                    const questionWithContext: PrelimsQuestionWithContext = { ...mcq, historyId: newHistoryId, timestamp: { seconds: Date.now() / 1000, nanoseconds: 0 }, articleUrl: activeTab === 'url' ? inputs.url : undefined };
+                    return getSavedQuestionId(user.uid, questionWithContext);
+                });
+                const savedStatus = await getSavedStatus(user.uid, questionIds);
+                setSavedQuestionIds(savedStatus);
+            }
         }
+        await incrementToolUsage(user.uid, 'newspaperAnalysis');
+
     } catch (error: any) {
         console.error("Analysis error:", error);
         let description = "The AI failed to analyze the article. Please try again later.";
@@ -585,24 +623,56 @@ export default function NewspaperAnalysisPage() {
       }
   };
 
-  const { prelimsContent, mainsContent, knowledgeGraphContent } = useMemo(() => {
-    if (!analysisResult) {
-        return { prelimsContent: [], mainsContent: [], knowledgeGraphContent: undefined };
+  const handleSaveToggle = async (mcq: MCQType) => {
+    if (!user || !historyId) return;
+
+    const questionWithContext: PrelimsQuestionWithContext = {
+      ...mcq,
+      historyId,
+      timestamp: { seconds: Date.now() / 1000, nanoseconds: 0 },
+      articleUrl: activeTab === 'url' ? inputs.url : undefined
+    };
+
+    const savedQuestionId = getSavedQuestionId(user.uid, questionWithContext);
+    const isCurrentlySaved = savedQuestionIds.has(savedQuestionId);
+    
+    // Optimistic UI Update
+    const newSavedIds = new Set(savedQuestionIds);
+    if (isCurrentlySaved) {
+      newSavedIds.delete(savedQuestionId);
+    } else {
+      newSavedIds.add(savedQuestionId);
     }
-    const hasPrelims = (analysisResult.prelims?.mcqs?.length || 0) > 0;
-    const hasMains = (analysisResult.mains?.questions?.length || 0) > 0;
-    const hasGraph = (analysisResult.knowledgeGraph?.nodes?.length || 0) > 0;
+    setSavedQuestionIds(newSavedIds);
 
-    let defaultTab = 'prelims';
-    if (hasPrelims) defaultTab = 'prelims';
-    else if (hasMains) defaultTab = 'mains';
-    else if (hasGraph) defaultTab = 'connections';
+    try {
+      if (isCurrentlySaved) {
+        await unsaveQuestion(user.uid, questionWithContext);
+        toast({ title: "Removed from Question Wall" });
+      } else {
+        await saveQuestion(user.uid, questionWithContext);
+        toast({ title: "Saved to Question Wall" });
+      }
+    } catch (err) {
+      // Revert UI on failure
+      setSavedQuestionIds(savedQuestionIds);
+      toast({ variant: 'destructive', title: "Action Failed", description: "Please try again." });
+    }
+  };
 
+  const prelimsContent = useMemo(() => {
+    if (!analysisResult) return [];
+    // Enrich with userId for getSavedQuestionId
+    return (analysisResult.prelims?.mcqs || []).map(mcq => ({...mcq, userId: user?.uid || ''} as PrelimsQuestionWithContext));
+  }, [analysisResult, user]);
+
+  const { mainsContent, knowledgeGraphContent } = useMemo(() => {
+    if (!analysisResult) {
+        return { mainsContent: [], knowledgeGraphContent: undefined };
+    }
     return {
-        prelimsContent: analysisResult.prelims?.mcqs || [],
         mainsContent: analysisResult.mains?.questions || [],
         knowledgeGraphContent: analysisResult.knowledgeGraph,
-        defaultTab
     };
   }, [analysisResult]);
 
@@ -853,7 +923,7 @@ export default function NewspaperAnalysisPage() {
                                     {showPrelims && (
                                         <TabsContent value="prelims" className="flex-1 mt-4">
                                             <ScrollArea className="h-[400px] w-full pr-4 -mr-4">
-                                                <MCQList mcqs={prelimsContent} onAnswer={handleAnswer} />
+                                                <MCQList mcqs={prelimsContent} onAnswer={handleAnswer} onSaveToggle={handleSaveToggle} savedQuestionIds={savedQuestionIds} />
                                             </ScrollArea>
                                         </TabsContent>
                                     )}
@@ -882,7 +952,7 @@ export default function NewspaperAnalysisPage() {
                         </DialogHeader>
                         <ScrollArea className="flex-1 pr-6 -mr-6">
                            {analysisResult?.prelims && user && (
-                             <MCQList mcqs={analysisResult.prelims.mcqs} onAnswer={handleAnswer} />
+                             <MCQList mcqs={prelimsContent} onAnswer={handleAnswer} onSaveToggle={handleSaveToggle} savedQuestionIds={savedQuestionIds} />
                            )}
                            {analysisResult?.mains && user && (
                              <MainsQuestionList questions={analysisResult.mains.questions} userId={user.uid} historyId={historyId}/>

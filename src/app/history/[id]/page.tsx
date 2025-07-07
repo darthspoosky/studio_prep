@@ -8,6 +8,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { getHistoryEntry, type HistoryEntry } from '@/services/historyService';
 import { saveQuizAttempt, getQuizAttemptsForHistory } from '@/services/quizAttemptsService';
 import { getMainsAnswersForHistory, saveMainsAnswer } from '@/services/mainsAnswerService';
+import { saveQuestion, unsaveQuestion, getSavedStatus, getSavedQuestionId, type SavedQuestion } from '@/services/savedQuestionsService';
 
 import Header from '@/components/layout/header';
 import Footer from '@/components/landing/footer';
@@ -16,7 +17,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Skeleton } from '@/components/ui/skeleton';
-import { ArrowLeft, ExternalLink, Loader2 } from 'lucide-react';
+import { ArrowLeft, ExternalLink, Loader2, Bookmark } from 'lucide-react';
 
 import { type MCQ as MCQType, type MainsQuestion, type KnowledgeGraph } from "@/ai/flows/newspaper-analysis-flow";
 import { cn } from "@/lib/utils";
@@ -29,6 +30,8 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
+import type { PrelimsQuestionWithContext } from '@/services/historyService';
+
 
 const DifficultyGauge = ({ score }: { score: number }) => {
     if (isNaN(score) || score < 1 || score > 10) return null;
@@ -81,7 +84,7 @@ const FormattedQuestion = ({ text }: { text: string }) => {
     );
 };
 
-const MCQ = ({ mcq, userId, historyId, savedSelection, onAnswer }: { mcq: MCQType, userId: string, historyId: string, savedSelection: string | null, onAnswer: (question: string, selectedOption: string, isCorrect: boolean, subject?: string, difficulty?: number) => void }) => {
+const MCQ = ({ mcq, userId, savedSelection, isSaved, onAnswer, onSaveToggle }: { mcq: PrelimsQuestionWithContext, userId: string, savedSelection: string | null, isSaved: boolean, onAnswer: (question: string, selectedOption: string, isCorrect: boolean, subject?: string, difficulty?: number) => void, onSaveToggle: (mcq: PrelimsQuestionWithContext) => void }) => {
   const { question, subject, explanation, options, difficulty } = mcq;
   const [selected, setSelected] = useState<string | null>(savedSelection);
   const [isAnswered, setIsAnswered] = useState(!!savedSelection);
@@ -97,7 +100,21 @@ const MCQ = ({ mcq, userId, historyId, savedSelection, onAnswer }: { mcq: MCQTyp
   const hasSelectedCorrect = options.some(o => o.text === selected && o.correct);
 
   return (
-    <div className="my-6 p-4 border rounded-lg bg-background/50 shadow-sm">
+    <div className="my-6 p-4 border rounded-lg bg-background/50 shadow-sm relative">
+      <div className="absolute top-2 right-2 flex items-center gap-2">
+         <TooltipProvider>
+            <Tooltip>
+                <TooltipTrigger asChild>
+                    <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-primary" onClick={() => onSaveToggle(mcq)}>
+                        <Bookmark className={cn("w-4 h-4", isSaved && "fill-primary text-primary")} />
+                    </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                    <p>{isSaved ? 'Remove from Question Wall' : 'Save to Question Wall'}</p>
+                </TooltipContent>
+            </Tooltip>
+        </TooltipProvider>
+      </div>
       {score && <DifficultyGauge score={score} />}
       <FormattedQuestion text={question} />
       {subject && <Badge variant="secondary" className="mb-4 mt-2 font-normal">{subject}</Badge>}
@@ -169,7 +186,7 @@ const MCQ = ({ mcq, userId, historyId, savedSelection, onAnswer }: { mcq: MCQTyp
   );
 };
 
-const MCQList = ({ mcqs, userId, historyId }: { mcqs: MCQType[], userId: string, historyId: string }) => {
+const MCQList = ({ mcqs, userId, historyId, savedQuestionIds, onAnswer, onSaveToggle }: { mcqs: PrelimsQuestionWithContext[], userId: string, historyId: string, savedQuestionIds: Set<string>, onAnswer: (question: string, selectedOption: string, isCorrect: boolean, subject?: string, difficulty?: number) => void, onSaveToggle: (mcq: PrelimsQuestionWithContext) => void }) => {
     const [attempts, setAttempts] = useState<Record<string, string>>({});
     const [loadingAttempts, setLoadingAttempts] = useState(true);
 
@@ -212,7 +229,18 @@ const MCQList = ({ mcqs, userId, historyId }: { mcqs: MCQType[], userId: string,
         );
     }
     
-    return <div>{mcqs.map((q, idx) => <MCQ key={idx} mcq={q} userId={userId} historyId={historyId} savedSelection={attempts[q.question] || null} onAnswer={handleAnswer} />)}</div>;
+    return <div>{mcqs.map((q, idx) => {
+        const savedQuestionId = getSavedQuestionId(userId, q);
+        return <MCQ 
+                    key={idx} 
+                    mcq={q} 
+                    userId={userId} 
+                    savedSelection={attempts[q.question] || null} 
+                    isSaved={savedQuestionIds.has(savedQuestionId)}
+                    onAnswer={handleAnswer} 
+                    onSaveToggle={onSaveToggle}
+                />
+    })}</div>;
 };
 
 const markdownComponents = {
@@ -412,11 +440,13 @@ export default function HistoryDetailPage() {
     const router = useRouter();
     const params = useParams();
     const id = params.id as string;
+    const { toast } = useToast();
 
     const [historyEntry, setHistoryEntry] = useState<HistoryEntry | null>(null);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [currentAnalysisTab, setCurrentAnalysisTab] = useState('prelims');
+    const [savedQuestionIds, setSavedQuestionIds] = useState(new Set<string>());
 
     useEffect(() => {
         if (!authLoading && !user) {
@@ -424,35 +454,84 @@ export default function HistoryDetailPage() {
         }
     }, [user, authLoading, router]);
 
+    const { prelimsContent, mainsContent, knowledgeGraphContent } = useMemo(() => {
+        if (!historyEntry) return { prelimsContent: [], mainsContent: [], knowledgeGraphContent: undefined };
+        const analysis = historyEntry.analysis;
+        return {
+            prelimsContent: (analysis.prelims?.mcqs || []).map(mcq => ({
+                ...mcq,
+                historyId: historyEntry.id,
+                timestamp: historyEntry.timestamp,
+                articleUrl: historyEntry.articleUrl
+            })),
+            mainsContent: analysis.mains?.questions || [],
+            knowledgeGraphContent: analysis.knowledgeGraph,
+        };
+    }, [historyEntry]);
+
     useEffect(() => {
         if (user && id) {
             const fetchEntry = async () => {
                 setIsLoading(true);
-                const entry = await getHistoryEntry(id);
-                if (entry) {
-                    if (entry.userId === user.uid) {
-                        setHistoryEntry(entry);
+                try {
+                    const entry = await getHistoryEntry(id);
+                    if (entry) {
+                        if (entry.userId === user.uid) {
+                            setHistoryEntry(entry);
+                            // After getting entry, check saved status
+                            const prelimsQuestionsWithContext = (entry.analysis.prelims?.mcqs || []).map(mcq => ({
+                                ...mcq,
+                                historyId: entry.id,
+                                timestamp: entry.timestamp,
+                                articleUrl: entry.articleUrl
+                            }));
+                            const questionIds = prelimsQuestionsWithContext.map(q => getSavedQuestionId(user.uid, q));
+                            const savedIds = await getSavedStatus(user.uid, questionIds);
+                            setSavedQuestionIds(savedIds);
+                        } else {
+                            setError("You do not have permission to view this analysis.");
+                        }
                     } else {
-                        setError("You do not have permission to view this analysis.");
+                        setError("Analysis not found.");
                     }
-                } else {
-                    setError("Analysis not found.");
+                } catch(e) {
+                    setError("Failed to load analysis details.");
+                } finally {
+                    setIsLoading(false);
                 }
-                setIsLoading(false);
             };
             fetchEntry();
         }
     }, [user, id]);
 
-    const { prelimsContent, mainsContent, knowledgeGraphContent } = useMemo(() => {
-        if (!historyEntry) return { prelimsContent: [], mainsContent: [], knowledgeGraphContent: undefined };
-        const analysis = historyEntry.analysis;
-        return {
-            prelimsContent: analysis.prelims?.mcqs || [],
-            mainsContent: analysis.mains?.questions || [],
-            knowledgeGraphContent: analysis.knowledgeGraph,
-        };
-    }, [historyEntry]);
+    const handleSaveToggle = async (mcq: PrelimsQuestionWithContext) => {
+        if (!user) return;
+        const savedQuestionId = getSavedQuestionId(user.uid, mcq);
+        const isSaved = savedQuestionIds.has(savedQuestionId);
+        
+        // Optimistic update
+        const newSavedQuestionIds = new Set(savedQuestionIds);
+        if (isSaved) {
+            newSavedQuestionIds.delete(savedQuestionId);
+        } else {
+            newSavedQuestionIds.add(savedQuestionId);
+        }
+        setSavedQuestionIds(newSavedQuestionIds);
+        
+        try {
+            if (isSaved) {
+                await unsaveQuestion(user.uid, mcq);
+                toast({ title: "Removed from Wall" });
+            } else {
+                await saveQuestion(user.uid, mcq);
+                toast({ title: "Saved to Question Wall" });
+            }
+        } catch (error) {
+            // Revert on failure
+            setSavedQuestionIds(savedQuestionIds);
+            toast({ variant: 'destructive', title: 'Action failed', description: 'Please try again.' });
+        }
+    };
     
     useEffect(() => {
       if (historyEntry) {
@@ -541,7 +620,7 @@ export default function HistoryDetailPage() {
                                 </TabsList>
                                 <div className="mt-4">
                                     <ScrollArea className="h-[60vh] pr-4 -mr-4">
-                                        {showPrelims && <TabsContent value="prelims"><MCQList mcqs={prelimsContent} userId={user.uid} historyId={historyEntry.id} /></TabsContent>}
+                                        {showPrelims && user && <TabsContent value="prelims"><MCQList mcqs={prelimsContent} userId={user.uid} historyId={historyEntry.id} savedQuestionIds={savedQuestionIds} onAnswer={() => {}} onSaveToggle={handleSaveToggle} /></TabsContent>}
                                         {showMains && <TabsContent value="mains"><MainsQuestionList questions={mainsContent} userId={user.uid} historyId={id} /></TabsContent>}
                                         {showGraph && <TabsContent value="connections"><KnowledgeGraphVisualizer graphData={knowledgeGraphContent} /></TabsContent>}
                                     </ScrollArea>
