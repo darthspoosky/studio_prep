@@ -27,6 +27,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { useAuth } from "@/contexts/AuthContext";
 import { useRouter } from "next/navigation";
 import { addHistory, type PrelimsQuestionWithContext } from "@/services/historyService";
+import { Timestamp } from "firebase/firestore";
 import { incrementToolUsage } from "@/services/usageService";
 import { saveQuizAttempt } from "@/services/quizAttemptsService";
 import { saveMainsAnswer } from "@/services/mainsAnswerService";
@@ -209,7 +210,7 @@ const MCQ = ({ mcq, onAnswer, isSaved, onSaveToggle }: { mcq: MCQType, onAnswer:
   );
 };
 
-const MCQList = ({ mcqs, onAnswer, onSaveToggle, savedQuestionIds }: { mcqs: MCQType[], onAnswer: (question: string, selectedOption: string, isCorrect: boolean, subject?: string, difficulty?: number) => void, onSaveToggle: (mcq: MCQType) => void, savedQuestionIds: Set<string> }) => {
+const MCQList = ({ mcqs, onAnswer, onSaveToggle, savedQuestionIds, user }: { mcqs: MCQType[], onAnswer: (question: string, selectedOption: string, isCorrect: boolean, subject?: string, difficulty?: number) => void, onSaveToggle: (mcq: MCQType) => void, savedQuestionIds: Set<string>, user: any }) => {
     if (!mcqs || mcqs.length === 0) {
         return (
             <div className="text-center text-muted-foreground p-8">
@@ -221,7 +222,8 @@ const MCQList = ({ mcqs, onAnswer, onSaveToggle, savedQuestionIds }: { mcqs: MCQ
         <div>
             {mcqs.map((q, idx) => {
                 const mcqWithContext = q as PrelimsQuestionWithContext;
-                const savedQuestionId = getSavedQuestionId(mcqWithContext.userId, mcqWithContext);
+                // Using the user ID from auth context, not from mcqWithContext
+                const savedQuestionId = getSavedQuestionId(user?.uid || '', mcqWithContext);
                 return <MCQ 
                     key={idx} 
                     mcq={q} 
@@ -569,7 +571,7 @@ export default function NewspaperAnalysisPage() {
             const prelimsQuestions = result.prelims?.mcqs || [];
             if (prelimsQuestions.length > 0) {
                 const questionIds = prelimsQuestions.map(mcq => {
-                    const questionWithContext: PrelimsQuestionWithContext = { ...mcq, historyId: newHistoryId, timestamp: { seconds: Date.now() / 1000, nanoseconds: 0 }, articleUrl: activeTab === 'url' ? inputs.url : undefined };
+                    const questionWithContext: PrelimsQuestionWithContext = { ...mcq, historyId: newHistoryId, timestamp: Timestamp.fromDate(new Date()), articleUrl: activeTab === 'url' ? inputs.url : undefined };
                     return getSavedQuestionId(user.uid, questionWithContext);
                 });
                 const savedStatus = await getSavedStatus(user.uid, questionIds);
@@ -629,7 +631,7 @@ export default function NewspaperAnalysisPage() {
     const questionWithContext: PrelimsQuestionWithContext = {
       ...mcq,
       historyId,
-      timestamp: { seconds: Date.now() / 1000, nanoseconds: 0 },
+      timestamp: Timestamp.fromDate(new Date()),
       articleUrl: activeTab === 'url' ? inputs.url : undefined
     };
 
@@ -663,7 +665,17 @@ export default function NewspaperAnalysisPage() {
   const prelimsContent = useMemo(() => {
     if (!analysisResult) return [];
     // Enrich with userId for getSavedQuestionId
-    return (analysisResult.prelims?.mcqs || []).map(mcq => ({...mcq, userId: user?.uid || ''} as PrelimsQuestionWithContext));
+    return (analysisResult.prelims?.mcqs || []).map(mcq => {
+      // Create a properly typed PrelimsQuestionWithContext object
+      const prelimsQuestion: PrelimsQuestionWithContext = {
+        ...mcq,
+        historyId: historyId || "", 
+        timestamp: Timestamp.fromDate(new Date()),
+        // Use the article URL from inputs or undefined if not available
+        articleUrl: activeTab === 'url' ? inputs.url : undefined
+      };
+      return prelimsQuestion;
+    });
   }, [analysisResult, user]);
 
   const { mainsContent, knowledgeGraphContent } = useMemo(() => {
@@ -923,7 +935,7 @@ export default function NewspaperAnalysisPage() {
                                     {showPrelims && (
                                         <TabsContent value="prelims" className="flex-1 mt-4">
                                             <ScrollArea className="h-[400px] w-full pr-4 -mr-4">
-                                                <MCQList mcqs={prelimsContent} onAnswer={handleAnswer} onSaveToggle={handleSaveToggle} savedQuestionIds={savedQuestionIds} />
+                                                <MCQList mcqs={prelimsContent} onAnswer={handleAnswer} onSaveToggle={handleSaveToggle} savedQuestionIds={savedQuestionIds} user={user} />
                                             </ScrollArea>
                                         </TabsContent>
                                     )}
@@ -952,7 +964,7 @@ export default function NewspaperAnalysisPage() {
                         </DialogHeader>
                         <ScrollArea className="flex-1 pr-6 -mr-6">
                            {analysisResult?.prelims && user && (
-                             <MCQList mcqs={prelimsContent} onAnswer={handleAnswer} onSaveToggle={handleSaveToggle} savedQuestionIds={savedQuestionIds} />
+                             <MCQList mcqs={prelimsContent} onAnswer={handleAnswer} onSaveToggle={handleSaveToggle} savedQuestionIds={savedQuestionIds} user={user}/>
                            )}
                            {analysisResult?.mains && user && (
                              <MainsQuestionList questions={analysisResult.mains.questions} userId={user.uid} historyId={historyId}/>

@@ -124,6 +124,16 @@ export default function ProfilePage() {
 
         (async () => {
             try {
+                if (!storage) {
+                    toast({
+                        variant: 'destructive',
+                        title: 'Storage Error',
+                        description: 'Firebase storage is not initialized.',
+                    });
+                    setIsUploading(false);
+                    return;
+                }
+                
                 const storageRef = ref(storage, `avatars/${user.uid}`);
                 await uploadBytes(storageRef, currentAvatarFile);
                 const photoURL = await getDownloadURL(storageRef);

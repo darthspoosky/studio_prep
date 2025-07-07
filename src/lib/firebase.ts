@@ -1,7 +1,7 @@
-import { initializeApp, getApps, getApp } from 'firebase/app';
-import { getFirestore } from 'firebase/firestore';
-import { getAuth } from 'firebase/auth';
-import { getStorage } from 'firebase/storage';
+import { initializeApp, getApps, getApp, FirebaseApp } from 'firebase/app';
+import { getFirestore, Firestore } from 'firebase/firestore';
+import { getAuth, Auth } from 'firebase/auth';
+import { getStorage, FirebaseStorage } from 'firebase/storage';
 
 // IMPORTANT: Your Firebase project configuration should be set in environment variables.
 // Create a .env.local file in the root of your project and add your keys there.
@@ -16,10 +16,10 @@ const firebaseConfig = {
 };
 
 // Initialize Firebase
-let app;
-let db;
-let auth;
-let storage;
+let app: FirebaseApp | undefined;
+let db: Firestore | undefined;
+let auth: Auth | undefined;
+let storage: FirebaseStorage | undefined;
 
 // This check prevents errors during hot-reloading in development
 if (firebaseConfig.projectId) {
@@ -33,3 +33,20 @@ if (firebaseConfig.projectId) {
 
 
 export { app, db, auth, storage };
+
+// Type guard functions to check if Firebase services are initialized
+export function isFirebaseInitialized(): boolean {
+  return app !== undefined;
+}
+
+export function isFirestoreInitialized(): boolean {
+  return db !== undefined;
+}
+
+export function isAuthInitialized(): boolean {
+  return auth !== undefined;
+}
+
+export function isStorageInitialized(): boolean {
+  return storage !== undefined;
+}

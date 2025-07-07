@@ -20,6 +20,7 @@ import type { PrelimsQuestionWithContext } from './historyService';
 export type SavedQuestion = PrelimsQuestionWithContext & {
   savedAt: Timestamp;
   userId: string;
+  id?: string; // Added to support the id property when returning from Firestore
 };
 
 // Helper to create a unique, reproducible ID for a saved question document.
