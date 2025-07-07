@@ -185,8 +185,8 @@ CRITICAL: Your entire response MUST be in {{{outputLanguage}}}.
 Adhere strictly to authentic UPSC Civil Services (P) Examination patterns. Generate a mix of the following question types based on what is most appropriate for the article's content. A penalty of 1/3rd marks is applied for wrong answers, so questions should test deep understanding.
 
 ### **1. Multiple Statement Evaluation (High Priority)**
-- **Structure:** Present 2-4 factual statements. The question should be "Which of the statements given above is/are correct?".
-- **Options:** Use formats like "(a) 1 and 2 only", "(b) 2 and 3 only", etc. Or, if appropriate, "Only one", "Only two", "All three", "None".
+- **Structure:** Present 2-4 factual statements, EACH prefixed with a number (e.g., "1.", "2."). The question should be "Which of the statements given above is/are correct?".
+- **Options:** Use formats like "(a) 1 and 2 only", "(b) 2 and 3 only", etc. Or, if appropriate for the question, "Only one", "Only two", "All three", "None".
 - **Goal:** Test comprehensive, nuanced knowledge, not just recall.
 
 ### **2. Assertion-Reason / Statement I & Statement II (Relationship Analysis)**
@@ -199,7 +199,7 @@ Adhere strictly to authentic UPSC Civil Services (P) Examination patterns. Gener
 - **Goal:** Test the understanding of cause-and-effect and logical coherence.
 
 ### **3. Matching Pairs (Numerical Count)**
-- **Structure:** Present two columns of items (e.g., historical figures and their roles, locations and significance). Ask "How many pairs given above are correctly matched?".
+- **Structure:** Present two columns of items (e.g., historical figures and their roles, locations and significance). Each pair MUST be on a new line and prefixed with a number (e.g., "1. Burzahom : Rock-cut shrines"). Ask "How many pairs given above are correctly matched?".
 - **Options:** Must be numerical counts like "Only one pair", "Only two pairs", etc.
 - **Goal:** Test specific factual associations and precise recall.
 
