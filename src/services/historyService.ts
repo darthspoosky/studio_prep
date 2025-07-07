@@ -45,6 +45,9 @@ export async function addHistory(userId: string, analysis: NewspaperAnalysisOutp
   }
 }
 
+// Fetches all history for a user. The ordering clause has been removed from the query
+// to prevent errors on databases without a composite index. Sorting is now handled
+// by the calling functions.
 async function getAllHistory(userId: string): Promise<HistoryEntry[]> {
   if (!db) {
     console.log("Firestore not initialized. Skipping getAllHistory.");
@@ -55,8 +58,7 @@ async function getAllHistory(userId: string): Promise<HistoryEntry[]> {
   try {
     const q = query(
         collection(db, 'userHistory'), 
-        where('userId', '==', userId), 
-        orderBy('timestamp', 'desc')
+        where('userId', '==', userId)
     );
     
     const querySnapshot = await getDocs(q);
@@ -79,6 +81,8 @@ export async function getHistory(userId: string): Promise<HistoryEntry[]> {
     return [];
   }
   const allHistory = await getAllHistory(userId);
+  // Sort by timestamp descending to get the most recent entries
+  allHistory.sort((a, b) => b.timestamp.seconds - a.timestamp.seconds);
   return allHistory.slice(0, 20);
 }
 
@@ -106,6 +110,8 @@ export async function getHistoryEntry(id: string): Promise<HistoryEntry | null> 
 
 export async function getPrelimsQuestions(userId: string): Promise<PrelimsQuestionWithContext[]> {
     const allHistory = await getAllHistory(userId);
+    // Sort by timestamp descending to ensure chronological order
+    allHistory.sort((a, b) => b.timestamp.seconds - a.timestamp.seconds);
     const prelimsQuestions = allHistory.flatMap(entry => 
         (entry.analysis.prelims?.mcqs || []).map(mcq => ({
             ...mcq,
@@ -119,6 +125,8 @@ export async function getPrelimsQuestions(userId: string): Promise<PrelimsQuesti
 
 export async function getMainsQuestions(userId: string): Promise<MainsQuestionWithContext[]> {
     const allHistory = await getAllHistory(userId);
+    // Sort by timestamp descending to ensure chronological order
+    allHistory.sort((a, b) => b.timestamp.seconds - a.timestamp.seconds);
     const mainsQuestions = allHistory.flatMap(entry => 
         (entry.analysis.mains?.questions || []).map(question => ({
             ...question,
