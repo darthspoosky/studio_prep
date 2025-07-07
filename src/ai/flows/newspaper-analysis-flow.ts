@@ -105,6 +105,7 @@ const VerificationInputSchema = NewspaperAnalysisOutputSchema.extend({
     sourceText: z.string(),
     outputLanguage: z.string(),
     analysisFocus: z.string(),
+    generatedAnalysisString: z.string(),
 });
 
 
@@ -208,12 +209,13 @@ Adhere strictly to authentic UPSC Civil Services (P) Examination patterns. Gener
 - **Goal:** Test direct recall of facts, definitions, or the identification of a single concept.
 
 **General Instructions for all MCQs:**
-- **Difficulty:** 8-9/10. Test synthesis, not just recall.
+- **Difficulty:** Provide an integer score from 1 (easiest) to 10 (hardest). Aim for a difficulty of 8 or 9.
 - **Explanations:** For every question, provide a detailed, professional explanation for why each option is correct or incorrect, linking to static syllabus knowledge. **Crucially, do not use phrases like "as the passage states."** The explanation should stand on its own.
 
 
 ## **UPSC MAINS**
 - **Directives:** Use words like "Critically analyze," "Examine," "Discuss."
+- **Difficulty:** Provide an integer score from 1 (easiest) to 10 (hardest). Aim for a difficulty of 8 or 9.
 - **Guidance:** For each question, provide structured guidance in markdown. The guidance should be a mini-essay plan that a top-ranker would create before writing.
 
   ### Guidance for Answer
@@ -258,7 +260,7 @@ const verificationEditorAgent = ai.definePrompt({
 **2. QUALITY ENHANCEMENT**:
    - **Prelims:** Are explanations analytical? Do options follow real UPSC patterns?
    - **Mains:** Is the 'guidance' structured and genuinely helpful for writing a high-scoring answer?
-   - **Difficulty:** Adjust if questions are too easy or too obscure.
+   - **Difficulty:** Ensure the difficulty score for each question is an integer between 1 and 10. Adjust if questions are too easy or too obscure.
 **3. SUMMARY SANITIZATION**: The 'summary' MUST be 2-3 sentences of clean text. If the summary is missing, empty, or inadequate in the input, you MUST generate a new one from the source article. Strip all tags.
 **4. KNOWLEDGE GRAPH VERIFICATION**: Ensure the extracted nodes and edges are factual and directly supported by the article text. The graph should be coherent and relationships logical. Node IDs must be valid identifiers.
 **5. METRICS**: Calculate and include 'questionsCount' and a 'qualityScore' (0-1).
