@@ -11,7 +11,7 @@ import { useRouter } from 'next/navigation';
 import Header from '@/components/layout/header';
 import Footer from '@/components/landing/footer';
 import { Button } from '@/components/ui/button';
-import { Card } from '@/components/ui/card';
+import { Card, CardHeader, CardContent } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ArrowLeft, ExternalLink, Info, CheckCircle, XCircle, Circle, Gauge, FileQuestion } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -239,15 +239,21 @@ export default function PrelimsQuestionBankPage() {
                     {isLoading ? (
                         Array.from({ length: 3 }).map((_, i) => (
                             <Card key={i} className="p-4">
-                                <div className="flex justify-between mb-2">
-                                    <Skeleton className="h-4 w-1/4" />
-                                    <Skeleton className="h-4 w-1/6" />
-                                </div>
-                                <Skeleton className="h-5 w-3/4 mb-4" />
-                                <div className="space-y-2 mt-4">
-                                    <Skeleton className="h-10 w-full" />
-                                    <Skeleton className="h-10 w-full" />
-                                </div>
+                                <CardHeader className="p-0">
+                                    <div className="flex justify-between mb-2">
+                                        <Skeleton className="h-4 w-1/4" />
+                                        <Skeleton className="h-4 w-1/6" />
+                                    </div>
+                                    <Skeleton className="h-4 w-1/2 mb-4" />
+                                </CardHeader>
+                                <CardContent className="p-0">
+                                    <Skeleton className="h-5 w-3/4 mb-4" />
+                                    <div className="space-y-2 mt-4">
+                                        <Skeleton className="h-10 w-full" />
+                                        <Skeleton className="h-10 w-full" />
+                                        <Skeleton className="h-10 w-full" />
+                                    </div>
+                                </CardContent>
                             </Card>
                         ))
                     ) : questions.length > 0 ? (
@@ -280,3 +286,5 @@ export default function PrelimsQuestionBankPage() {
         </div>
     );
 }
+
+    

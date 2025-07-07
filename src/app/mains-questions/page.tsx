@@ -10,7 +10,7 @@ import { useRouter } from 'next/navigation';
 import Header from '@/components/layout/header';
 import Footer from '@/components/landing/footer';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ArrowLeft, ExternalLink, Loader2, PenLine } from 'lucide-react';
 import { Textarea } from '@/components/ui/textarea';
@@ -142,10 +142,20 @@ export default function MainsQuestionBankPage() {
                 <div className="max-w-4xl mx-auto space-y-8">
                     {isLoading ? (
                         Array.from({ length: 3 }).map((_, i) => (
-                            <Card key={i}>
-                                <CardHeader><Skeleton className="h-10 w-3/4" /></CardHeader>
-                                <CardContent><Skeleton className="h-32 w-full" /></CardContent>
-                                <CardFooter><Skeleton className="h-8 w-24" /></CardFooter>
+                            <Card key={i} className="glassmorphic shadow-sm">
+                                <CardHeader>
+                                    <Skeleton className="h-6 w-3/4" />
+                                    <Skeleton className="h-4 w-1/4 mt-2" />
+                                </CardHeader>
+                                <CardContent>
+                                    <div className="space-y-2">
+                                        <Skeleton className="h-4 w-1/3" />
+                                        <Skeleton className="h-32 w-full" />
+                                    </div>
+                                </CardContent>
+                                <CardFooter>
+                                    <Skeleton className="h-10 w-28" />
+                                </CardFooter>
                             </Card>
                         ))
                     ) : questions.length > 0 ? (
@@ -172,3 +182,5 @@ export default function MainsQuestionBankPage() {
         </div>
     );
 }
+
+    
