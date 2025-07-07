@@ -29,6 +29,7 @@ import { useRouter } from "next/navigation";
 import { addHistory } from "@/services/historyService";
 import { incrementToolUsage } from "@/services/usageService";
 import { saveQuizAttempt } from "@/services/quizAttemptsService";
+import { saveMainsAnswer } from "@/services/mainsAnswerService";
 import { Skeleton } from "@/components/ui/skeleton";
 
 
@@ -236,7 +237,39 @@ const markdownComponents = {
   strong: (props: any) => <strong className="font-bold text-foreground" {...props} />,
 };
 
-const MainsQuestionList = ({ questions }: { questions: MainsQuestion[] }) => {
+const MainsQuestionList = ({ questions, userId, historyId }: { questions: MainsQuestion[], userId: string, historyId: string | null }) => {
+    const [answers, setAnswers] = useState<Record<string, string>>({});
+    const [saving, setSaving] = useState<string | null>(null);
+    const { toast } = useToast();
+
+    const handleAnswerChange = (question: string, answer: string) => {
+        setAnswers(prev => ({ ...prev, [question]: answer }));
+    };
+
+    const handleSaveAnswer = async (question: string) => {
+        if (!historyId) {
+            toast({
+                variant: 'destructive',
+                title: "Cannot Save",
+                description: "The analysis must be generated and saved before you can save an answer.",
+            });
+            return;
+        }
+        setSaving(question);
+        try {
+            await saveMainsAnswer(userId, historyId, question, answers[question]);
+            toast({ title: "Answer Saved!" });
+        } catch (error) {
+            toast({
+                variant: 'destructive',
+                title: 'Save Failed',
+                description: 'Could not save your answer. Please try again.',
+            });
+        } finally {
+            setSaving(null);
+        }
+    };
+
     if (!questions || questions.length === 0) {
         return (
             <div className="text-center text-muted-foreground p-8">
@@ -257,6 +290,23 @@ const MainsQuestionList = ({ questions }: { questions: MainsQuestion[] }) => {
                             </ReactMarkdown>
                         </div>
                     )}
+                    <div className="mt-6 border-t pt-4 space-y-2">
+                        <Label htmlFor={`mains-q-${i}`} className="font-semibold">Your Answer</Label>
+                        <Textarea
+                            id={`mains-q-${i}`}
+                            placeholder="Draft your answer here..."
+                            className="h-48 bg-background/80"
+                            value={answers[q.question] || ''}
+                            onChange={(e) => handleAnswerChange(q.question, e.target.value)}
+                        />
+                        <Button 
+                            onClick={() => handleSaveAnswer(q.question)}
+                            disabled={!historyId || saving === q.question || !answers[q.question]}
+                        >
+                            {saving === q.question && <Loader2 className="animate-spin" />}
+                            Save Answer
+                        </Button>
+                    </div>
                 </div>
             ))}
         </div>
@@ -736,7 +786,7 @@ export default function NewspaperAnalysisPage() {
                                     <p className="text-muted-foreground mt-2 max-w-sm">Submit an article on the left to see the AI-powered analysis.</p>
                                 </div>
                             )}
-                            {!isLoading && analysisResult && (
+                            {!isLoading && analysisResult && user && (
                               <div className="flex-1 flex flex-col">
                                 {analysisResult.totalTokens !== undefined && analysisResult.cost !== undefined && (
                                     <UsageStats
@@ -810,7 +860,7 @@ export default function NewspaperAnalysisPage() {
                                     {showMains && (
                                         <TabsContent value="mains" className="flex-1 mt-4">
                                             <ScrollArea className="h-[400px] w-full pr-4 -mr-4">
-                                                <MainsQuestionList questions={mainsContent} />
+                                                <MainsQuestionList questions={mainsContent} userId={user.uid} historyId={historyId} />
                                             </ScrollArea>
                                         </TabsContent>
                                     )}
@@ -831,11 +881,11 @@ export default function NewspaperAnalysisPage() {
                             <DialogTitle>Expanded Analysis</DialogTitle>
                         </DialogHeader>
                         <ScrollArea className="flex-1 pr-6 -mr-6">
-                           {analysisResult?.prelims && (
+                           {analysisResult?.prelims && user && (
                              <MCQList mcqs={analysisResult.prelims.mcqs} onAnswer={handleAnswer} />
                            )}
-                           {analysisResult?.mains && (
-                             <MainsQuestionList questions={analysisResult.mains.questions} />
+                           {analysisResult?.mains && user && (
+                             <MainsQuestionList questions={analysisResult.mains.questions} userId={user.uid} historyId={historyId}/>
                            )}
                            {analysisResult?.knowledgeGraph && (
                             <div className="mt-8">

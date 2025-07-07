@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useState, useEffect, useMemo } from 'react';
@@ -6,6 +7,7 @@ import Link from 'next/link';
 import { useAuth } from '@/contexts/AuthContext';
 import { getHistoryEntry, type HistoryEntry } from '@/services/historyService';
 import { saveQuizAttempt, getQuizAttemptsForHistory } from '@/services/quizAttemptsService';
+import { getMainsAnswersForHistory, saveMainsAnswer } from '@/services/mainsAnswerService';
 
 import Header from '@/components/layout/header';
 import Footer from '@/components/landing/footer';
@@ -14,7 +16,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Skeleton } from '@/components/ui/skeleton';
-import { ArrowLeft, ExternalLink } from 'lucide-react';
+import { ArrowLeft, ExternalLink, Loader2 } from 'lucide-react';
 
 import { type MCQ as MCQType, type MainsQuestion, type KnowledgeGraph } from "@/ai/flows/newspaper-analysis-flow";
 import { cn } from "@/lib/utils";
@@ -24,6 +26,9 @@ import { Badge } from "@/components/ui/badge";
 import { Info, CheckCircle, XCircle, Circle, Gauge, IndianRupee, MoveRight, Share2 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { Textarea } from '@/components/ui/textarea';
+import { Label } from '@/components/ui/label';
+import { useToast } from '@/hooks/use-toast';
 
 const DifficultyGauge = ({ score }: { score: number }) => {
     if (isNaN(score) || score < 1 || score > 10) return null;
@@ -219,23 +224,92 @@ const markdownComponents = {
   strong: (props: any) => <strong className="font-bold text-foreground" {...props} />,
 };
 
-const MainsQuestionList = ({ questions }: { questions: MainsQuestion[] }) => {
+const MainsQuestionList = ({ questions, userId, historyId }: { questions: MainsQuestion[], userId: string, historyId: string }) => {
+    const { toast } = useToast();
+    const [answers, setAnswers] = useState<Record<string, string>>({});
+    const [savedAnswers, setSavedAnswers] = useState<Record<string, string>>({});
+    const [loading, setLoading] = useState(true);
+    const [saving, setSaving] = useState<string | null>(null);
+
+    useEffect(() => {
+        getMainsAnswersForHistory(historyId).then(fetchedAnswers => {
+            setAnswers(fetchedAnswers);
+            setSavedAnswers(fetchedAnswers);
+            setLoading(false);
+        });
+    }, [historyId]);
+
+    const handleAnswerChange = (question: string, answer: string) => {
+        setAnswers(prev => ({...prev, [question]: answer}));
+    };
+
+    const handleSaveAnswer = async (question: string) => {
+        setSaving(question);
+        try {
+            await saveMainsAnswer(userId, historyId, question, answers[question]);
+            setSavedAnswers(prev => ({...prev, [question]: answers[question]}));
+            toast({ title: 'Answer Saved!' });
+        } catch (error) {
+            toast({ variant: 'destructive', title: 'Save Failed' });
+        } finally {
+            setSaving(null);
+        }
+    };
+
+    if (loading) {
+        return (
+            <div>
+                {Array.from({ length: 2 }).map((_, i) => (
+                    <div key={i} className="my-6 p-4 border rounded-lg shadow-sm">
+                        <Skeleton className="h-6 w-full mb-4" />
+                        <Skeleton className="h-4 w-3/4 mb-6" />
+                        <Skeleton className="h-32 w-full" />
+                    </div>
+                ))}
+            </div>
+        );
+    }
+    
     if (!questions || questions.length === 0) {
         return <div className="text-center text-muted-foreground p-8">No Mains questions were generated for this analysis.</div>;
     }
+    
     return (
         <div className="space-y-8">
-            {questions.map((q, i) => (
-                <div key={i} className="p-4 border rounded-lg bg-background/50 shadow-sm">
-                    <h2 className="text-xl font-bold font-headline text-primary">{q.question}</h2>
-                    {q.difficulty && <div className="mt-2"><DifficultyGauge score={q.difficulty} /></div>}
-                    {q.guidance && (
-                        <div className="prose-sm dark:prose-invert max-w-none text-muted-foreground mt-4">
-                            <ReactMarkdown remarkPlugins={[remarkGfm]} components={markdownComponents}>{q.guidance}</ReactMarkdown>
+            {questions.map((q, i) => {
+                const currentAnswer = answers[q.question] || '';
+                const isSaving = saving === q.question;
+                const isSaved = savedAnswers[q.question] === currentAnswer;
+
+                return (
+                    <div key={i} className="p-4 border rounded-lg bg-background/50 shadow-sm">
+                        <h2 className="text-xl font-bold font-headline text-primary">{q.question}</h2>
+                        {q.difficulty && <div className="mt-2"><DifficultyGauge score={q.difficulty} /></div>}
+                        {q.guidance && (
+                            <div className="prose-sm dark:prose-invert max-w-none text-muted-foreground mt-4">
+                                <ReactMarkdown remarkPlugins={[remarkGfm]} components={markdownComponents}>{q.guidance}</ReactMarkdown>
+                            </div>
+                        )}
+                        <div className="mt-6 border-t pt-4 space-y-4">
+                            <Label htmlFor={`mains-answer-${i}`} className="font-semibold">Your Answer</Label>
+                            <Textarea
+                                id={`mains-answer-${i}`}
+                                placeholder="Draft your response here..."
+                                className="h-48 bg-background"
+                                value={currentAnswer}
+                                onChange={(e) => handleAnswerChange(q.question, e.target.value)}
+                            />
+                            <Button 
+                                onClick={() => handleSaveAnswer(q.question)}
+                                disabled={isSaving || isSaved || currentAnswer.length < 20}
+                            >
+                                {isSaving ? <Loader2 className="animate-spin" /> : null}
+                                {isSaving ? 'Saving...' : isSaved ? 'Saved' : 'Save Answer'}
+                            </Button>
                         </div>
-                    )}
-                </div>
-            ))}
+                    </div>
+                );
+            })}
         </div>
     );
 };
@@ -468,7 +542,7 @@ export default function HistoryDetailPage() {
                                 <div className="mt-4">
                                     <ScrollArea className="h-[60vh] pr-4 -mr-4">
                                         {showPrelims && <TabsContent value="prelims"><MCQList mcqs={prelimsContent} userId={user.uid} historyId={historyEntry.id} /></TabsContent>}
-                                        {showMains && <TabsContent value="mains"><MainsQuestionList questions={mainsContent} /></TabsContent>}
+                                        {showMains && <TabsContent value="mains"><MainsQuestionList questions={mainsContent} userId={user.uid} historyId={id} /></TabsContent>}
                                         {showGraph && <TabsContent value="connections"><KnowledgeGraphVisualizer graphData={knowledgeGraphContent} /></TabsContent>}
                                     </ScrollArea>
                                 </div>
