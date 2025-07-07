@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useAuth } from '@/contexts/AuthContext';
@@ -14,6 +14,7 @@ import { Calendar } from '@/components/ui/calendar';
 import { Progress } from '@/components/ui/progress';
 import { RadialBarChart, RadialBar, ResponsiveContainer, PolarAngleAxis } from 'recharts';
 import { Skeleton } from '@/components/ui/skeleton';
+import { isToday } from 'date-fns';
 
 
 // --- Local Components for Dashboard ---
@@ -65,23 +66,6 @@ const LeftSidebar = () => (
             </Button>
         </div>
     </div>
-);
-
-const ScheduleCard = ({ title, description, buttonText, buttonVariant = 'default'}: {title: string, description: string, buttonText: string, buttonVariant?: 'default' | 'outline'}) => (
-    <Card className="flex-1 glassmorphic">
-        <CardHeader className="flex-row items-start gap-4">
-            <div className="p-2 bg-primary/20 rounded-full">
-                <CheckCircle className="w-5 h-5 text-primary"/>
-            </div>
-            <div>
-                <CardTitle className="text-base font-semibold">{title}</CardTitle>
-                <CardDescription className="text-xs">{description}</CardDescription>
-            </div>
-        </CardHeader>
-        <CardFooter>
-            <Button variant={buttonVariant} size="sm">{buttonText}</Button>
-        </CardFooter>
-    </Card>
 );
 
 const HistoryCard = ({ entry }: { entry: HistoryEntry }) => {
@@ -235,6 +219,76 @@ export default function ReimaginedDashboardPage() {
         }
     }, [user]);
 
+    const scheduleContent = useMemo(() => {
+        const lastActivity = history?.[0];
+        const lastActivityWasToday = lastActivity ? isToday(new Date(lastActivity.timestamp.seconds * 1000)) : false;
+
+        if (lastActivityWasToday) {
+            const analysis = lastActivity.analysis;
+            return (
+                <Card className="flex-1 glassmorphic">
+                    <CardHeader className="flex-row items-start gap-4">
+                        <div className="p-2 bg-green-500/20 rounded-full">
+                            <CheckCircle className="w-5 h-5 text-green-500"/>
+                        </div>
+                        <div>
+                            <CardTitle className="text-base font-semibold">Great work today!</CardTitle>
+                            <CardDescription className="text-xs">
+                                You analyzed an article on &quot;{analysis.syllabusTopic || 'a relevant topic'}&quot; with {analysis.questionsCount || 'several'} questions.
+                            </CardDescription>
+                        </div>
+                    </CardHeader>
+                    <CardFooter className="gap-2">
+                        <Button asChild variant="default" size="sm">
+                            <Link href={`/history/${lastActivity.id}`}>Review Analysis</Link>
+                        </Button>
+                        <Button asChild variant="outline" size="sm">
+                            <Link href="/newspaper-analysis">Analyze Another</Link>
+                        </Button>
+                    </CardFooter>
+                </Card>
+            );
+        } else {
+            return (
+                <>
+                    <Card className="flex-1 glassmorphic">
+                        <CardHeader className="flex-row items-start gap-4">
+                            <div className="p-2 bg-primary/20 rounded-full">
+                                <Newspaper className="w-5 h-5 text-primary"/>
+                            </div>
+                            <div>
+                                <CardTitle className="text-base font-semibold">Analyze a News Article</CardTitle>
+                                <CardDescription className="text-xs">Stay updated and generate exam-ready questions from today&apos;s news.</CardDescription>
+                            </div>
+                        </CardHeader>
+                        <CardFooter>
+                            <Button asChild variant="default" size="sm">
+                                <Link href="/newspaper-analysis">Start Analyzing</Link>
+                            </Button>
+                        </CardFooter>
+                    </Card>
+                     <Card className="flex-1 glassmorphic">
+                        <CardHeader className="flex-row items-start gap-4">
+                            <div className="p-2 bg-primary/20 rounded-full">
+                                <FileQuestion className="w-5 h-5 text-primary"/>
+                            </div>
+                            <div>
+                                <CardTitle className="text-base font-semibold">Take a Daily Quiz</CardTitle>
+                                <CardDescription className="text-xs">Sharpen your knowledge with a quick, adaptive quiz.</CardDescription>
+                            </div>
+                        </CardHeader>
+                        <CardFooter>
+                            <Button asChild variant="outline" size="sm">
+                                <Link href="/daily-quiz">Start Quiz</Link>
+                            </Button>
+                        </CardFooter>
+                    </Card>
+                </>
+            );
+        }
+    }, [history]);
+
+
     if (loading || !user) {
         return null;
     }
@@ -253,18 +307,8 @@ export default function ReimaginedDashboardPage() {
                     {/* Schedule */}
                     <div>
                         <h3 className="text-lg font-semibold px-4 mb-3">Your Schedule for today</h3>
-                        <div className="flex gap-4 px-4">
-                            <ScheduleCard 
-                                title="Daily current affairs test"
-                                description="Your daily dose of current affairs test is served hot."
-                                buttonText="Attempt another quiz"
-                                buttonVariant="outline"
-                            />
-                             <ScheduleCard 
-                                title="Let's do one more"
-                                description="If you do 2 sub topics a day you can complete the entire syllabus!"
-                                buttonText="Go to syllabus"
-                            />
+                        <div className="flex flex-col md:flex-row gap-4 px-4">
+                            {scheduleContent}
                         </div>
                     </div>
                     
@@ -308,3 +352,4 @@ export default function ReimaginedDashboardPage() {
 
 // A small fix for a component name typo to avoid breaking the build
 const Course_Card = HistoryCard;
+
