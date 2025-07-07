@@ -12,7 +12,7 @@ import { getHistory, type HistoryEntry, getQuestionStats } from '@/services/hist
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Calendar } from '@/components/ui/calendar';
 import { Progress } from '@/components/ui/progress';
-import { RadialBarChart, RadialBar, ResponsiveContainer, PolarAngleAxis, BarChart, XAxis, YAxis, Tooltip, Legend, Bar, CartesianGrid, Cell } from 'recharts';
+import { RadialBarChart, RadialBar, ResponsiveContainer, PolarAngleAxis, BarChart, XAxis, YAxis, Tooltip, Legend, Bar, CartesianGrid, Cell, defs, linearGradient, stop } from 'recharts';
 import { Skeleton } from '@/components/ui/skeleton';
 import { isToday } from 'date-fns';
 import { Sheet, SheetContent, SheetTrigger, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet';
@@ -281,16 +281,24 @@ const RightSidebar = ({ quizStats }: { quizStats: UserQuizStats | null }) => {
 // --- NEW CHART COMPONENTS ---
 
 const questionsBySubjectData = [
-  { week: "Week 1", History: 40, Polity: 24, Economy: 24 },
-  { week: "Week 2", History: 30, Polity: 13, Economy: 22 },
-  { week: "Week 3", History: 20, Polity: 78, Economy: 29 },
-  { week: "Week 4", History: 27, Polity: 39, Economy: 20 },
+  { paper: "GS I", History: 40, Geography: 24, Society: 24 },
+  { paper: "GS II", Polity: 30, Governance: 13, "Intl. Relations": 22 },
+  { paper: "GS III", Economy: 20, "Sci & Tech": 78, Environment: 29 },
+  { paper: "GS IV", Ethics: 27, "Case Studies": 39 },
 ];
 
 const questionsBySubjectConfig = {
-  History: { label: "History", color: "#5b5bff" },
-  Polity: { label: "Polity", color: "#6f6fff" },
-  Economy: { label: "Economy", color: "#1ecbd2" },
+  History: { label: "History", color: "#5347CE" },
+  Polity: { label: "Polity", color: "#5347CE" },
+  Economy: { label: "Economy", color: "#5347CE" },
+  Ethics: { label: "Ethics", color: "#5347CE" },
+  Geography: { label: "Geography", color: "#887CFD" },
+  Governance: { label: "Governance", color: "#887CFD" },
+  "Sci & Tech": { label: "Sci & Tech", color: "#887CFD" },
+  "Case Studies": { label: "Case Studies", color: "#887CFD" },
+  Society: { label: "Society", color: "#4896FE" },
+  "Intl. Relations": { label: "Intl. Relations", color: "#4896FE" },
+  Environment: { label: "Environment", color: "#16CBC7" },
 } satisfies ChartConfig;
 
 const QuestionsBySubjectChart = () => (
@@ -299,7 +307,7 @@ const QuestionsBySubjectChart = () => (
             <div className="flex justify-between items-start">
                 <div>
                     <CardTitle>Questions by Subject</CardTitle>
-                    <CardDescription>Breakdown of generated questions</CardDescription>
+                    <CardDescription>Breakdown of generated questions by GS Paper</CardDescription>
                 </div>
                 <div className="flex items-center gap-2">
                      <Button variant="outline" size="sm" className="h-8 hidden sm:flex">
@@ -337,83 +345,139 @@ const QuestionsBySubjectChart = () => (
         <CardContent className="pl-0">
              <ChartContainer config={questionsBySubjectConfig} className="min-h-[250px] w-full">
                 <BarChart accessibilityLayer data={questionsBySubjectData}>
+                    <defs>
+                        <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+                            <feDropShadow dx="0" dy="4" stdDeviation="4" floodColor="#000000" floodOpacity="0.1" />
+                        </filter>
+                    </defs>
                     <CartesianGrid vertical={false} />
-                    <XAxis dataKey="week" tickLine={false} tickMargin={10} axisLine={false} />
+                    <XAxis dataKey="paper" tickLine={false} tickMargin={10} axisLine={false} />
                     <YAxis tickLine={false} tickMargin={10} axisLine={false} tickFormatter={(value) => `${value}`} />
                     <ChartTooltip content={<ChartTooltipContent />} />
                     <Legend content={<ChartLegendContent />} />
-                    <Bar dataKey="History" stackId="a" fill="var(--color-History)" radius={[4, 4, 0, 0]} />
-                    <Bar dataKey="Polity" stackId="a" fill="var(--color-Polity)" radius={[0, 0, 0, 0]} />
-                    <Bar dataKey="Economy" stackId="a" fill="var(--color-Economy)" radius={[0, 0, 0, 0]} />
+                    {Object.keys(questionsBySubjectConfig).map((key) => (
+                         <Bar key={key} dataKey={key} stackId="a" fill={`var(--color-${key})`} radius={[4, 4, 0, 0]} filter="url(#shadow)" />
+                    ))}
                 </BarChart>
             </ChartContainer>
         </CardContent>
     </Card>
 );
 
-const weeklyAccuracyData = [
-  { day: 'Sun', accuracy: 82 },
-  { day: 'Mon', accuracy: 75 },
-  { day: 'Tue', accuracy: 91 },
-  { day: 'Wed', accuracy: 88 },
-  { day: 'Thu', accuracy: 72 },
-  { day: 'Fri', accuracy: 85 },
-  { day: 'Sat', accuracy: 93 },
-]
+const allAccuracyData = {
+    daily: [
+      { day: 'Sun', accuracy: 82 }, { day: 'Mon', accuracy: 75 },
+      { day: 'Tue', accuracy: 91 }, { day: 'Wed', accuracy: 88 },
+      { day: 'Thu', accuracy: 72 }, { day: 'Fri', accuracy: 85 },
+      { day: 'Sat', accuracy: 93 },
+    ],
+    weekly: [
+        { week: 'W1', accuracy: 78 }, { week: 'W2', accuracy: 85 },
+        { week: 'W3', accuracy: 81 }, { week: 'W4', accuracy: 90 },
+    ],
+    monthly: [
+        { month: 'Jan', accuracy: 75 }, { month: 'Feb', accuracy: 80 },
+        { month: 'Mar', accuracy: 88 }, { month: 'Apr', accuracy: 85 },
+    ]
+};
 
 const weeklyAccuracyConfig = {
-  accuracy: { label: "Accuracy", color: "#4d4dff" },
+  accuracy: { label: "Accuracy", color: "#887CFD" },
 } satisfies ChartConfig
 
-const WeeklyAccuracyChart = () => (
-  <Card className="glassmorphic">
-    <CardHeader>
-      <div className="flex justify-between items-start">
-        <div>
-            <CardTitle>Weekly Quiz Accuracy</CardTitle>
-            <CardDescription>Your performance over the last 7 days</CardDescription>
-        </div>
-        <Select defaultValue="weekly">
-            <SelectTrigger className="w-[100px]">
-                <SelectValue placeholder="Select"/>
-            </SelectTrigger>
-            <SelectContent>
-                <SelectItem value="daily">Daily</SelectItem>
-                <SelectItem value="weekly">Weekly</SelectItem>
-                <SelectItem value="monthly">Monthly</SelectItem>
-            </SelectContent>
-        </Select>
-      </div>
-    </CardHeader>
-    <CardContent>
-        <div className="mb-4">
-            <div className="text-3xl font-bold">84%</div>
-            <div className="flex items-center text-sm text-muted-foreground">
-                <span className="flex items-center text-green-600 mr-2">
-                    <ArrowUpRight className="w-4 h-4" />
-                    +2.5%
-                </span>
-                vs last week
+const WeeklyAccuracyChart = () => {
+    const [interval, setInterval] = useState<"daily" | "weekly" | "monthly">("weekly");
+    const [quizType, setQuizType] = useState("combined");
+
+    const chartData = useMemo(() => {
+        // In a real app, this would be a filtered fetch. Here we simulate it.
+        const baseData = allAccuracyData[interval];
+        let multiplier = 1;
+        if (quizType === 'newspaper') multiplier = 1.05;
+        if (quizType === 'practice') multiplier = 0.95;
+        
+        return baseData.map(d => ({ ...d, accuracy: Math.min(100, Math.round(d.accuracy * multiplier))}));
+
+    }, [interval, quizType]);
+
+    const dataKey = useMemo(() => {
+        if (interval === 'daily') return 'day';
+        if (interval === 'weekly') return 'week';
+        return 'month';
+    }, [interval]);
+
+    return (
+      <Card className="glassmorphic">
+        <CardHeader>
+          <div className="flex flex-col sm:flex-row justify-between items-start gap-4">
+            <div>
+                <CardTitle>Quiz Accuracy</CardTitle>
+                <CardDescription>Performance over time</CardDescription>
             </div>
-        </div>
-        <ChartContainer config={weeklyAccuracyConfig} className="min-h-[200px] w-full">
-            <BarChart accessibilityLayer data={weeklyAccuracyData}>
-                <CartesianGrid vertical={false} />
-                <XAxis dataKey="day" tickLine={false} tickMargin={10} axisLine={false} />
-                <ChartTooltip
-                    cursor={false}
-                    content={<ChartTooltipContent indicator="line" />}
-                />
-                <Bar dataKey="accuracy" radius={4}>
-                    {weeklyAccuracyData.map((_entry, index) => (
-                        <Cell key={`cell-${index}`} fill={index === 2 ? '#4d4dff' : '#e9e7ff'} />
-                    ))}
-                </Bar>
-            </BarChart>
-        </ChartContainer>
-    </CardContent>
-  </Card>
-);
+            <div className="flex items-center gap-2">
+                <Select defaultValue="combined" onValueChange={setQuizType}>
+                    <SelectTrigger className="w-[150px]">
+                        <SelectValue placeholder="Quiz Type"/>
+                    </SelectTrigger>
+                    <SelectContent>
+                        <SelectItem value="combined">Combined</SelectItem>
+                        <SelectItem value="newspaper">Newspaper Quiz</SelectItem>
+                        <SelectItem value="practice">Quiz Practice</SelectItem>
+                    </SelectContent>
+                </Select>
+                <Select defaultValue={interval} onValueChange={(value) => setInterval(value as any)}>
+                    <SelectTrigger className="w-[120px]">
+                        <SelectValue placeholder="Select"/>
+                    </SelectTrigger>
+                    <SelectContent>
+                        <SelectItem value="daily">Daily</SelectItem>
+                        <SelectItem value="weekly">Weekly</SelectItem>
+                        <SelectItem value="monthly">Monthly</SelectItem>
+                    </SelectContent>
+                </Select>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent>
+            <div className="mb-4">
+                <div className="text-3xl font-bold">84%</div>
+                <div className="flex items-center text-sm text-muted-foreground">
+                    <span className="flex items-center text-green-600 mr-2">
+                        <ArrowUpRight className="w-4 h-4" />
+                        +2.5%
+                    </span>
+                    vs last period
+                </div>
+            </div>
+            <ChartContainer config={weeklyAccuracyConfig} className="min-h-[200px] w-full">
+                <BarChart accessibilityLayer data={chartData}>
+                    <defs>
+                        <linearGradient id="accuracyGradient" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="5%" stopColor="#887CFD" stopOpacity={0.8}/>
+                            <stop offset="95%" stopColor="#5347CE" stopOpacity={0.1}/>
+                        </linearGradient>
+                         <filter id="barShadow" x="-20%" y="-20%" width="140%" height="140%">
+                            <feDropShadow dx="0" dy="2" stdDeviation="2" floodColor="#5347CE" floodOpacity="0.3" />
+                        </filter>
+                    </defs>
+                    <CartesianGrid vertical={false} />
+                    <XAxis dataKey={dataKey} tickLine={false} tickMargin={10} axisLine={false} />
+                    <ChartTooltip
+                        cursor={false}
+                        content={<ChartTooltipContent indicator="line" />}
+                    />
+                    <Bar 
+                        dataKey="accuracy" 
+                        radius={[5, 5, 0, 0]} 
+                        fill="url(#accuracyGradient)"
+                        filter="url(#barShadow)"
+                    />
+                </BarChart>
+            </ChartContainer>
+        </CardContent>
+      </Card>
+    );
+}
 
 
 export default function ReimaginedDashboardPage() {
