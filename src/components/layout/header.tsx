@@ -7,7 +7,7 @@ import { UserNav } from './user-nav';
 import { Button } from '../ui/button';
 
 const Header = () => {
-  const { user } = useAuth();
+  const { user, loading } = useAuth();
 
   return (
     <header className="absolute top-0 left-0 w-full z-50 py-4 px-4 sm:px-6 lg:px-8">
@@ -19,8 +19,8 @@ const Header = () => {
           PrepTalk
         </Link>
 
-        <div>
-          {user ? (
+        <div className="flex items-center">
+          {loading ? null : user ? (
             <UserNav />
           ) : (
             <div className="space-x-2">

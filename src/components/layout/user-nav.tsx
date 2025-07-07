@@ -21,10 +21,12 @@ import { signOut } from 'firebase/auth';
 import { LayoutDashboard, LogOut } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import { useToast } from '@/hooks/use-toast';
 
 export function UserNav() {
   const { user } = useAuth();
   const router = useRouter();
+  const { toast } = useToast();
 
   if (!user) {
     return null;
@@ -32,8 +34,13 @@ export function UserNav() {
   
   const handleLogout = async () => {
     if (!auth) return;
-    await signOut(auth);
-    router.push('/');
+    try {
+        await signOut(auth);
+        toast({ title: 'Logged out successfully.' });
+        router.push('/');
+    } catch (error) {
+        toast({ variant: 'destructive', title: 'Logout failed.' });
+    }
   };
 
   const getInitials = (email: string | null) => {

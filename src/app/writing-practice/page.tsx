@@ -10,12 +10,22 @@ import Footer from "@/components/landing/footer";
 import Header from "@/components/layout/header";
 import Link from "next/link";
 import { ArrowLeft, Loader2, Sparkles } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/contexts/AuthContext";
+import { useRouter } from "next/navigation";
 
 export default function WritingPracticePage() {
+  const { user, loading } = useAuth();
+  const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
+
+  useEffect(() => {
+    if (!loading && !user) {
+      router.push('/login');
+    }
+  }, [user, loading, router]);
 
   const handleFeedback = () => {
     setIsLoading(true);
@@ -29,14 +39,18 @@ export default function WritingPracticePage() {
     }, 1000);
   };
 
+  if (loading || !user) {
+    return null;
+  }
+
   return (
     <div className="flex flex-col min-h-screen bg-gray-50 dark:bg-gray-900">
       <Header />
       <main className="flex-1 container mx-auto px-4 py-24 sm:py-32">
         <div className="max-w-4xl mx-auto">
-            <Link href="/#tools" className="inline-flex items-center text-sm text-muted-foreground hover:text-primary transition-colors mb-8">
+            <Link href="/dashboard" className="inline-flex items-center text-sm text-muted-foreground hover:text-primary transition-colors mb-8">
                 <ArrowLeft className="mr-2 h-4 w-4" />
-                Back to Home
+                Back to Dashboard
             </Link>
             <div className="text-center mb-16">
                 <h1 className="font-headline text-4xl sm:text-5xl font-bold tracking-tighter">

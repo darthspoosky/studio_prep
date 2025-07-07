@@ -26,6 +26,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { useAuth } from "@/contexts/AuthContext";
 import { useRouter } from "next/navigation";
+import { addHistory } from "@/services/historyService";
 
 
 const DifficultyGauge = ({ score }: { score: number }) => {
@@ -476,6 +477,10 @@ export default function NewspaperAnalysisPage() {
         };
         const result = await analyzeNewspaperArticle(flowInput);
         setAnalysisResult(result);
+
+        if (user) {
+            await addHistory(user.uid, result, activeTab === 'url' ? inputs.url : undefined);
+        }
     } catch (error: any) {
         console.error("Analysis error:", error);
         toast({
