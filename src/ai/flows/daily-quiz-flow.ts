@@ -127,7 +127,7 @@ const quizVerificationAgent = ai.definePrompt({
   description: 'Verifies and improves quiz questions for accuracy and quality',
   model: 'gemini-1.5-pro',
   tools: [],
-  // @ts-ignore - Adding properties that may not be in current type definitions but required for runtime
+  // @ts-expect-error - Adding properties that may not be in current type definitions but required for runtime
   inputSchema: z.object({
     mcqs: z.array(MCQSchema),
     subject: z.string(),

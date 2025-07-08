@@ -14,8 +14,34 @@ import Header from "@/components/layout/header";
 import Link from "next/link";
 import { ArrowLeft, Loader2, Sparkles, CheckCircle, XCircle, Circle, Info, Maximize, Volume2, Gauge, IndianRupee, MoveRight, Share2, Bookmark } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { analyzeNewspaperArticle, type NewspaperAnalysisInput, type NewspaperAnalysisOutput, type MCQ as MCQType, type MainsQuestion, type KnowledgeGraph } from "@/ai/flows/newspaper-analysis-flow";
-import { textToSpeech } from "@/ai/flows/text-to-speech-flow";
+// Import types but not the actual implementations to avoid bundling server-only code
+import type { NewspaperAnalysisInput, NewspaperAnalysisOutput, MCQ as MCQType, MainsQuestion, KnowledgeGraph } from "@/ai/flows/newspaper-analysis-flow";
+
+// Create client-side stubs for server functions
+const analyzeNewspaperArticle = async (input: NewspaperAnalysisInput): Promise<NewspaperAnalysisOutput> => {
+  // Call API endpoint instead of using the flow directly
+  const response = await fetch('/api/newspaper-analysis', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(input),
+  });
+  return response.json();
+};
+
+const textToSpeech = async (text: string): Promise<{text: string, audio: Buffer}> => {
+  // Call API endpoint instead of using the flow directly
+  const response = await fetch('/api/tts', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ text }),
+  });
+  const data = await response.json();
+  return {
+    text: data.text,
+    // Convert base64 to Buffer if needed
+    audio: typeof Buffer !== 'undefined' ? Buffer.from(data.audio, 'base64') : null as any,
+  };
+};
 import { ScrollArea } from "@/components/ui/scroll-area";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
@@ -606,7 +632,13 @@ export default function NewspaperAnalysisPage() {
     setAudioSrc(null);
     try {
       const { audio } = await textToSpeech(analysisResult.summary);
-      setAudioSrc(audio);
+      // Convert base64 string to data URL for browser audio playback
+      if (typeof audio === 'string') {
+        setAudioSrc(`data:audio/mp3;base64,${audio}`);
+      } else {
+        // If somehow still a Buffer object, convert to base64 string first
+        setAudioSrc(`data:audio/mp3;base64,${typeof audio === 'object' ? Buffer.from(audio).toString('base64') : audio}`);
+      }
     } catch (error) {
       console.error("Audio generation error:", error);
       toast({
