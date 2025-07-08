@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useEffect, useState, useMemo } from 'react';
@@ -12,7 +13,7 @@ import {
   MoreVertical, Filter, ArrowUpDown, Library,
   Calendar as CalendarIcon, Clock, CheckCircle
 } from 'lucide-react';
-import { getHistory, type HistoryEntry, getQuestionStats } from '@/services/historyService';
+import { onHistoryUpdate, type HistoryEntry } from '@/services/historyService';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Calendar } from '@/components/ui/calendar';
 import { Progress } from '@/components/ui/progress';
@@ -137,36 +138,39 @@ export default function DashboardPage() {
       router.push('/login');
       return;
     }
+    setHistoryLoading(true);
 
-    const fetchData = async () => {
+    // Fetch one-time stats
+    const fetchStaticData = async () => {
       try {
-        // Fetch history
-        setHistoryLoading(true);
-        const historyData = await getHistory(user.uid);
-        setHistory(historyData);
-        setHistoryLoading(false);
-        
-        // Fetch quiz stats
         const stats = await getUserQuizStats(user.uid);
-        // Add missing properties required by the interface
         const extendedStats: ExtendedUserQuizStats = {
           ...stats,
-          streak: 3, // Mock data for streak
-          improvement: 12 // Mock data for improvement
+          streak: 3,
+          improvement: 12
         };
         setQuizStats(extendedStats);
         
-        // Fetch usage stats
         const usage = await getUserUsage(user.uid);
         setUsageStats(usage);
       } catch (error) {
-        console.error('Error fetching dashboard data:', error);
-        setHistoryLoading(false);
+        console.error('Error fetching dashboard stats:', error);
       }
     };
     
-    fetchData();
+    fetchStaticData();
+
+    // Set up real-time listener for history
+    const unsubscribe = onHistoryUpdate(user.uid, (historyData) => {
+      setHistory(historyData);
+      setHistoryLoading(false); // Set loading to false once initial data is loaded
+    });
+
+    // Cleanup listener on component unmount
+    return () => unsubscribe();
+    
   }, [user, router]);
+
 
   // Memoize schedule content
   const scheduleContent = useMemo(() => (

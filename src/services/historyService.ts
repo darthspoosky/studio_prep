@@ -1,6 +1,6 @@
 
 import { db } from '@/lib/firebase';
-import { collection, addDoc, query, where, orderBy, getDocs, Timestamp, doc, getDoc } from 'firebase/firestore';
+import { collection, addDoc, query, where, orderBy, getDocs, Timestamp, doc, getDoc, onSnapshot, limit } from 'firebase/firestore';
 import type { NewspaperAnalysisOutput, MCQ, MainsQuestion } from '@/ai/flows/newspaper-analysis-flow';
 
 export interface HistoryEntry {
@@ -151,4 +151,31 @@ export async function getQuestionStats(userId:string) {
         mainsCount += entry.analysis.mains?.questions?.length || 0;
     });
     return { prelimsCount, mainsCount };
+}
+
+// Sets up a real-time listener for history updates.
+export function onHistoryUpdate(userId: string, callback: (history: HistoryEntry[]) => void) {
+  if (!db) {
+    console.log("Firestore not initialized. Skipping onHistoryUpdate.");
+    return () => {}; // Return a no-op unsubscribe function
+  }
+  
+  const q = query(
+    collection(db, 'userHistory'), 
+    where('userId', '==', userId), 
+    orderBy('timestamp', 'desc'),
+    limit(20) // Performance: only listen to the most recent 20 entries
+  );
+  
+  const unsubscribe = onSnapshot(q, (querySnapshot) => {
+    const history: HistoryEntry[] = [];
+    querySnapshot.forEach((doc) => {
+      history.push({ id: doc.id, ...doc.data() } as HistoryEntry);
+    });
+    callback(history);
+  }, (error) => {
+      console.error("Error listening to history updates: ", error);
+  });
+
+  return unsubscribe;
 }
