@@ -24,7 +24,7 @@ function getSyllabusContent() {
 
 // --- Input and Output Schemas ---
 
-const NewspaperAnalysisInputSchema = z.object({
+export const NewspaperAnalysisInputSchema = z.object({
   sourceText: z.string().min(100).max(50000),
   examType: z.string().default('UPSC Civil Services'),
   analysisFocus: z.string(),
@@ -100,7 +100,7 @@ const NewspaperAnalysisOutputSchema = z.object({
 export type NewspaperAnalysisOutput = z.infer<typeof NewspaperAnalysisOutputSchema>;
 
 // NEW: Define the shape of each streamed chunk
-const NewspaperAnalysisChunkSchema = z.discriminatedUnion("type", [
+export const NewspaperAnalysisChunkSchema = z.discriminatedUnion("type", [
   z.object({ type: z.literal('summary'), data: z.string().describe("The summary of the article.") }),
   z.object({ type: z.literal('prelims'), data: MCQSchema.describe("A single Prelims MCQ question.") }),
   z.object({ type: z.literal('mains'), data: MainsQuestionSchema.describe("A single Mains question.") }),
@@ -300,11 +300,11 @@ Execute comprehensive verification now.`,
 
 export const analyzeNewspaperArticle = ai.defineFlow(
   {
-    name: 'analyzeNewspaperArticle',
+    name: 'analyzeNewspaperArticleFlow',
     inputSchema: NewspaperAnalysisInputSchema,
     streamSchema: NewspaperAnalysisChunkSchema,
   },
-  async (input, { sendChunk }) => {
+  async function* (input) { // <--- REFACTORED to an async generator
     // Load syllabus content inside the flow
     const { prelims: prelimsSyllabus, mains: mainsSyllabus } = getSyllabusContent();
 
@@ -334,7 +334,7 @@ export const analyzeNewspaperArticle = ai.defineFlow(
 
     if (!relevanceResult || !relevanceResult.isRelevant || !relevanceResult.syllabusTopic) {
       const reason = relevanceResult?.reasoning || 'Article assessed as not relevant for UPSC preparation.';
-      sendChunk({ type: 'error', data: reason });
+      yield { type: 'error', data: reason }; // <--- Use yield
       return;
     }
 
@@ -354,7 +354,7 @@ export const analyzeNewspaperArticle = ai.defineFlow(
     }
 
     if (!initialAnalysis) {
-      sendChunk({ type: 'error', data: 'Question Generator Agent failed to produce an analysis.' });
+      yield { type: 'error', data: 'Question Generator Agent failed to produce an analysis.' }; // <--- Use yield
       return;
     }
 
@@ -381,20 +381,20 @@ export const analyzeNewspaperArticle = ai.defineFlow(
     
     // STEP 4: Stream the results piece by piece
     if (finalAnalysis.summary) {
-        sendChunk({ type: 'summary', data: finalAnalysis.summary });
+        yield { type: 'summary', data: finalAnalysis.summary }; // <--- Use yield
     }
     if (finalAnalysis.prelims?.mcqs) {
         for (const mcq of finalAnalysis.prelims.mcqs) {
-            sendChunk({ type: 'prelims', data: mcq });
+            yield { type: 'prelims', data: mcq }; // <--- Use yield
         }
     }
     if (finalAnalysis.mains?.questions) {
         for (const question of finalAnalysis.mains.questions) {
-            sendChunk({ type: 'mains', data: question });
+            yield { type: 'mains', data: question }; // <--- Use yield
         }
     }
     if (finalAnalysis.knowledgeGraph) {
-        sendChunk({ type: 'knowledgeGraph', data: finalAnalysis.knowledgeGraph });
+        yield { type: 'knowledgeGraph', data: finalAnalysis.knowledgeGraph }; // <--- Use yield
     }
 
     // STEP 5: Final metadata
@@ -402,7 +402,7 @@ export const analyzeNewspaperArticle = ai.defineFlow(
     const totalTokens = totalInputTokens + totalOutputTokens;
     const cost = ((totalInputTokens / 1000) * INPUT_PRICE_PER_1K_TOKENS_USD + (totalOutputTokens / 1000) * OUTPUT_PRICE_PER_1K_TOKENS_USD) * USD_TO_INR_RATE;
     
-    sendChunk({
+    yield { // <--- Use yield
         type: 'metadata',
         data: {
             syllabusTopic: relevanceResult.syllabusTopic,
@@ -411,6 +411,6 @@ export const analyzeNewspaperArticle = ai.defineFlow(
             totalTokens,
             cost: Math.round(cost * 100) / 100,
         }
-    });
+    };
   }
 );
