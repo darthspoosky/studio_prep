@@ -24,7 +24,7 @@ function getSyllabusContent() {
 
 // --- Input and Output Schemas ---
 
-export const NewspaperAnalysisInputSchema = z.object({
+const NewspaperAnalysisInputSchema = z.object({
   sourceText: z.string().min(100).max(50000),
   examType: z.string().default('UPSC Civil Services'),
   analysisFocus: z.string(),
@@ -100,7 +100,7 @@ const NewspaperAnalysisOutputSchema = z.object({
 export type NewspaperAnalysisOutput = z.infer<typeof NewspaperAnalysisOutputSchema>;
 
 // NEW: Define the shape of each streamed chunk
-export const NewspaperAnalysisChunkSchema = z.discriminatedUnion("type", [
+const NewspaperAnalysisChunkSchema = z.discriminatedUnion("type", [
   z.object({ type: z.literal('summary'), data: z.string().describe("The summary of the article.") }),
   z.object({ type: z.literal('prelims'), data: MCQSchema.describe("A single Prelims MCQ question.") }),
   z.object({ type: z.literal('mains'), data: MainsQuestionSchema.describe("A single Mains question.") }),
