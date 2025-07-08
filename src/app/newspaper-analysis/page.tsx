@@ -1,7 +1,7 @@
 
 "use client";
 
-import React, { useState, useMemo, useEffect } from "react";
+import React, { useState, useMemo, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -15,18 +15,8 @@ import Link from "next/link";
 import { ArrowLeft, Loader2, Sparkles, CheckCircle, XCircle, Circle, Info, Maximize, Volume2, Gauge, IndianRupee, MoveRight, Share2, Bookmark } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 // Import types but not the actual implementations to avoid bundling server-only code
-import type { NewspaperAnalysisInput, NewspaperAnalysisOutput, MCQ as MCQType, MainsQuestion, KnowledgeGraph } from "@/ai/flows/newspaper-analysis-flow";
-
-// Create client-side stubs for server functions
-const analyzeNewspaperArticle = async (input: NewspaperAnalysisInput): Promise<NewspaperAnalysisOutput> => {
-  // Call API endpoint instead of using the flow directly
-  const response = await fetch('/api/newspaper-analysis', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(input),
-  });
-  return response.json();
-};
+import type { NewspaperAnalysisInput, NewspaperAnalysisOutput, MCQ as MCQType, MainsQuestion, KnowledgeGraph, NewspaperAnalysisChunk } from "@/ai/flows/newspaper-analysis-flow";
+import { analyzeNewspaperArticle } from "@/ai/flows/newspaper-analysis-flow";
 
 const textToSpeech = async (text: string): Promise<{ audio: string }> => {
   const response = await fetch('/api/tts', {
@@ -137,7 +127,12 @@ const MCQ = ({ mcq, onAnswer, isSaved, onSaveToggle }: { mcq: MCQType, onAnswer:
   const hasSelectedCorrect = options.some(o => o.text === selected && o.correct);
 
   return (
-    <div className="my-6 p-4 border rounded-lg bg-background/50 shadow-sm relative">
+    <motion.div 
+      className="my-6 p-4 border rounded-lg bg-background/50 shadow-sm relative"
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.3 }}
+    >
        <div className="absolute top-2 right-2 flex items-center gap-2">
          <TooltipProvider>
             <Tooltip>
@@ -230,7 +225,7 @@ const MCQ = ({ mcq, onAnswer, isSaved, onSaveToggle }: { mcq: MCQType, onAnswer:
         </motion.div>
       )}
       </AnimatePresence>
-    </div>
+    </motion.div>
   );
 };
 
@@ -244,18 +239,19 @@ const MCQList = ({ mcqs, onAnswer, onSaveToggle, savedQuestionIds, user }: { mcq
     }
     return (
         <div>
-            {mcqs.map((q, idx) => {
-                const mcqWithContext = q as PrelimsQuestionWithContext;
-                // Using the user ID from auth context, not from mcqWithContext
-                const savedQuestionId = getSavedQuestionId(user?.uid || '', mcqWithContext);
-                return <MCQ 
-                    key={idx} 
-                    mcq={q} 
-                    onAnswer={onAnswer}
-                    onSaveToggle={onSaveToggle} 
-                    isSaved={savedQuestionIds.has(savedQuestionId)} 
-                />
-            })}
+            <AnimatePresence>
+                {mcqs.map((q, idx) => {
+                    const mcqWithContext = q as PrelimsQuestionWithContext;
+                    const savedQuestionId = getSavedQuestionId(user?.uid || '', mcqWithContext);
+                    return <MCQ 
+                        key={idx} 
+                        mcq={q} 
+                        onAnswer={onAnswer}
+                        onSaveToggle={onSaveToggle} 
+                        isSaved={savedQuestionIds.has(savedQuestionId)} 
+                    />
+                })}
+            </AnimatePresence>
         </div>
     );
 };
@@ -326,36 +322,44 @@ const MainsQuestionList = ({ questions, userId, historyId }: { questions: MainsQ
     }
     return (
         <div className="space-y-8">
-            {questions.map((q, i) => (
-                <div key={i} className="p-4 border rounded-lg bg-background/50 shadow-sm">
-                    <h2 className="text-xl font-bold font-headline text-primary">{q.question}</h2>
-                    {q.difficulty && <div className="mt-2"><DifficultyGauge score={q.difficulty} /></div>}
-                    {q.guidance && (
-                        <div className="prose-sm dark:prose-invert max-w-none text-muted-foreground mt-4">
-                            <ReactMarkdown remarkPlugins={[remarkGfm]} components={markdownComponents}>
-                                {q.guidance}
-                            </ReactMarkdown>
+            <AnimatePresence>
+                {questions.map((q, i) => (
+                    <motion.div 
+                        key={i} 
+                        className="p-4 border rounded-lg bg-background/50 shadow-sm"
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ duration: 0.3, delay: i * 0.1 }}
+                    >
+                        <h2 className="text-xl font-bold font-headline text-primary">{q.question}</h2>
+                        {q.difficulty && <div className="mt-2"><DifficultyGauge score={q.difficulty} /></div>}
+                        {q.guidance && (
+                            <div className="prose-sm dark:prose-invert max-w-none text-muted-foreground mt-4">
+                                <ReactMarkdown remarkPlugins={[remarkGfm]} components={markdownComponents}>
+                                    {q.guidance}
+                                </ReactMarkdown>
+                            </div>
+                        )}
+                        <div className="mt-6 border-t pt-4 space-y-2">
+                            <Label htmlFor={`mains-q-${i}`} className="font-semibold">Your Answer</Label>
+                            <Textarea
+                                id={`mains-q-${i}`}
+                                placeholder="Draft your answer here..."
+                                className="h-48 bg-background/80"
+                                value={answers[q.question] || ''}
+                                onChange={(e) => handleAnswerChange(q.question, e.target.value)}
+                            />
+                            <Button 
+                                onClick={() => handleSaveAnswer(q.question)}
+                                disabled={!historyId || saving === q.question || !answers[q.question]}
+                            >
+                                {saving === q.question && <Loader2 className="animate-spin" />}
+                                Save Answer
+                            </Button>
                         </div>
-                    )}
-                    <div className="mt-6 border-t pt-4 space-y-2">
-                        <Label htmlFor={`mains-q-${i}`} className="font-semibold">Your Answer</Label>
-                        <Textarea
-                            id={`mains-q-${i}`}
-                            placeholder="Draft your answer here..."
-                            className="h-48 bg-background/80"
-                            value={answers[q.question] || ''}
-                            onChange={(e) => handleAnswerChange(q.question, e.target.value)}
-                        />
-                        <Button 
-                            onClick={() => handleSaveAnswer(q.question)}
-                            disabled={!historyId || saving === q.question || !answers[q.question]}
-                        >
-                            {saving === q.question && <Loader2 className="animate-spin" />}
-                            Save Answer
-                        </Button>
-                    </div>
-                </div>
-            ))}
+                    </motion.div>
+                ))}
+            </AnimatePresence>
         </div>
     );
 };
@@ -393,33 +397,45 @@ const KnowledgeGraphVisualizer = ({ graphData }: { graphData?: KnowledgeGraph })
         <h3 className="text-lg font-semibold mb-4 flex items-center gap-2"><Share2 className="w-5 h-5 text-primary"/> Key Entities</h3>
         <div className="space-y-4">
           {Object.entries(nodesByType).map(([type, nodes]) => (
-            <div key={type}>
+            <motion.div 
+                key={type}
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+            >
               <h4 className={cn("font-semibold mb-2", entityColors[type])}>{type}</h4>
               <div className="flex flex-wrap gap-2">
                 {nodes.map(node => <Badge key={node.id} variant="secondary" className={cn("text-base", entityColors[type])}>{node.label}</Badge>)}
               </div>
-            </div>
+            </motion.div>
           ))}
         </div>
       </div>
       <div>
         <h3 className="text-lg font-semibold mb-4 flex items-center gap-2"><MoveRight className="w-5 h-5 text-primary"/> Key Relationships</h3>
         <div className="space-y-3">
+            <AnimatePresence>
           {graphData.edges.map((edge, index) => {
             const sourceNode = getNode(edge.source);
             const targetNode = getNode(edge.target);
             if (!sourceNode || !targetNode) return null;
             
             return (
-              <div key={index} className="flex items-center gap-3 text-sm p-3 bg-primary/5 border border-primary/20 rounded-lg">
+              <motion.div 
+                key={index} 
+                className="flex items-center gap-3 text-sm p-3 bg-primary/5 border border-primary/20 rounded-lg"
+                initial={{ opacity: 0, x: -10 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ duration: 0.3, delay: index * 0.1 }}
+                >
                 <Badge variant="outline" className={cn(entityColors[sourceNode.type])}>{sourceNode.label}</Badge>
                 <div className="flex-1 text-center text-primary font-medium text-xs tracking-wider uppercase">
                   {edge.label}
                 </div>
                 <Badge variant="outline" className={cn(entityColors[targetNode.type])}>{targetNode.label}</Badge>
-              </div>
+              </motion.div>
             )
           })}
+          </AnimatePresence>
         </div>
       </div>
     </div>
@@ -433,11 +449,13 @@ const UsageStats = ({
   outputTokens,
   cost,
 }: {
-  totalTokens: number;
+  totalTokens?: number;
   inputTokens?: number;
   outputTokens?: number;
-  cost: number;
+  cost?: number;
 }) => {
+  if (totalTokens === undefined || cost === undefined) return null;
+
   return (
     <div className="flex items-center gap-6 text-xs text-muted-foreground border-b mb-4 pb-4">
       <TooltipProvider>
@@ -493,6 +511,7 @@ const UsageStats = ({
 export default function NewspaperAnalysisPage() {
   const { user, loading } = useAuth();
   const router = useRouter();
+  const finalAnalysisForHistory = useRef<Partial<NewspaperAnalysisOutput>>({});
 
   useEffect(() => {
     if (!loading && !user) {
@@ -502,7 +521,7 @@ export default function NewspaperAnalysisPage() {
 
   const [isLoading, setIsLoading] = useState(false);
   const [isGeneratingAudio, setIsGeneratingAudio] = useState(false);
-  const [analysisResult, setAnalysisResult] = useState<NewspaperAnalysisOutput | null>(null);
+  const [analysisResult, setAnalysisResult] = useState<Partial<NewspaperAnalysisOutput> | null>(null);
   const [historyId, setHistoryId] = useState<string | null>(null);
   const [audioSrc, setAudioSrc] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState("url");
@@ -556,21 +575,14 @@ export default function NewspaperAnalysisPage() {
         sourceText = inputs.text;
     }
 
-    if (!sourceText.trim()) {
-        toast({ variant: 'destructive', title: "Input Required", description: "Please provide an article URL or paste the text to analyze." });
-        return;
-    }
-    if (!inputs.examType) {
-        toast({ variant: 'destructive', title: "Exam Type Required", description: "Please select an exam type." });
-        return;
-    }
-    if (!inputs.analysisFocus) {
-        toast({ variant: 'destructive', title: "Analysis Focus Required", description: "Please select an analysis focus." });
+    if (!sourceText.trim() || !inputs.examType || !inputs.analysisFocus) {
+        toast({ variant: 'destructive', title: "Input Required", description: "Please complete all fields." });
         return;
     }
     
-    if(!isLoading) setIsLoading(true);
-    setAnalysisResult(null);
+    setIsLoading(true);
+    setAnalysisResult({ prelims: { mcqs: [] }, mains: { questions: [] }, knowledgeGraph: { nodes: [], edges: [] }});
+    finalAnalysisForHistory.current = { prelims: { mcqs: [] }, mains: { questions: [] }, knowledgeGraph: { nodes: [], edges: [] } };
     setHistoryId(null);
     setAudioSrc(null);
     setSavedQuestionIds(new Set());
@@ -583,14 +595,47 @@ export default function NewspaperAnalysisPage() {
             analysisFocus: inputs.analysisFocus,
             outputLanguage: inputs.outputLanguage,
         };
-        const result = await analyzeNewspaperArticle(flowInput);
-        setAnalysisResult(result);
+        const stream = await analyzeNewspaperArticle(flowInput);
+
+        for await (const chunk of stream) {
+            setAnalysisResult(currentResult => {
+                const newResult = JSON.parse(JSON.stringify(currentResult || {})); // Deep copy
+                
+                switch (chunk.type) {
+                    case 'summary':
+                        newResult.summary = chunk.data;
+                        finalAnalysisForHistory.current.summary = chunk.data;
+                        break;
+                    case 'prelims':
+                        if (!newResult.prelims) newResult.prelims = { mcqs: [] };
+                        newResult.prelims.mcqs.push(chunk.data);
+                        finalAnalysisForHistory.current.prelims?.mcqs.push(chunk.data);
+                        break;
+                    case 'mains':
+                        if (!newResult.mains) newResult.mains = { questions: [] };
+                        newResult.mains.questions.push(chunk.data);
+                        finalAnalysisForHistory.current.mains?.questions.push(chunk.data);
+                        break;
+                    case 'knowledgeGraph':
+                        newResult.knowledgeGraph = chunk.data;
+                        finalAnalysisForHistory.current.knowledgeGraph = chunk.data;
+                        break;
+                    case 'metadata':
+                        Object.assign(newResult, chunk.data);
+                        Object.assign(finalAnalysisForHistory.current, chunk.data);
+                        break;
+                    case 'error':
+                        toast({ variant: 'destructive', title: 'Analysis Error', description: chunk.data });
+                        break;
+                }
+                return newResult;
+            });
+        }
         
-        const newHistoryId = await addHistory(user.uid, result, activeTab === 'url' ? inputs.url : undefined);
+        const newHistoryId = await addHistory(user.uid, finalAnalysisForHistory.current as NewspaperAnalysisOutput, activeTab === 'url' ? inputs.url : undefined);
         if (newHistoryId) {
             setHistoryId(newHistoryId);
-            // Now that history is saved, we can check saved status for new questions
-            const prelimsQuestions = result.prelims?.mcqs || [];
+            const prelimsQuestions = finalAnalysisForHistory.current.prelims?.mcqs || [];
             if (prelimsQuestions.length > 0) {
                 const questionIds = prelimsQuestions.map(mcq => {
                     const questionWithContext: PrelimsQuestionWithContext = { ...mcq, historyId: newHistoryId, timestamp: Timestamp.fromDate(new Date()), articleUrl: activeTab === 'url' ? inputs.url : undefined };
@@ -604,17 +649,10 @@ export default function NewspaperAnalysisPage() {
 
     } catch (error: any) {
         console.error("Analysis error:", error);
-        let description = "The AI failed to analyze the article. Please try again later.";
-        if (error.code === 'permission-denied') {
-            description = "Could not save analysis history due to a permission error. Please check your Firestore security rules or contact support."
-        } else if (error.message) {
-            description = error.message;
-        }
-
         toast({
             variant: "destructive",
             title: "Analysis Failed",
-            description: description,
+            description: "The AI failed to analyze the article. Please try again later.",
         });
     } finally {
         setIsLoading(false);
@@ -684,44 +722,22 @@ export default function NewspaperAnalysisPage() {
     }
   };
 
-  const prelimsContent = useMemo(() => {
-    if (!analysisResult) return [];
-    // Enrich with userId for getSavedQuestionId
-    return (analysisResult.prelims?.mcqs || []).map(mcq => {
-      // Create a properly typed PrelimsQuestionWithContext object
-      const prelimsQuestion: PrelimsQuestionWithContext = {
-        ...mcq,
-        historyId: historyId || "", 
-        timestamp: Timestamp.fromDate(new Date()),
-        // Use the article URL from inputs or undefined if not available
-        articleUrl: activeTab === 'url' ? inputs.url : undefined
-      };
-      return prelimsQuestion;
-    });
-  }, [analysisResult, user, historyId, activeTab, inputs.url]);
-
-  const { mainsContent, knowledgeGraphContent } = useMemo(() => {
-    if (!analysisResult) {
-        return { mainsContent: [], knowledgeGraphContent: undefined };
-    }
-    return {
-        mainsContent: analysisResult.mains?.questions || [],
-        knowledgeGraphContent: analysisResult.knowledgeGraph,
-    };
-  }, [analysisResult]);
+  const prelimsContent = useMemo(() => analysisResult?.prelims?.mcqs || [], [analysisResult]);
+  const mainsContent = useMemo(() => analysisResult?.mains?.questions || [], [analysisResult]);
+  const knowledgeGraphContent = useMemo(() => analysisResult?.knowledgeGraph, [analysisResult]);
 
   useEffect(() => {
     if (analysisResult) {
-        const hasPrelims = (analysisResult.prelims?.mcqs?.length || 0) > 0;
-        const hasMains = (analysisResult.mains?.questions?.length || 0) > 0;
-        const hasGraph = (analysisResult.knowledgeGraph?.nodes?.length || 0) > 0;
+        const hasPrelims = prelimsContent.length > 0;
+        const hasMains = mainsContent.length > 0;
+        const hasGraph = knowledgeGraphContent && knowledgeGraphContent.nodes.length > 0;
   
         if (hasPrelims) setCurrentAnalysisTab('prelims');
         else if (hasMains) setCurrentAnalysisTab('mains');
         else if (hasGraph) setCurrentAnalysisTab('connections');
-        else setCurrentAnalysisTab('prelims'); // fallback
+        else setCurrentAnalysisTab('prelims');
     }
-  }, [analysisResult]);
+  }, [prelimsContent, mainsContent, knowledgeGraphContent, analysisResult]);
 
   const showPrelims = prelimsContent.length > 0;
   const showMains = mainsContent.length > 0;
@@ -742,7 +758,6 @@ export default function NewspaperAnalysisPage() {
   if (loading || !user) {
     return null;
   }
-
 
   return (
     <div className="flex flex-col min-h-screen bg-gray-50 dark:bg-gray-900">
@@ -876,7 +891,7 @@ export default function NewspaperAnalysisPage() {
                             </div>
                         </CardHeader>
                         <div className="flex-1 flex flex-col px-6 pb-6 pt-0">
-                            {isLoading && (
+                            {isLoading && !analysisResult?.summary && (
                                 <div className="flex flex-col items-center justify-center text-center h-full flex-1 p-8">
                                     <Loader2 className="w-16 h-16 text-primary/50 animate-spin mb-4" />
                                     <p className="text-muted-foreground font-medium text-lg">Our AI is reading...</p>
@@ -890,7 +905,7 @@ export default function NewspaperAnalysisPage() {
                                     <p className="text-muted-foreground mt-2 max-w-sm">Submit an article on the left to see the AI-powered analysis.</p>
                                 </div>
                             )}
-                            {!isLoading && analysisResult && user && (
+                            {analysisResult && user && (
                               <div className="flex-1 flex flex-col">
                                 {analysisResult.totalTokens !== undefined && analysisResult.cost !== undefined && (
                                     <UsageStats
@@ -901,7 +916,11 @@ export default function NewspaperAnalysisPage() {
                                     />
                                 )}
                                 {analysisResult.summary && (
-                                  <div className="mb-4 p-4 bg-primary/10 rounded-lg flex items-center gap-4">
+                                  <motion.div 
+                                    className="mb-4 p-4 bg-primary/10 rounded-lg flex items-center gap-4"
+                                    initial={{ opacity: 0 }}
+                                    animate={{ opacity: 1 }}
+                                   >
                                     <p className="flex-1 text-sm text-muted-foreground italic">
                                       {analysisResult.summary}
                                     </p>
@@ -919,7 +938,7 @@ export default function NewspaperAnalysisPage() {
                                     ) : (
                                         audioButton
                                     )}
-                                  </div>
+                                  </motion.div>
                                 )}
                                 {audioSrc && (
                                   <motion.div initial={{ opacity: 0}} animate={{ opacity: 1}}>
@@ -989,11 +1008,11 @@ export default function NewspaperAnalysisPage() {
                              <MCQList mcqs={prelimsContent} onAnswer={handleAnswer} onSaveToggle={handleSaveToggle} savedQuestionIds={savedQuestionIds} user={user}/>
                            )}
                            {analysisResult?.mains && user && (
-                             <MainsQuestionList questions={analysisResult.mains.questions} userId={user.uid} historyId={historyId}/>
+                             <MainsQuestionList questions={mainsContent} userId={user.uid} historyId={historyId}/>
                            )}
                            {analysisResult?.knowledgeGraph && (
                             <div className="mt-8">
-                                <KnowledgeGraphVisualizer graphData={analysisResult.knowledgeGraph} />
+                                <KnowledgeGraphVisualizer graphData={knowledgeGraphContent} />
                             </div>
                            )}
                         </ScrollArea>

@@ -1,15 +1,13 @@
 'use server';
 /**
  * @fileOverview A multi-agent AI workflow to analyze newspaper articles for exam preparation.
+ * This flow now supports streaming results back to the client.
  *
- * This file simulates a multi-agent system using distinct prompts and an orchestrator flow.
- * - RelevanceAnalystAgent: Assesses if an article is relevant to the UPSC syllabus.
- * - QuestionGeneratorAgent: Creates Prelims and Mains questions based on the article.
- * - VerificationEditorAgent: Reviews and refines the generated questions for quality.
  * - analyzeNewspaperArticle: The public-facing function that orchestrates the workflow.
  */
 
 import { ai } from '@/ai/genkit';
+import { run } from '@genkit-ai/flow';
 import { z } from 'zod';
 import fs from 'fs';
 import path from 'path';
@@ -84,7 +82,7 @@ const KnowledgeGraphSchema = z.object({
 export type KnowledgeGraph = z.infer<typeof KnowledgeGraphSchema>;
 
 
-// Final output schema for the entire flow
+// Final output schema for the entire flow (used for client-side state)
 const NewspaperAnalysisOutputSchema = z.object({
   summary: z.string().optional(),
   prelims: z.object({ mcqs: z.array(MCQSchema) }),
@@ -101,6 +99,24 @@ const NewspaperAnalysisOutputSchema = z.object({
 });
 export type NewspaperAnalysisOutput = z.infer<typeof NewspaperAnalysisOutputSchema>;
 
+// NEW: Define the shape of each streamed chunk
+const NewspaperAnalysisChunkSchema = z.discriminatedUnion("type", [
+  z.object({ type: z.literal('summary'), data: z.string().describe("The summary of the article.") }),
+  z.object({ type: z.literal('prelims'), data: MCQSchema.describe("A single Prelims MCQ question.") }),
+  z.object({ type: z.literal('mains'), data: MainsQuestionSchema.describe("A single Mains question.") }),
+  z.object({ type: z.literal('knowledgeGraph'), data: KnowledgeGraphSchema.unwrap().optional().describe("The full knowledge graph.") }),
+  z.object({ type: z.literal('metadata'), data: z.object({
+    syllabusTopic: z.string().optional().nullable(),
+    qualityScore: z.number().optional(),
+    questionsCount: z.number().optional(),
+    totalTokens: z.number().optional(),
+    cost: z.number().optional()
+  }).describe("Final metadata about the analysis.") }),
+  z.object({ type: z.literal('error'), data: z.string().describe("An error message if the analysis failed.") }),
+]);
+export type NewspaperAnalysisChunk = z.infer<typeof NewspaperAnalysisChunkSchema>;
+
+
 const VerificationInputSchema = NewspaperAnalysisOutputSchema.extend({
     sourceText: z.string(),
     outputLanguage: z.string(),
@@ -109,14 +125,7 @@ const VerificationInputSchema = NewspaperAnalysisOutputSchema.extend({
 });
 
 
-// --- AGENT 1: Relevance Analyst ---
-
-type RelevanceOutput = {
-  isRelevant: boolean;
-  syllabusTopic: string | null;
-  reasoning?: string;
-};
-
+// --- AGENT 1: Relevance Analyst (definition remains the same) ---
 const RelevanceAnalystOutputSchema = z.object({
   isRelevant: z.boolean().describe('Whether the article content is relevant to the provided UPSC syllabus.'),
   syllabusTopic: z.string().nullable().describe('The single most specific, granular syllabus topic. Null if not relevant.'),
@@ -164,8 +173,7 @@ Output your assessment in {{{outputLanguage}}}.
 `,
 });
 
-// --- AGENT 2: Question Generator ---
-
+// --- AGENT 2: Question Generator (definition remains the same) ---
 const questionGeneratorAgent = ai.definePrompt({
   name: 'questionGeneratorAgent',
   input: { schema: AnalysisWithTopicInputSchema },
@@ -252,8 +260,7 @@ This information should be populated in the 'knowledgeGraph' field of the JSON o
 Generate the questions and knowledge graph now.`,
 });
 
-// --- AGENT 3: Verification Editor ---
-
+// --- AGENT 3: Verification Editor (definition remains the same) ---
 const verificationEditorAgent = ai.definePrompt({
   name: 'verificationEditorAgent',
   input: { schema: VerificationInputSchema },
@@ -289,30 +296,27 @@ Execute comprehensive verification now.`,
 });
 
 
-// --- ORCHESTRATOR: The Main Flow ---
+// --- ORCHESTRATOR: The Main Flow (Now Streaming) ---
 
-export async function analyzeNewspaperArticle(input: NewspaperAnalysisInput): Promise<NewspaperAnalysisOutput> {
-  const startTime = Date.now();
-  
+export async function analyzeNewspaperArticle(input: NewspaperAnalysisInput) {
   const { prelims: prelimsSyllabus, mains: mainsSyllabus } = getSyllabusContent();
   
-  const result = await analyzeNewspaperArticleFlow({
+  const stream = await run(analyzeNewspaperArticleFlow, {
     ...input,
     prelimsSyllabus: prelimsSyllabus as string,
     mainsSyllabus: mainsSyllabus as string,
   });
-  
-  const processingTime = Date.now() - startTime;
-  return { ...result, processingTime };
+
+  return stream;
 }
 
 const analyzeNewspaperArticleFlow = ai.defineFlow(
   {
     name: 'analyzeNewspaperArticleFlow',
     inputSchema: SyllabusInputSchema,
-    outputSchema: NewspaperAnalysisOutputSchema,
+    streamSchema: NewspaperAnalysisChunkSchema, // Define the stream output
   },
-  async (input) => {
+  async (input, { sendChunk }) => {
     let totalInputTokens = 0;
     let totalOutputTokens = 0;
     const USD_TO_INR_RATE = 83;
@@ -332,20 +336,9 @@ const analyzeNewspaperArticleFlow = ai.defineFlow(
     }
 
     if (!relevanceResult || !relevanceResult.isRelevant || !relevanceResult.syllabusTopic) {
-      const cost = ((totalInputTokens / 1000) * INPUT_PRICE_PER_1K_TOKENS_USD + (totalOutputTokens / 1000) * OUTPUT_PRICE_PER_1K_TOKENS_USD) * USD_TO_INR_RATE;
-      return {
-        summary: relevanceResult?.reasoning || 'Article assessed as not relevant for UPSC preparation.',
-        prelims: { mcqs: [] },
-        mains: { questions: [] },
-        knowledgeGraph: { nodes: [], edges: [] },
-        syllabusTopic: null,
-        qualityScore: 0,
-        questionsCount: 0,
-        totalTokens: totalInputTokens + totalOutputTokens,
-        inputTokens: totalInputTokens,
-        outputTokens: totalOutputTokens,
-        cost,
-      };
+      const reason = relevanceResult?.reasoning || 'Article assessed as not relevant for UPSC preparation.';
+      sendChunk({ type: 'error', data: reason });
+      return;
     }
 
     // STEP 2: Run Question Generator Agent
@@ -364,7 +357,8 @@ const analyzeNewspaperArticleFlow = ai.defineFlow(
     }
 
     if (!initialAnalysis) {
-      throw new Error("Question Generator Agent failed to produce an analysis.");
+      sendChunk({ type: 'error', data: 'Question Generator Agent failed to produce an analysis.' });
+      return;
     }
 
     // STEP 3: Run Verification Editor Agent
@@ -388,25 +382,38 @@ const analyzeNewspaperArticleFlow = ai.defineFlow(
 
     const finalAnalysis = verifiedAnalysis || initialAnalysis; // Fallback to initial if verification fails
     
-    // STEP 4: Final Processing and Packaging
-    const questionsCount = (finalAnalysis.prelims?.mcqs?.length || 0) + (finalAnalysis.mains?.questions?.length || 0);
-    const cleanSummary = (finalAnalysis.summary || '').replace(/<[^>]+>/g, '').trim();
+    // STEP 4: Stream the results piece by piece
+    if (finalAnalysis.summary) {
+        sendChunk({ type: 'summary', data: finalAnalysis.summary });
+    }
+    if (finalAnalysis.prelims?.mcqs) {
+        for (const mcq of finalAnalysis.prelims.mcqs) {
+            sendChunk({ type: 'prelims', data: mcq });
+        }
+    }
+    if (finalAnalysis.mains?.questions) {
+        for (const question of finalAnalysis.mains.questions) {
+            sendChunk({ type: 'mains', data: question });
+        }
+    }
+    if (finalAnalysis.knowledgeGraph) {
+        sendChunk({ type: 'knowledgeGraph', data: finalAnalysis.knowledgeGraph });
+    }
 
+    // STEP 5: Final metadata
+    const questionsCount = (finalAnalysis.prelims?.mcqs?.length || 0) + (finalAnalysis.mains?.questions?.length || 0);
     const totalTokens = totalInputTokens + totalOutputTokens;
     const cost = ((totalInputTokens / 1000) * INPUT_PRICE_PER_1K_TOKENS_USD + (totalOutputTokens / 1000) * OUTPUT_PRICE_PER_1K_TOKENS_USD) * USD_TO_INR_RATE;
-
-    return {
-      ...finalAnalysis,
-      summary: cleanSummary || 'Analysis completed successfully.',
-      prelims: finalAnalysis.prelims || { mcqs: [] },
-      mains: finalAnalysis.mains || { questions: [] },
-      knowledgeGraph: finalAnalysis.knowledgeGraph || { nodes: [], edges: [] },
-      syllabusTopic: relevanceResult.syllabusTopic,
-      questionsCount,
-      totalTokens,
-      inputTokens: totalInputTokens,
-      outputTokens: totalOutputTokens,
-      cost: Math.round(cost * 100) / 100,
-    };
+    
+    sendChunk({
+        type: 'metadata',
+        data: {
+            syllabusTopic: relevanceResult.syllabusTopic,
+            qualityScore: finalAnalysis.qualityScore,
+            questionsCount,
+            totalTokens,
+            cost: Math.round(cost * 100) / 100,
+        }
+    });
   }
 );
