@@ -39,7 +39,7 @@ const Hero = () => {
             </p>
             <div className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-4">
                 <Button asChild size="lg">
-                    <Link href="/dashboard">Get Started for Free</Link>
+                    <Link href="/dashboard">Get Started</Link>
                 </Button>
                 <Button asChild size="lg" variant="outline" className="bg-background/50">
                     <a href="#tools">Explore Tools</a>
