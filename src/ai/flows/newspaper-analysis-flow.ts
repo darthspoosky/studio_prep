@@ -4,7 +4,7 @@
  * @fileOverview A multi-agent AI workflow to analyze newspaper articles for exam preparation.
  * This flow now supports streaming results back to the client.
  *
- * - analyzeNewspaperArticle: The public-facing function that orchestrates the workflow.
+ * - analyzeNewspaperArticle: The public-facing flow that orchestrates the workflow.
  */
 
 import { ai } from '@/ai/genkit';
@@ -298,13 +298,22 @@ Execute comprehensive verification now.`,
 
 // --- ORCHESTRATOR: The Main Flow (Now Streaming) ---
 
-const analyzeNewspaperArticleFlow = ai.defineFlow(
+export const analyzeNewspaperArticle = ai.defineFlow(
   {
-    name: 'analyzeNewspaperArticleFlow',
-    inputSchema: SyllabusInputSchema,
-    streamSchema: NewspaperAnalysisChunkSchema, // Define the stream output
+    name: 'analyzeNewspaperArticle',
+    inputSchema: NewspaperAnalysisInputSchema,
+    streamSchema: NewspaperAnalysisChunkSchema,
   },
   async (input, { sendChunk }) => {
+    // Load syllabus content inside the flow
+    const { prelims: prelimsSyllabus, mains: mainsSyllabus } = getSyllabusContent();
+
+    const flowInputWithSyllabus: SyllabusInputSchema = {
+      ...input,
+      prelimsSyllabus: prelimsSyllabus as string,
+      mainsSyllabus: mainsSyllabus as string,
+    };
+
     let totalInputTokens = 0;
     let totalOutputTokens = 0;
     const USD_TO_INR_RATE = 83;
@@ -312,7 +321,7 @@ const analyzeNewspaperArticleFlow = ai.defineFlow(
     const OUTPUT_PRICE_PER_1K_TOKENS_USD = 0.00105;
 
     // STEP 1: Run Relevance Analyst Agent
-    const relevanceAgentResponse = await relevanceAnalystAgent(input);
+    const relevanceAgentResponse = await relevanceAnalystAgent(flowInputWithSyllabus);
     const relevanceResult = relevanceAgentResponse.output;
     
     // @ts-expect-error - Handling metadata usage which may not be in current type definitions
@@ -331,7 +340,7 @@ const analyzeNewspaperArticleFlow = ai.defineFlow(
 
     // STEP 2: Run Question Generator Agent
     const questionAgentResponse = await questionGeneratorAgent({
-      ...input,
+      ...flowInputWithSyllabus,
       identifiedSyllabusTopic: relevanceResult.syllabusTopic || '',
     });
     const initialAnalysis = questionAgentResponse.output;
@@ -405,15 +414,3 @@ const analyzeNewspaperArticleFlow = ai.defineFlow(
     });
   }
 );
-
-export async function analyzeNewspaperArticle(input: NewspaperAnalysisInput) {
-  const { prelims: prelimsSyllabus, mains: mainsSyllabus } = getSyllabusContent();
-  
-  const stream = await analyzeNewspaperArticleFlow({
-    ...input,
-    prelimsSyllabus: prelimsSyllabus as string,
-    mainsSyllabus: mainsSyllabus as string,
-  });
-
-  return stream;
-}
