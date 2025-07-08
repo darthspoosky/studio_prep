@@ -1,6 +1,4 @@
 
-'use client';
-
 import { db } from '@/lib/firebase';
 import { collection, addDoc, doc, getDoc, updateDoc, query, where, getDocs, Timestamp, orderBy } from 'firebase/firestore';
 
