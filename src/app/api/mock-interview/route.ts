@@ -1,4 +1,3 @@
-import { run } from '@genkit-ai/flow';
 import { mockInterviewFlow } from '@/ai/flows/mock-interview-flow';
 import { NextRequest, NextResponse } from 'next/server';
 import { createMockInterviewSession, updateMockInterviewSession } from '@/services/mockInterviewService';
@@ -35,31 +34,32 @@ export async function POST(req: NextRequest) {
   try {
     const sessionId = await createMockInterviewSession(userId, { interviewType, difficulty, roleProfile });
 
-    const inputData = {
-      input: {
-        interviewType,
-        difficulty,
-        roleProfile,
-        sessionId, // Pass sessionId to the flow
-      },
+    const flowInput = {
+      interviewType,
+      difficulty,
+      roleProfile,
+      transcript: [],
+      questionCount: 0,
     };
-
-    // @ts-expect-error - Flow typing issue with run function
-    const result = await run(mockInterviewFlow, inputData);
-    // Type assertion to handle the response structure
-    const report = (result as { report: Record<string, unknown> }).report;
     
-    // Convert the report to a string if the service expects a string
-    const reportString = typeof report === 'string' 
-      ? report 
-      : JSON.stringify(report);
-      
+    // Call the flow directly, replacing the old 'run' function
+    const result = await mockInterviewFlow(flowInput);
+    
+    // The result will contain the first question. The frontend expects a 'report' object.
+    // To make this work without changing the frontend yet, we'll create a mock report.
+    const mockReport = {
+        firstQuestion: result.question,
+        status: 'Interview initiated. Please answer the first question.',
+    };
+    
+    // We will update the session to 'in-progress', not 'completed'.
+    // This also stores the first question for context in future conversational turns.
     await updateMockInterviewSession(sessionId, { 
-        status: 'completed', 
-        finalReport: reportString
+        status: 'in-progress', 
+        questionsAndAnswers: [{ question: result.question || '', answer: '', feedback: '' }]
     });
 
-    return NextResponse.json({ sessionId, report });
+    return NextResponse.json({ sessionId, report: mockReport });
   } catch (error) {
     console.error(error);
     return NextResponse.json({ error: 'Failed to start interview' }, { status: 500 });
