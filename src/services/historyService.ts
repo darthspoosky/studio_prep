@@ -1,4 +1,6 @@
 
+'use client';
+
 import { db } from '@/lib/firebase';
 import { collection, addDoc, query, where, orderBy, getDocs, Timestamp, doc, getDoc, onSnapshot, limit } from 'firebase/firestore';
 import type { NewspaperAnalysisOutput, MCQ, MainsQuestion } from '@/ai/flows/newspaper-analysis-flow';
@@ -72,6 +74,10 @@ async function getAllHistory(userId: string): Promise<HistoryEntry[]> {
       throw error;
   }
   return history;
+}
+
+export async function getFullHistory(userId: string): Promise<HistoryEntry[]> {
+    return getAllHistory(userId);
 }
 
 

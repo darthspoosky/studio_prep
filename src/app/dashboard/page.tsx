@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import { useEffect, useState, useMemo } from 'react';
@@ -453,9 +454,11 @@ export default function DashboardPage() {
         <div className="px-4 lg:px-0">
           <div className="flex justify-between items-center mb-4">
             <h3 className="text-lg font-medium text-foreground/90">Activity History</h3>
-            <Button variant="outline" size="sm" className="gap-1 bg-white/5 hover:bg-white/10 border-white/10">
-              <span>View All</span>
-              <ArrowUpRight className="h-3.5 w-3.5" />
+            <Button asChild variant="outline" size="sm" className="gap-1 bg-white/5 hover:bg-white/10 border-white/10">
+                <Link href="/history">
+                    <span>View All</span>
+                    <ArrowUpRight className="h-3.5 w-3.5" />
+                </Link>
             </Button>
           </div>
           
