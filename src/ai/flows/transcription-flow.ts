@@ -1,24 +1,26 @@
-
-import { defineFlow } from '@genkit-ai/flow';
-import { googleAI } from '@genkit-ai/googleai';
+'use server';
+import { ai } from '@/ai/genkit';
 import * as z from 'zod';
 
-export const transcriptionFlow = defineFlow(
+export const transcriptionFlow = ai.defineFlow(
   {
     name: 'transcriptionFlow',
-    inputSchema: z.any(), // Using any for now, will refine later
-    outputSchema: z.object({ transcription: z.string() }),
+    inputSchema: z.object({
+      audioDataUri: z.string().describe("Audio to be transcribed, as a data URI that must include a MIME type and use Base64 encoding. Expected format: 'data:<mimetype>;base64,<encoded_data>'."),
+    }),
+    outputSchema: z.object({
+      transcription: z.string()
+    }),
   },
-  async (audio) => {
-    // Using the correct API for the model
-    const model = googleAI().generativeModel('gemini-1.5-flash');
-    const response = await model.generate({
-        prompt: "Transcribe the following audio:",
-        data: audio
+  async ({ audioDataUri }) => {
+    const { text } = await ai.generate({
+      model: 'googleai/gemini-1.5-pro',
+      prompt: [
+        { text: "Transcribe the following audio precisely." },
+        { media: { url: audioDataUri } },
+      ],
     });
 
-    return { transcription: response.text() };
+    return { transcription: text };
   }
 );
-
-// No need to call startFlows() - it's handled by the @genkit-ai/next integration

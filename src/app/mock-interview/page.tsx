@@ -77,18 +77,24 @@ export default function MockInterviewPage() {
             const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/wav' });
             audioChunksRef.current = [];
             
-            const formData = new FormData();
-            formData.append("audio", audioBlob);
-
-            try {
-                const response = await fetch("/api/transcribe", { method: "POST", body: formData });
-                if (!response.ok) throw new Error("Transcription failed");
-                const data = await response.json();
-                setTranscription(data.transcription);
-            } catch (error) {
-                console.error("Error transcribing audio:", error);
-                toast({ title: "Transcription Error", description: "Could not transcribe the audio.", variant: "destructive" });
-            }
+            const reader = new FileReader();
+            reader.readAsDataURL(audioBlob);
+            reader.onloadend = async () => {
+                const base64Audio = reader.result;
+                try {
+                    const response = await fetch("/api/transcribe", { 
+                        method: "POST", 
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ audioDataUri: base64Audio })
+                    });
+                    if (!response.ok) throw new Error("Transcription failed");
+                    const data = await response.json();
+                    setTranscription(data.transcription);
+                } catch (error) {
+                    console.error("Error transcribing audio:", error);
+                    toast({ title: "Transcription Error", description: "Could not transcribe the audio.", variant: "destructive" });
+                }
+            };
         };
         audioChunksRef.current = [];
         mediaRecorderRef.current.start();
@@ -116,10 +122,9 @@ export default function MockInterviewPage() {
             body: JSON.stringify({ text })
         });
         if (!response.ok) throw new Error("TTS failed");
-        const audioBlob = await response.blob();
-        const audioUrl = URL.createObjectURL(audioBlob);
-        const audio = new Audio(audioUrl);
-        audio.play();
+        const { audio } = await response.json();
+        const audioEl = new Audio(audio);
+        audioEl.play();
     } catch (error) {
         console.error("Error playing audio:", error);
         toast({ title: "Playback Error", description: "Could not play the audio.", variant: "destructive" });

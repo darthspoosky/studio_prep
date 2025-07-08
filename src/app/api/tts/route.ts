@@ -10,15 +10,11 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Missing text' }, { status: 400 });
     }
 
-    // @ts-expect-error - Flow typing issue with run function
-    const result = await run(textToSpeechFlow, { input: { text } });
-    // Type assertion to handle the response structure
-    const typedResult = result as { audio: Buffer, text: string };
+    const result = await run(textToSpeechFlow, text) as { media: string };
     
-    // Return both text and base64-encoded audio for client-side usage
+    // Return the data URI directly
     return NextResponse.json({
-      text: typedResult.text || text, // Use original text as fallback if result.text is undefined
-      audio: typedResult.audio.toString('base64')
+      audio: result.media,
     });
   } catch (err) {
     console.error('TTS error:', err);

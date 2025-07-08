@@ -12,13 +12,9 @@ export async function POST(req: NextRequest) {
     }
 
     const audioBuffer = await streamToBuffer(audioStream);
-
-    // Use type assertion to handle the return type from the flow
-    const result = await run(transcriptionFlow, {
-        input: { data: audioBuffer, mimeType: 'audio/wav' }
-    }) as { transcription: string };
+    const audioDataUri = `data:audio/wav;base64,${audioBuffer.toString('base64')}`;
     
-    const { transcription } = result;
+    const { transcription } = await run(transcriptionFlow, { audioDataUri });
 
     return NextResponse.json({ transcription });
   } catch (err) {

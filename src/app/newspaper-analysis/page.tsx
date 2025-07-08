@@ -28,20 +28,18 @@ const analyzeNewspaperArticle = async (input: NewspaperAnalysisInput): Promise<N
   return response.json();
 };
 
-const textToSpeech = async (text: string): Promise<{text: string, audio: Buffer}> => {
-  // Call API endpoint instead of using the flow directly
+const textToSpeech = async (text: string): Promise<{ audio: string }> => {
   const response = await fetch('/api/tts', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ text }),
   });
-  const data = await response.json();
-  return {
-    text: data.text,
-    // Convert base64 to Buffer if needed
-    audio: typeof Buffer !== 'undefined' ? Buffer.from(data.audio, 'base64') : null as any,
-  };
+  if (!response.ok) {
+    throw new Error('TTS Failed');
+  }
+  return response.json();
 };
+
 import { ScrollArea } from "@/components/ui/scroll-area";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
@@ -398,9 +396,7 @@ const KnowledgeGraphVisualizer = ({ graphData }: { graphData?: KnowledgeGraph })
             <div key={type}>
               <h4 className={cn("font-semibold mb-2", entityColors[type])}>{type}</h4>
               <div className="flex flex-wrap gap-2">
-                {nodes.map(node => (
-                  <Badge key={node.id} variant="secondary" className={cn("text-base", entityColors[type])}>{node.label}</Badge>
-                ))}
+                {nodes.map(node => <Badge key={node.id} variant="secondary" className={cn("text-base", entityColors[type])}>{node.label}</Badge>)}
               </div>
             </div>
           ))}
@@ -632,13 +628,7 @@ export default function NewspaperAnalysisPage() {
     setAudioSrc(null);
     try {
       const { audio } = await textToSpeech(analysisResult.summary);
-      // Convert base64 string to data URL for browser audio playback
-      if (typeof audio === 'string') {
-        setAudioSrc(`data:audio/mp3;base64,${audio}`);
-      } else {
-        // If somehow still a Buffer object, convert to base64 string first
-        setAudioSrc(`data:audio/mp3;base64,${typeof audio === 'object' ? Buffer.from(audio).toString('base64') : audio}`);
-      }
+      setAudioSrc(audio);
     } catch (error) {
       console.error("Audio generation error:", error);
       toast({
@@ -708,7 +698,7 @@ export default function NewspaperAnalysisPage() {
       };
       return prelimsQuestion;
     });
-  }, [analysisResult, user]);
+  }, [analysisResult, user, historyId, activeTab, inputs.url]);
 
   const { mainsContent, knowledgeGraphContent } = useMemo(() => {
     if (!analysisResult) {
@@ -725,7 +715,7 @@ export default function NewspaperAnalysisPage() {
         const hasPrelims = (analysisResult.prelims?.mcqs?.length || 0) > 0;
         const hasMains = (analysisResult.mains?.questions?.length || 0) > 0;
         const hasGraph = (analysisResult.knowledgeGraph?.nodes?.length || 0) > 0;
-
+  
         if (hasPrelims) setCurrentAnalysisTab('prelims');
         else if (hasMains) setCurrentAnalysisTab('mains');
         else if (hasGraph) setCurrentAnalysisTab('connections');
