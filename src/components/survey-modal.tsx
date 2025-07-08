@@ -1,3 +1,4 @@
+
 "use client";
 
 import React, { useState, useRef, useEffect } from 'react';
@@ -25,8 +26,8 @@ const formSchema = z.object({
   examType: z.string().min(1, 'Please select an exam type.'),
   goal: z.string().min(1, 'Please select a goal.'),
   studyTime: z.string().min(1, 'Please select your study time.'),
-  frustrations: z.string().min(10, 'Please describe your frustrations in at least 10 characters.'),
-  featureRequests: z.string().min(10, 'Please describe your feature requests in at least 10 characters.'),
+  frustrations: z.string().min(1, 'Please select a frustration.'),
+  featureRequests: z.string().min(1, 'Please select a feature.'),
 });
 
 type FormData = z.infer<typeof formSchema>;
@@ -53,14 +54,14 @@ const questions = [
   {
     key: 'frustrations' as const,
     text: 'Thanks for sharing. Now, for the important part: what are your biggest frustrations with your current study routine?',
-    type: 'textarea' as const,
-    placeholder: 'e.g., Covering the vast syllabus, current affairs, writing practice for mains...',
+    type: 'options' as const,
+    options: ['Covering the vast syllabus', 'Staying motivated', 'Finding quality practice material', 'Time management & consistency'],
   },
   {
     key: 'featureRequests' as const,
     text: 'And finally, if you could wave a magic wand, what features in a prep app would help you the most?',
-    type: 'textarea' as const,
-    placeholder: 'e.g., Daily current affairs analysis, mock interview practice, essay feedback...',
+    type: 'options' as const,
+    options: ['Personalized study plans', 'AI mock interviews', 'Better progress tracking', 'Interactive daily quizzes'],
   }
 ];
 
