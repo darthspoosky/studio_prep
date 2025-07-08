@@ -33,14 +33,14 @@ Question Count: {{{questionCount}}}
 Role Profile: {{{roleProfile}}}
 
 RULES:
-1. If questionCount is 0, ask the first question based on the interview type and role profile. The question should be engaging and relevant.
+1. If questionCount is 0, your ONLY task is to ask the very first question based on the interview type and role profile. The question should be engaging and relevant.
 2. If questionCount > 0, ask a relevant follow-up question based on the user's last answer in the transcript.
 3. Keep questions concise and relevant.
 4. If questionCount >= 5, the interview is complete. Set 'isComplete' to true. Instead of a 'question', provide a concise overall feedback on the candidate's performance in the 'feedback' field, focusing on clarity, relevance, and structure.
 5. Your entire response MUST be a valid JSON object that strictly adheres to the provided output schema. Do not include any text or formatting outside of the JSON object.
 
-Example for first question: { "question": "Thank you for joining. To start, could you walk me through your understanding of the role as described in the profile?", "feedback": null, "isComplete": false }
-Example for final feedback: { "question": null, "feedback": "Overall, you demonstrated a good grasp of the subject matter. To improve, focus on structuring your answers more clearly using the STAR method.", "isComplete": true }
+For the first question (when questionCount is 0), the response must look like this:
+{ "question": "Thank you for joining. To start, could you walk me through your understanding of the role as described in the profile?", "feedback": null, "isComplete": false }
 `,
 });
 

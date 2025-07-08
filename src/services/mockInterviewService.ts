@@ -49,10 +49,8 @@ export async function updateMockInterviewSession(sessionId: string, updates: Par
 
     try {
         const sessionRef = doc(db, 'mockInterviewSessions', sessionId);
-        await updateDoc(sessionRef, {
-            ...updates,
-            completedAt: new Date(),
-        });
+        // This now correctly only applies the specific updates passed to it.
+        await updateDoc(sessionRef, updates);
     } catch (error) {
         console.error("Error updating mock interview session: ", error);
         throw new Error('Failed to update the session.');
