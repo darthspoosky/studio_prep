@@ -1,6 +1,8 @@
 import React from 'react';
 import { Bot, FileQuestion, PenLine, Mic, Users, BookOpen, Target } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { Button } from '@/components/ui/button';
+import Link from 'next/link';
 
 const FloatingIcon = ({ icon, className, animation, delay, gradient }: { icon: React.ReactNode, className?: string, animation?: string, delay?: string, gradient?: string }) => (
     <div 
@@ -35,6 +37,14 @@ const Hero = () => {
             <p className="mt-6 max-w-2xl mx-auto text-lg md:text-xl text-muted-foreground">
               We combine cutting-edge AI with community feedback to create a prep experience that truly adapts to you.
             </p>
+            <div className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-4">
+                <Button asChild size="lg">
+                    <Link href="/dashboard">Get Started for Free</Link>
+                </Button>
+                <Button asChild size="lg" variant="outline" className="bg-background/50">
+                    <a href="#tools">Explore Tools</a>
+                </Button>
+            </div>
         </div>
         
         <div className="absolute inset-0 z-0 w-full h-full pointer-events-none">
