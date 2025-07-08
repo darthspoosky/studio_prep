@@ -1,71 +1,100 @@
 "use client";
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { motion } from 'framer-motion';
+import { onIdeasUpdate, type Idea } from '@/services/ideasService';
 
-const testimonials = [
+const initialIdeas: Idea[] = [
   {
-    quote: "PrepTalk's AI bot is a game-changer for my interview practice. The feedback is so insightful!",
-    name: 'Alex Johnson',
-    handle: 'Software Engineer',
-    avatar: 'AJ',
+    featureRequests: "An AI that creates a personalized study schedule based on my weak areas would be amazing.",
+    author: 'Priya S.',
+    role: 'Beta Tester',
+    avatar: 'PS',
+    glowColor: 'hsl(var(--primary))',
   },
   {
-    quote: 'The daily quizzes are the perfect way to start my study sessions. Short, sharp, and relevant.',
-    name: 'Maria Garcia',
-    handle: 'Pre-Med Student',
-    avatar: 'MG',
-  },
-  {
-    quote: "I finally feel confident about my writing skills for the GRE. The prompts are fantastic.",
-    name: 'David Chen',
-    handle: 'Graduate Applicant',
-    avatar: 'DC',
-  },
-  {
-    quote: "The community feedback feature is brilliant. It's like having thousands of study partners.",
-    name: 'Samantha Lee',
-    handle: 'SAT Taker',
-    avatar: 'SL',
-  },
-  {
-    quote: 'An indispensable tool. The mock interviews helped me land my dream internship.',
-    name: 'Ben Carter',
-    handle: 'MBA Candidate',
+    featureRequests: "What if we could upload our own practice essays and get instant feedback on structure and grammar?",
+    author: 'Ben C.',
+    role: 'Early Adopter',
     avatar: 'BC',
+    glowColor: 'hsl(var(--accent))',
   },
   {
-    quote: 'The AI-powered writing practice has drastically improved my essays. A must-have!',
-    name: 'Priya Patel',
-    handle: 'Law Student',
-    avatar: 'PP',
+    featureRequests: "I'd love a 'cram session' mode that drills you on the topics you struggle with most, right before an exam.",
+    author: 'Maria G.',
+    role: 'Student Voice',
+    avatar: 'MG',
+    glowColor: 'hsl(200 96% 87%)',
+  },
+  {
+    featureRequests: "Could the mock interviewer simulate different personality types, like a friendly or a very strict one?",
+    author: 'Alex J.',
+    role: 'Power User',
+    avatar: 'AJ',
+    glowColor: 'hsl(300 96% 87%)',
+  },
+  {
+    featureRequests: "Gamify the daily quizzes! Leaderboards, points, and streaks would make studying much more fun.",
+    author: 'Samantha L.',
+    role: 'Beta Tester',
+    avatar: 'SL',
+    glowColor: 'hsl(150 96% 87%)',
+  },
+  {
+    featureRequests: "A feature to connect with other students studying for the same exam would be great for motivation.",
+    author: 'David C.',
+    role: 'Community Member',
+    avatar: 'DC',
+    glowColor: 'hsl(50 96% 87%)',
   },
 ];
 
-const duplicatedTestimonials = [...testimonials, ...testimonials];
-
-const TestimonialCard = ({ quote, name, handle, avatar }: (typeof testimonials)[0]) => (
-    <Card className="w-[300px] sm:w-[350px] lg:w-[400px] shrink-0 glassmorphic h-full">
-        <CardContent className="pt-6 flex flex-col h-full">
-            <p className="mb-4 text-foreground flex-grow text-base">"{quote}"</p>
-            <div className="flex items-center mt-auto">
-                <Avatar>
-                    <AvatarImage data-ai-hint="person" src={`https://placehold.co/40x40.png`} />
-                    <AvatarFallback>{avatar}</AvatarFallback>
-                </Avatar>
-                <div className="ml-4 text-left">
-                    <p className="font-semibold text-foreground">{name}</p>
-                    <p className="text-sm text-muted-foreground">{handle}</p>
+const IdeaCard = ({ featureRequests, author, role, avatar, glowColor }: Idea) => (
+    <motion.div
+        whileHover={{
+            scale: 1.05,
+            y: -8,
+            boxShadow: `0 0 30px 5px ${glowColor}`,
+            zIndex: 50
+        }}
+        transition={{ type: 'spring', stiffness: 300 }}
+        className="relative w-[300px] sm:w-[350px] lg:w-[400px] shrink-0"
+    >
+        <Card className="w-full h-full glassmorphic">
+            <CardContent className="pt-6 flex flex-col h-full">
+                <p className="mb-4 text-foreground flex-grow text-base md:text-lg">"{featureRequests}"</p>
+                <div className="flex items-center mt-auto">
+                    <Avatar>
+                        <AvatarImage data-ai-hint="person" src={`https://placehold.co/40x40.png`} />
+                        <AvatarFallback>{avatar}</AvatarFallback>
+                    </Avatar>
+                    <div className="ml-4 text-left">
+                        <p className="font-semibold text-foreground">{author}</p>
+                        <p className="text-sm text-muted-foreground">{role}</p>
+                    </div>
                 </div>
-            </div>
-        </CardContent>
-    </Card>
+            </CardContent>
+        </Card>
+    </motion.div>
 );
 
 
 const FeedbackWall = () => {
+    const [ideas, setIdeas] = useState<Idea[]>(initialIdeas);
+
+    useEffect(() => {
+        const unsubscribe = onIdeasUpdate((newIdeasFromDb) => {
+            const newIdeaTexts = new Set(newIdeasFromDb.map(i => i.featureRequests));
+            const filteredInitialIdeas = initialIdeas.filter(i => !newIdeaTexts.has(i.featureRequests));
+            setIdeas([...newIdeasFromDb, ...filteredInitialIdeas].slice(0, 20));
+        });
+        return () => unsubscribe();
+    }, []);
+
+    const duplicatedIdeas = ideas.length > 0 ? [...ideas, ...ideas] : [];
+
     return (
         <section className="relative py-24 sm:py-32 flex flex-col justify-center overflow-hidden bg-background">
             <div className="container mx-auto px-4 text-center mb-16">
@@ -75,7 +104,7 @@ const FeedbackWall = () => {
                     </span>
                 </h2>
                 <p className="mt-4 max-w-2xl mx-auto text-lg md:text-xl text-muted-foreground">
-                    See what our users are saying about their prep journey with us.
+                    Our real-time idea wall, shaped by you and powered by AI.
                 </p>
             </div>
             
@@ -85,8 +114,8 @@ const FeedbackWall = () => {
                     animate={{ x: ['0%', '-100%'] }}
                     transition={{ ease: 'linear', duration: 50, repeat: Infinity }}
                 >
-                    {duplicatedTestimonials.map((testimonial, index) => (
-                        <TestimonialCard key={`marquee-1-${index}`} {...testimonial} />
+                    {duplicatedIdeas.map((item, index) => (
+                        <IdeaCard key={`marquee-1-${item.id || item.featureRequests}-${index}`} {...item} />
                     ))}
                 </motion.div>
                 <motion.div 
@@ -94,8 +123,8 @@ const FeedbackWall = () => {
                     animate={{ x: ['-100%', '0%'] }}
                     transition={{ ease: 'linear', duration: 50, repeat: Infinity }}
                 >
-                    {duplicatedTestimonials.map((testimonial, index) => (
-                        <TestimonialCard key={`marquee-2-${index}`} {...testimonial} />
+                    {duplicatedIdeas.map((item, index) => (
+                        <IdeaCard key={`marquee-2-${item.id || item.featureRequests}-${index}`} {...item} />
                     ))}
                 </motion.div>
             </div>

@@ -93,10 +93,6 @@ export default {
             boxShadow: '0 0 0 10px hsl(var(--primary) / 0)',
           },
         },
-        scroll: {
-          '0%': { transform: 'translateX(0)' },
-          '100%': { transform: 'translateX(-50%)' },
-        },
         'gradient-anim': {
           '0%, 100%': { 'background-position': '0% 50%' },
           '50%': { 'background-position': '100% 50%' },
@@ -109,7 +105,6 @@ export default {
         'hero-float': 'hero-float 8s ease-in-out infinite',
         'hero-float-alt': 'hero-float-alt 12s ease-in-out infinite',
         'pulse-cta': 'pulse-cta 2s infinite',
-        scroll: 'scroll 40s linear infinite',
         'gradient-anim': 'gradient-anim 6s ease infinite',
       },
     },
