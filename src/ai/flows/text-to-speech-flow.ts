@@ -32,7 +32,7 @@ async function toWav(
   });
 }
 
-export const textToSpeechFlow = ai.defineFlow(
+const textToSpeechFlowInternal = ai.defineFlow(
   {
     name: 'textToSpeechFlow',
     inputSchema: z.string(),
@@ -63,3 +63,7 @@ export const textToSpeechFlow = ai.defineFlow(
     };
   }
 );
+
+export async function textToSpeech(text: string) {
+    return textToSpeechFlowInternal(text);
+}

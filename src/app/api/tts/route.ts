@@ -1,7 +1,6 @@
 
 import { NextRequest, NextResponse } from 'next/server';
-import { run } from '@genkit-ai/flow';
-import { textToSpeechFlow } from '@/ai/flows/text-to-speech-flow';
+import { textToSpeech } from '@/ai/flows/text-to-speech-flow';
 
 export async function POST(req: NextRequest) {
   try {
@@ -10,7 +9,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Missing text' }, { status: 400 });
     }
 
-    const result = await run(textToSpeechFlow, text) as { media: string };
+    const result = await textToSpeech(text);
     
     // Return the data URI directly
     return NextResponse.json({
