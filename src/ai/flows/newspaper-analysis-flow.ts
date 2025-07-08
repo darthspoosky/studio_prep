@@ -1,3 +1,4 @@
+
 'use server';
 /**
  * @fileOverview A multi-agent AI workflow to analyze newspaper articles for exam preparation.
@@ -297,18 +298,6 @@ Execute comprehensive verification now.`,
 
 // --- ORCHESTRATOR: The Main Flow (Now Streaming) ---
 
-export async function analyzeNewspaperArticle(input: NewspaperAnalysisInput) {
-  const { prelims: prelimsSyllabus, mains: mainsSyllabus } = getSyllabusContent();
-  
-  const stream = await ai.run(analyzeNewspaperArticleFlow, {
-    ...input,
-    prelimsSyllabus: prelimsSyllabus as string,
-    mainsSyllabus: mainsSyllabus as string,
-  });
-
-  return stream;
-}
-
 const analyzeNewspaperArticleFlow = ai.defineFlow(
   {
     name: 'analyzeNewspaperArticleFlow',
@@ -416,3 +405,15 @@ const analyzeNewspaperArticleFlow = ai.defineFlow(
     });
   }
 );
+
+export async function analyzeNewspaperArticle(input: NewspaperAnalysisInput) {
+  const { prelims: prelimsSyllabus, mains: mainsSyllabus } = getSyllabusContent();
+  
+  const stream = await analyzeNewspaperArticleFlow({
+    ...input,
+    prelimsSyllabus: prelimsSyllabus as string,
+    mainsSyllabus: mainsSyllabus as string,
+  });
+
+  return stream;
+}
