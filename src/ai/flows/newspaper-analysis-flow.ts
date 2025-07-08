@@ -298,13 +298,13 @@ Execute comprehensive verification now.`,
 
 // --- ORCHESTRATOR: The Main Flow (Now Streaming) ---
 
-export const analyzeNewspaperArticle = ai.defineFlow(
+const analyzeNewspaperArticleFlow = ai.defineFlow(
   {
     name: 'analyzeNewspaperArticleFlow',
     inputSchema: NewspaperAnalysisInputSchema,
     streamSchema: NewspaperAnalysisChunkSchema,
   },
-  async function* (input) { // <--- REFACTORED to an async generator
+  async function* (input) {
     // Load syllabus content inside the flow
     const { prelims: prelimsSyllabus, mains: mainsSyllabus } = getSyllabusContent();
 
@@ -334,7 +334,7 @@ export const analyzeNewspaperArticle = ai.defineFlow(
 
     if (!relevanceResult || !relevanceResult.isRelevant || !relevanceResult.syllabusTopic) {
       const reason = relevanceResult?.reasoning || 'Article assessed as not relevant for UPSC preparation.';
-      yield { type: 'error', data: reason }; // <--- Use yield
+      yield { type: 'error', data: reason };
       return;
     }
 
@@ -354,7 +354,7 @@ export const analyzeNewspaperArticle = ai.defineFlow(
     }
 
     if (!initialAnalysis) {
-      yield { type: 'error', data: 'Question Generator Agent failed to produce an analysis.' }; // <--- Use yield
+      yield { type: 'error', data: 'Question Generator Agent failed to produce an analysis.' };
       return;
     }
 
@@ -381,20 +381,20 @@ export const analyzeNewspaperArticle = ai.defineFlow(
     
     // STEP 4: Stream the results piece by piece
     if (finalAnalysis.summary) {
-        yield { type: 'summary', data: finalAnalysis.summary }; // <--- Use yield
+        yield { type: 'summary', data: finalAnalysis.summary };
     }
     if (finalAnalysis.prelims?.mcqs) {
         for (const mcq of finalAnalysis.prelims.mcqs) {
-            yield { type: 'prelims', data: mcq }; // <--- Use yield
+            yield { type: 'prelims', data: mcq };
         }
     }
     if (finalAnalysis.mains?.questions) {
         for (const question of finalAnalysis.mains.questions) {
-            yield { type: 'mains', data: question }; // <--- Use yield
+            yield { type: 'mains', data: question };
         }
     }
     if (finalAnalysis.knowledgeGraph) {
-        yield { type: 'knowledgeGraph', data: finalAnalysis.knowledgeGraph }; // <--- Use yield
+        yield { type: 'knowledgeGraph', data: finalAnalysis.knowledgeGraph };
     }
 
     // STEP 5: Final metadata
@@ -402,7 +402,7 @@ export const analyzeNewspaperArticle = ai.defineFlow(
     const totalTokens = totalInputTokens + totalOutputTokens;
     const cost = ((totalInputTokens / 1000) * INPUT_PRICE_PER_1K_TOKENS_USD + (totalOutputTokens / 1000) * OUTPUT_PRICE_PER_1K_TOKENS_USD) * USD_TO_INR_RATE;
     
-    yield { // <--- Use yield
+    yield {
         type: 'metadata',
         data: {
             syllabusTopic: relevanceResult.syllabusTopic,
@@ -414,3 +414,7 @@ export const analyzeNewspaperArticle = ai.defineFlow(
     };
   }
 );
+
+export async function analyzeNewspaperArticle(input: NewspaperAnalysisInput) {
+    return analyzeNewspaperArticleFlow(input);
+}
