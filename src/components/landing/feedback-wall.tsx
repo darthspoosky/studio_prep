@@ -70,7 +70,9 @@ const FeedbackWall = () => {
         <section className="relative py-24 sm:py-32 flex flex-col justify-center overflow-hidden bg-background">
             <div className="container mx-auto px-4 text-center mb-16">
                 <h2 className="font-headline text-4xl md:text-5xl font-bold tracking-tight">
-                    From the PrepTalk Community
+                    <span className="animate-gradient-anim bg-[length:200%_auto] bg-gradient-to-r from-primary via-accent to-pink-500 bg-clip-text text-transparent">
+                        From the PrepTalk Community
+                    </span>
                 </h2>
                 <p className="mt-4 max-w-2xl mx-auto text-lg md:text-xl text-muted-foreground">
                     See what our users are saying about their prep journey with us.
