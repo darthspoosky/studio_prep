@@ -51,6 +51,10 @@ export default class PastYearQuestionService {
    * @returns Promise resolving to the complete user progress data
    */
   static async getUserProgressData(userId: string): Promise<UserProgressData | null> {
+    if (!db) {
+        console.warn("Firestore not initialized, skipping getUserProgressData.");
+        return null;
+    }
     try {
       if (!userId) return null;
       
@@ -74,6 +78,11 @@ export default class PastYearQuestionService {
    * @returns Promise resolving to an array of questions
    */
   static async fetchQuestionsByYear(year: number, userId?: string): Promise<QuestionSet> {
+    if (!db) {
+        console.warn("Firestore not initialized, returning mock data for fetchQuestionsByYear.");
+        const mockQuestions: Question[] = Array(10).fill(null).map((_, index) => ({ id: `py-${year}-${index}`, question: `Sample past year question ${index + 1} from ${year}`, options: [ { id: 'a', text: 'Option A' }, { id: 'b', text: 'Option B' }, { id: 'c', text: 'Option C' }, { id: 'd', text: 'Option D' }, ], correctOptionId: 'a', explanation: `This is an explanation for question ${index + 1}`, year, subject: 'General Studies', topic: 'Current Affairs', difficulty: 'medium', userAnswer: null, }));
+        return { id: `py-set-${year}`, title: `UPSC ${year} Questions`, description: `Questions from UPSC Prelims ${year} examination`, questions: mockQuestions, metadata: { source: 'past-year', year, }, };
+    }
     try {
       // Get questions collection reference
       const questionsRef = collection(db, 'pastYearQuestions');
@@ -173,6 +182,11 @@ export default class PastYearQuestionService {
     sectionId: string,
     userId?: string
   ): Promise<QuestionSet> {
+    if (!db) {
+        console.warn("Firestore not initialized, returning mock data for fetchQuestionsBySyllabusSection.");
+        const mockQuestions: Question[] = Array(8).fill(null).map((_, index) => ({ id: `py-section-${sectionId}-${index}`, question: `Sample question ${index + 1} from syllabus section ${sectionId}`, options: [ { id: 'a', text: 'Option A' }, { id: 'b', text: 'Option B' }, { id: 'c', text: 'Option C' }, { id: 'd', text: 'Option D' }, ], correctOptionId: 'b', explanation: `This is an explanation for question ${index + 1} in syllabus section ${sectionId}`, year: 2020 + Math.floor(Math.random() * 3), subject: sectionId.includes('gs') ? 'General Studies' : 'CSAT', topic: sectionId, difficulty: 'medium', userAnswer: null, }));
+        return { id: `py-section-${sectionId}`, title: `${sectionId.toUpperCase()} Questions`, description: `Questions from syllabus section ${sectionId}`, questions: mockQuestions, metadata: { source: 'past-year', syllabusSectionId: sectionId, }, };
+    }
     try {
       // Get questions collection reference
       const questionsRef = collection(db, 'pastYearQuestions');
@@ -289,6 +303,11 @@ export default class PastYearQuestionService {
    * @returns Promise resolving to an array of year progress objects
    */
   static async getUserYearProgress(userId: string): Promise<YearProgress[]> {
+    if (!db) {
+        console.warn("Firestore not initialized, returning mock data for getUserYearProgress.");
+        const currentYear = new Date().getFullYear();
+        return Array(10).fill(null).map((_, i) => ({ year: currentYear - i, total: 100, attempted: 0, correct: 0 }));
+    }
     try {
       // Check if user progress document exists
       const userProgressRef = doc(db, 'userProgress', userId);
@@ -346,6 +365,10 @@ export default class PastYearQuestionService {
     answer: string,
     questionData?: Question
   ): Promise<void> {
+    if (!db) {
+        console.warn("Firestore not initialized, skipping updateUserAnswer.");
+        return;
+    }
     try {
       if (!userId) {
         console.warn('No user ID provided for answer update');
@@ -500,6 +523,11 @@ export default class PastYearQuestionService {
    * @returns Promise resolving to an array of available years
    */
   static async getAvailableYears(): Promise<number[]> {
+    if (!db) {
+        console.warn("Firestore not initialized, returning mock data for getAvailableYears.");
+        const currentYear = new Date().getFullYear();
+        return Array.from({ length: 10 }, (_, i) => currentYear - i);
+    }
     try {
       // Try to get unique years from the database
       const questionsRef = collection(db, 'pastYearQuestions');
