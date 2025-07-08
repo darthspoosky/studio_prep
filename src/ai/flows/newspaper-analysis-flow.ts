@@ -7,7 +7,6 @@
  */
 
 import { ai } from '@/ai/genkit';
-import { run } from '@genkit-ai/core';
 import { z } from 'zod';
 import fs from 'fs';
 import path from 'path';
@@ -301,7 +300,7 @@ Execute comprehensive verification now.`,
 export async function analyzeNewspaperArticle(input: NewspaperAnalysisInput) {
   const { prelims: prelimsSyllabus, mains: mainsSyllabus } = getSyllabusContent();
   
-  const stream = await run(analyzeNewspaperArticleFlow, {
+  const stream = await ai.run(analyzeNewspaperArticleFlow, {
     ...input,
     prelimsSyllabus: prelimsSyllabus as string,
     mainsSyllabus: mainsSyllabus as string,
