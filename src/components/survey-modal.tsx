@@ -26,8 +26,8 @@ const formSchema = z.object({
   examType: z.string().min(1, 'Please select an exam type.'),
   goal: z.string().min(1, 'Please select a goal.'),
   studyTime: z.string().min(1, 'Please select your study time.'),
-  frustrations: z.string().min(1, 'Please select a frustration.'),
-  featureRequests: z.string().min(1, 'Please select a feature.'),
+  frustrations: z.string().min(1, 'Please select or describe a frustration.'),
+  featureRequests: z.string().min(1, 'Please select or describe a feature.'),
 });
 
 type FormData = z.infer<typeof formSchema>;
@@ -55,13 +55,13 @@ const questions = [
     key: 'frustrations' as const,
     text: 'Thanks for sharing. Now, for the important part: what are your biggest frustrations with your current study routine?',
     type: 'options' as const,
-    options: ['Covering the vast syllabus', 'Staying motivated', 'Finding quality practice material', 'Time management & consistency'],
+    options: ['Covering the vast syllabus', 'Staying motivated', 'Finding quality practice material', 'Time management & consistency', 'Other'],
   },
   {
     key: 'featureRequests' as const,
     text: 'And finally, if you could wave a magic wand, what features in a prep app would help you the most?',
     type: 'options' as const,
-    options: ['Personalized study plans', 'AI mock interviews', 'Better progress tracking', 'Interactive daily quizzes'],
+    options: ['Personalized study plans', 'AI mock interviews', 'Better progress tracking', 'Interactive daily quizzes', 'Other'],
   }
 ];
 
@@ -82,6 +82,7 @@ const SurveyModal = ({ isOpen, onOpenChange }: SurveyModalProps) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [analysisResult, setAnalysisResult] = useState<string | null>(null);
   const [showThankYou, setShowThankYou] = useState(false);
+  const [isAwaitingOtherInputFor, setIsAwaitingOtherInputFor] = useState<keyof FormData | null>(null);
   const { toast } = useToast();
   const scrollAreaRef = useRef<HTMLDivElement>(null);
 
@@ -96,8 +97,8 @@ const SurveyModal = ({ isOpen, onOpenChange }: SurveyModalProps) => {
     },
   });
 
-  const { control, setValue, handleSubmit, watch } = form;
-  const currentTextValue = watch(questions[currentQuestionIndex]?.key as keyof FormData, '');
+  const { setValue, handleSubmit, getValues, register } = form;
+  const otherInputValue = getValues(isAwaitingOtherInputFor || 'examType');
 
 
   useEffect(() => {
@@ -107,7 +108,6 @@ const SurveyModal = ({ isOpen, onOpenChange }: SurveyModalProps) => {
   }, [isOpen]);
 
   useEffect(() => {
-    // Scroll to the bottom of the chat on new message
     if (scrollAreaRef.current) {
         const viewport = scrollAreaRef.current.querySelector('div[data-radix-scroll-area-viewport]');
         if (viewport) {
@@ -118,13 +118,12 @@ const SurveyModal = ({ isOpen, onOpenChange }: SurveyModalProps) => {
     }
   }, [messages]);
 
-
   const addMessage = (sender: 'bot' | 'user', content: React.ReactNode) => {
     setMessages((prev) => [...prev, { id: Date.now(), sender, content }]);
   };
   
-  const handleNext = (key: keyof FormData, value: string) => {
-    setValue(key, value);
+  const proceedToNextStep = (key: keyof FormData, value: string) => {
+    setValue(key, value, { shouldValidate: true });
     addMessage('user', value);
     
     const nextIndex = currentQuestionIndex + 1;
@@ -134,13 +133,34 @@ const SurveyModal = ({ isOpen, onOpenChange }: SurveyModalProps) => {
         setCurrentQuestionIndex(nextIndex);
       }, 500);
     } else {
+      // All questions answered, submit the form.
       handleSubmit(onSubmit)();
     }
   };
-  
+
+  const handleOptionClick = (key: keyof FormData, option: string) => {
+    if (option === 'Other') {
+      addMessage('user', 'Other');
+      setIsAwaitingOtherInputFor(key);
+      setTimeout(() => {
+        let prompt = "Please tell us more.";
+        if (key === 'frustrations') {
+            prompt = "I see. Could you please describe your frustrations?";
+        } else if (key === 'featureRequests') {
+            prompt = "Interesting! What feature did you have in mind?";
+        }
+        addMessage('bot', prompt);
+      }, 500);
+    } else {
+      proceedToNextStep(key, option);
+    }
+  };
+
   const handleTextSubmit = () => {
-    const key = questions[currentQuestionIndex].key;
-    const value = form.getValues(key);
+    if (!isAwaitingOtherInputFor) return;
+
+    const key = isAwaitingOtherInputFor;
+    const value = getValues(key);
 
     if (value.length < 10) {
       toast({
@@ -150,10 +170,10 @@ const SurveyModal = ({ isOpen, onOpenChange }: SurveyModalProps) => {
       });
       return;
     }
-
-    handleNext(key, value);
+    
+    setIsAwaitingOtherInputFor(null);
+    proceedToNextStep(key, value);
   };
-
 
   const onSubmit = async (values: FormData) => {
     setIsSubmitting(true);
@@ -172,7 +192,6 @@ const SurveyModal = ({ isOpen, onOpenChange }: SurveyModalProps) => {
       });
     } finally {
       setIsSubmitting(false);
-      // Remove the loading spinner message
       setMessages(prev => prev.slice(0, prev.length -1));
     }
   };
@@ -183,6 +202,7 @@ const SurveyModal = ({ isOpen, onOpenChange }: SurveyModalProps) => {
     setMessages([]);
     setAnalysisResult(null);
     setShowThankYou(false);
+    setIsAwaitingOtherInputFor(null);
     onOpenChange(false);
   }
   
@@ -259,46 +279,43 @@ const SurveyModal = ({ isOpen, onOpenChange }: SurveyModalProps) => {
         
         <div className="p-6 pt-2 border-t bg-background">
           <AnimatePresence mode="wait">
-            {!showThankYou && (
+            {!showThankYou && !isSubmitting && (
                <motion.div
-                key={currentQuestionIndex}
+                key={currentQuestionIndex + (isAwaitingOtherInputFor || '')}
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -20 }}
                 transition={{ duration: 0.3 }}
               >
-              {currentQuestion.type === 'options' && (
+              {isAwaitingOtherInputFor ? (
+                  <div className="flex items-center gap-2">
+                    <Textarea
+                        placeholder="Tell us more..."
+                        {...register(isAwaitingOtherInputFor)}
+                        rows={1}
+                        className="max-h-24"
+                        onKeyDown={(e) => {
+                        if (e.key === 'Enter' && !e.shiftKey) {
+                            e.preventDefault();
+                            handleTextSubmit();
+                        }
+                        }}
+                    />
+                    <Button size="icon" onClick={handleTextSubmit} disabled={(otherInputValue?.length || 0) < 10}>
+                        <Send className="h-4 w-4" />
+                    </Button>
+                  </div>
+              ) : (
                 <div className="flex flex-wrap gap-2 justify-center">
                   {currentQuestion.options.map((option) => (
                     <Button
                       key={option}
                       variant="outline"
-                      onClick={() => handleNext(currentQuestion.key, option)}
-                      disabled={isSubmitting}
+                      onClick={() => handleOptionClick(currentQuestion.key, option)}
                     >
                       {option}
                     </Button>
                   ))}
-                </div>
-              )}
-              {currentQuestion.type === 'textarea' && (
-                <div className="flex items-center gap-2">
-                  <Textarea
-                    placeholder={currentQuestion.placeholder}
-                    {...form.register(currentQuestion.key)}
-                    rows={1}
-                    className="max-h-24"
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter' && !e.shiftKey) {
-                        e.preventDefault();
-                        handleTextSubmit();
-                      }
-                    }}
-                    disabled={isSubmitting}
-                  />
-                  <Button size="icon" onClick={handleTextSubmit} disabled={isSubmitting || (currentTextValue?.length || 0) < 10}>
-                    {isSubmitting ? <Loader2 className="h-4 w-4 animate-spin"/> : <Send className="h-4 w-4" />}
-                  </Button>
                 </div>
               )}
               </motion.div>
