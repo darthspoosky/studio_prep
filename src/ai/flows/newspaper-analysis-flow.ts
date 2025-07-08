@@ -7,7 +7,7 @@
  */
 
 import { ai } from '@/ai/genkit';
-import { run } from '@genkit-ai/flow';
+import { run } from '@genkit-ai/core';
 import { z } from 'zod';
 import fs from 'fs';
 import path from 'path';
