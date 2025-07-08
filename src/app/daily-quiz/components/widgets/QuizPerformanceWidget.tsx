@@ -1,6 +1,5 @@
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
 import { Sparkles, BarChart2, TrendingUp } from 'lucide-react';
 import { 
@@ -130,7 +129,10 @@ const QuizPerformanceWidget: React.FC<QuizPerformanceWidgetProps> = ({
             </span>
           </div>
           {data.recentImprovement !== undefined && (
-            <Badge variant={data.recentImprovement >= 0 ? "success" : "destructive"} className="h-5">
+            <Badge 
+              variant={data.recentImprovement > 0 ? "default" : "destructive"} 
+              className={data.recentImprovement > 0 ? "bg-green-600 hover:bg-green-700" : "bg-red-600 hover:bg-red-700"} 
+            >
               <TrendingUp size={12} className="mr-1" />
               {data.recentImprovement > 0 ? '+' : ''}{data.recentImprovement}%
             </Badge>

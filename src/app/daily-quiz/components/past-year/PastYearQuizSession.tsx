@@ -8,7 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Check, X, Clock, AlertTriangle, ChevronLeft, ChevronRight, Info } from 'lucide-react';
 import { Question, QuestionSet } from '@/types/quiz';
-import { useAuth } from '@/hooks/useAuth';
+import { useAuth } from '@/contexts/AuthContext';
 import PastYearQuestionService from '@/services/pastYearQuestionService';
 import { cn } from '@/lib/utils';
 
@@ -73,7 +73,7 @@ export default function PastYearQuizSession({
     return () => {
       if (timerInterval) clearInterval(timerInterval);
     };
-  }, [questionSet, startTime, user]);
+  }, [questionSet, startTime, user, timerInterval]);
 
   const currentQuestion = questionSet.questions[currentQuestionIndex];
 
@@ -259,7 +259,7 @@ export default function PastYearQuizSession({
               <Badge variant="secondary" className="px-3 py-1">
                 Total: {results.totalQuestions}
               </Badge>
-              <Badge variant="success" className="bg-green-100 text-green-800 px-3 py-1">
+              <Badge variant="default" className="bg-green-100 text-green-800 px-3 py-1">
                 Correct: {results.correctAnswers}
               </Badge>
               <Badge variant="destructive" className="px-3 py-1">

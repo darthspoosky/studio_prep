@@ -1,10 +1,9 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import QuizPerformanceWidget from './QuizPerformanceWidget';
 import WeakAreaWidget, { WeakAreaTopic } from './WeakAreaWidget';
 import QuizWidgetSettings, { useWidgetPreferences } from './QuizWidgetSettings';
 import { useAuth } from '@/contexts/AuthContext';
 import PastYearQuestionService from '@/services/pastYearQuestionService';
-import { UserProgressData, SyllabusSection } from './types';
 
 interface QuizDashboardWidgetsProps {
   className?: string;
@@ -43,8 +42,8 @@ const QuizDashboardWidgets: React.FC<QuizDashboardWidgetsProps> = ({ className }
   });
   const [weakAreas, setWeakAreas] = useState<WeakAreaTopic[]>([]);
   
-  // Function to fetch dashboard data
-  const fetchDashboardData = async () => {
+  // Function to fetch dashboard data - wrapped in useCallback to avoid recreation on every render
+  const fetchDashboardData = useCallback(async () => {
     try {
       setLoading(true);
       
@@ -207,7 +206,7 @@ const QuizDashboardWidgets: React.FC<QuizDashboardWidgetsProps> = ({ className }
     } finally {
       setLoading(false);
     }
-  };
+  }, [user]);
 
   // Set up auto-refresh if configured
   useEffect(() => {
@@ -218,12 +217,12 @@ const QuizDashboardWidgets: React.FC<QuizDashboardWidgetsProps> = ({ className }
       
       return () => clearInterval(intervalId);
     }
-  }, [preferences.autoRefreshInterval, user]);
+  }, [preferences.autoRefreshInterval, user, fetchDashboardData]);
 
   // Initial data fetch
   useEffect(() => {
     fetchDashboardData();
-  }, [user]);
+  }, [user, fetchDashboardData]);
   
   return (
     <div className={`grid gap-4 ${className || ''}`}>

@@ -176,7 +176,7 @@ export default function SyllabusDetailPage() {
       'gs-polity': 'Questions on Indian constitution, political system, governance structures, and rights issues.',
       'gs-economy': 'Questions on economic development, social issues, poverty, inclusion, and social sector initiatives.',
       'gs-environment': 'Questions on environmental ecology, biodiversity, climate change, and related topics.',
-      'gs-science': 'Questions on general science topics that don't require specialized knowledge.',
+      'gs-science': 'Questions on general science topics that don\'t require specialized knowledge.',
       'csat': 'Questions testing comprehension, reasoning, analytical ability, and basic numeracy.'
     };
     
