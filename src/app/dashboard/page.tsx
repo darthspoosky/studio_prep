@@ -21,7 +21,7 @@ import { Progress } from '@/components/ui/progress';
 import { BarChart, Bar, XAxis, CartesianGrid, AreaChart, Area, ResponsiveContainer } from "recharts";
 import { Skeleton } from '@/components/ui/skeleton';
 import { isToday } from 'date-fns';
-import { Sheet, SheetContent, SheetTrigger, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet';
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet';
 import { UserNav } from '@/components/layout/user-nav';
 import { getUserQuizStats, type UserQuizStats } from '@/services/quizAttemptsService';
 
@@ -111,6 +111,7 @@ export default function DashboardPage() {
   
   // States
   const [historyLoading, setHistoryLoading] = useState(true);
+  const [statsLoading, setStatsLoading] = useState(true);
   const [history, setHistory] = useState<HistoryEntry[]>([]);
   const [quizStats, setQuizStats] = useState<ExtendedUserQuizStats | null>(null);
   const [usageStats, setUsageStats] = useState<UsageStats | null>(null);
@@ -127,10 +128,10 @@ export default function DashboardPage() {
 
   // Tool statistics
   const toolStats = [
-    { title: 'Questions Attempted', value: quizStats?.totalAttempted || 35, icon: <FileQuestion className="h-6 w-6" />, color: 'primary' },
-    { title: 'Accuracy', value: quizStats?.accuracy || 78, suffix: '%', icon: <BarChart3 className="h-6 w-6" />, color: 'accent' },
-    { title: 'Articles Analyzed', value: usageStats?.newspaperAnalysis || 8, icon: <Newspaper className="h-6 w-6" />, color: 'secondary' },
-    { title: 'Mock Interviews', value: usageStats?.mockInterview || 3, icon: <Mic className="h-6 w-6" />, color: 'warning' },
+    { title: 'Questions Attempted', value: quizStats?.totalAttempted, icon: <FileQuestion className="h-6 w-6" />, color: 'primary' },
+    { title: 'Accuracy', value: quizStats?.accuracy, suffix: '%', icon: <BarChart3 className="h-6 w-6" />, color: 'accent' },
+    { title: 'Articles Analyzed', value: usageStats?.newspaperAnalysis, icon: <Newspaper className="h-6 w-6" />, color: 'secondary' },
+    { title: 'Mock Interviews', value: usageStats?.mockInterview, icon: <Mic className="h-6 w-6" />, color: 'warning' },
   ];
 
   // Fetch data
@@ -140,22 +141,26 @@ export default function DashboardPage() {
       return;
     }
     setHistoryLoading(true);
+    setStatsLoading(true);
 
     // Fetch one-time stats
     const fetchStaticData = async () => {
       try {
-        const stats = await getUserQuizStats(user.uid);
+        const [stats, usage] = await Promise.all([
+          getUserQuizStats(user.uid),
+          getUserUsage(user.uid)
+        ]);
         const extendedStats: ExtendedUserQuizStats = {
           ...stats,
           streak: 3,
           improvement: 12
         };
         setQuizStats(extendedStats);
-        
-        const usage = await getUserUsage(user.uid);
         setUsageStats(usage);
       } catch (error) {
         console.error('Error fetching dashboard stats:', error);
+      } finally {
+        setStatsLoading(false);
       }
     };
     
@@ -305,22 +310,18 @@ export default function DashboardPage() {
                 className="group"
               >
                 <div className={`${glassmorphicStyles.card} h-full`}>
-                  {/* Gradient overlay */}
-                  <div className="absolute inset-0 bg-gradient-to-br from-white/5 to-transparent opacity-0 group-hover:opacity-20 transition-opacity duration-300 rounded-xl"></div>
-                  
-                  <div className="relative z-10">
-                    <StatCard
-                      title={stat.title}
-                      icon={stat.icon}
-                      value={(stat.value || 0).toLocaleString()}
-                      suffix={stat.suffix}
-                      trend={{
-                        value: index % 2 === 0 ? 15 : index % 3 === 0 ? -8 : 0,
-                        direction: index % 2 === 0 ? 'up' : index % 3 === 0 ? 'down' : 'neutral'
-                      }}
-                      color={stat.color as "primary" | "secondary" | "accent" | "success" | "warning" | "danger" | undefined}
-                    />
-                  </div>
+                  <StatCard
+                    loading={statsLoading}
+                    title={stat.title}
+                    icon={stat.icon}
+                    value={stat.value === undefined ? '-' : stat.value.toLocaleString()}
+                    suffix={stat.suffix}
+                    trend={{
+                      value: index % 2 === 0 ? 15 : index % 3 === 0 ? -8 : 0,
+                      direction: index % 2 === 0 ? 'up' : index % 3 === 0 ? 'down' : 'neutral'
+                    }}
+                    color={stat.color as "primary" | "secondary" | "accent" | "success" | "warning" | "danger" | undefined}
+                  />
                 </div>
               </motion.div>
             ))}

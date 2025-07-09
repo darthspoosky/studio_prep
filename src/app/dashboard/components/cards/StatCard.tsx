@@ -1,95 +1,152 @@
+
 'use client';
 
 import React from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { cn } from '@/lib/utils';
+import { useIsMobile } from '@/hooks/use-mobile';
+import { Skeleton } from '@/components/ui/skeleton';
+import { Button } from '@/components/ui/button';
+import { AlertCircle, TrendingUp, TrendingDown, Minus } from 'lucide-react';
 
-/**
- * Interface for StatCard props
- */
 export interface StatCardProps {
-  /** Icon to display in the card */
-  icon: React.ReactNode;
-  /** Title text for the stat */
   title: string;
-  /** Value text to display prominently */
+  icon: React.ReactNode;
   value: string | number;
-  /** Optional suffix to show after the value (like %, pts, etc) */
   suffix?: string;
-  /** Background color gradient for the card indicator */
+  trend?: {
+    value: number;
+    direction: 'up' | 'down' | 'neutral';
+  };
   color?: 'primary' | 'secondary' | 'accent' | 'success' | 'warning' | 'danger';
-  /** Optional trend indicator */
-  trend?: { value: number; direction: 'up' | 'down' | 'neutral' };
+  loading?: boolean;
+  error?: Error | null;
+  onClick?: () => void;
+  className?: string;
 }
 
-/**
- * StatCard component displays a single statistic with an icon, title and value
- * Used for displaying key metrics on the dashboard with modern glassmorphic styling
- */
-export const StatCard = ({ 
-  icon, 
-  title, 
-  value, 
+const colorMap = {
+  primary: 'bg-primary/10 text-primary',
+  secondary: 'bg-secondary/10 text-secondary-foreground',
+  accent: 'bg-accent/10 text-accent-foreground',
+  success: 'bg-green-500/10 text-green-500',
+  warning: 'bg-yellow-500/10 text-yellow-500',
+  danger: 'bg-red-500/10 text-red-500',
+};
+
+export const StatCard: React.FC<StatCardProps> = ({
+  title,
+  icon,
+  value,
+  suffix,
+  trend,
   color = 'primary',
-  trend 
-}: StatCardProps) => {
-  // Map color names to actual gradient classes
-  const colorMap = {
-    primary: 'from-primary/20 to-primary/5',
-    secondary: 'from-secondary/20 to-secondary/5',
-    accent: 'from-accent/20 to-accent/5',
-    success: 'from-emerald-500/20 to-emerald-500/5',
-    warning: 'from-amber-500/20 to-amber-500/5',
-    danger: 'from-rose-500/20 to-rose-500/5'
-  };
+  loading = false,
+  error = null,
+  onClick,
+  className
+}) => {
+  const isMobile = useIsMobile();
   
-  // Get trend indicator styles
+  if (loading) {
+    return (
+      <div className={cn("p-5", className)}>
+        <Skeleton className="h-8 w-8 rounded-lg mb-4" />
+        <Skeleton className="h-7 w-20 mb-1" />
+        <Skeleton className="h-4 w-32" />
+      </div>
+    );
+  }
+  
+  if (error) {
+    return (
+      <div className={cn("p-5 flex flex-col justify-between h-full", className)}>
+        <div>
+          <div className="flex items-center gap-2 text-red-500 mb-2">
+            <AlertCircle className="h-5 w-5" />
+            <span className="text-sm font-medium">Failed to load</span>
+          </div>
+          <p className="text-xs text-muted-foreground">{title}</p>
+        </div>
+        <Button variant="ghost" size="sm" onClick={onClick} className="mt-2 self-start">
+          Retry
+        </Button>
+      </div>
+    );
+  }
+  
   const getTrendStyles = () => {
     if (!trend) return '';
-    
-    if (trend.direction === 'up') {
-      return 'text-emerald-500';
-    } else if (trend.direction === 'down') {
-      return 'text-rose-500';
-    } 
-    return 'text-slate-400';
+    if (trend.direction === 'up') return 'text-green-600';
+    if (trend.direction === 'down') return 'text-red-600';
+    return 'text-gray-600';
   };
-  
+
   const getTrendIcon = () => {
     if (!trend) return null;
-    
-    if (trend.direction === 'up') {
-      return <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-        <path strokeLinecap="round" strokeLinejoin="round" d="M7 11l5-5 5 5M7 17l5-5 5 5" />
-      </svg>;
-    } else if (trend.direction === 'down') {
-      return <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-        <path strokeLinecap="round" strokeLinejoin="round" d="M17 11l-5 5-5-5M17 5l-5 5-5-5" />
-      </svg>;
-    }
-    return null;
+    if (trend.direction === 'up') return <TrendingUp className="h-3 w-3 lg:h-4 lg:w-4" />;
+    if (trend.direction === 'down') return <TrendingDown className="h-3 w-3 lg:h-4 lg:w-4" />;
+    return <Minus className="h-3 w-3 lg:h-4 lg:w-4" />;
   };
 
   return (
-    <Card className={`overflow-hidden backdrop-blur-md bg-background/30 border border-muted/20 shadow-lg rounded-xl transition-all duration-300 hover:shadow-xl hover:scale-[1.02] group`}>
-      <div className={`absolute top-0 left-0 h-full w-1.5 bg-gradient-to-b ${colorMap[color]}`}></div>
-      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-        <CardTitle className="text-sm font-medium text-foreground/80">{title}</CardTitle>
-        <div className="p-2 rounded-full bg-background/50 border border-muted/10 text-foreground/80 group-hover:bg-background/70 transition-colors duration-300">
-          {icon}
+    <div 
+      className={cn(
+        "p-5 h-full",
+        onClick && "cursor-pointer transition-all duration-200 hover:scale-[1.02] active:scale-[0.98]",
+        className
+      )}
+      onClick={onClick}
+      role={onClick ? "button" : undefined}
+      tabIndex={onClick ? 0 : undefined}
+      onKeyDown={(e) => {
+        if (onClick && (e.key === 'Enter' || e.key === ' ')) {
+          onClick();
+        }
+      }}
+    >
+      <div className="flex items-start justify-between mb-3">
+        <div className={cn(
+          "p-2.5 rounded-lg",
+          colorMap[color] || colorMap.primary
+        )}>
+          {React.cloneElement(icon as React.ReactElement, {
+            className: cn("h-5 w-5 lg:h-6 lg:w-6", (icon as React.ReactElement).props.className)
+          })}
         </div>
-      </CardHeader>
-      <CardContent>
-        <div className="flex items-baseline justify-between">
-          <div className="text-2xl font-bold tracking-tight">{value}</div>
-          {trend && (
-            <div className={`flex items-center space-x-1 text-xs font-medium ${getTrendStyles()}`}>
-              {getTrendIcon()}
-              <span>{`${trend.value}%`}</span>
-            </div>
+        
+        {trend && (
+          <div className={cn(
+            "flex items-center gap-1 text-xs lg:text-sm font-medium",
+            getTrendStyles()
+          )}>
+            {getTrendIcon()}
+            <span>{Math.abs(trend.value)}%</span>
+          </div>
+        )}
+      </div>
+      
+      <div>
+        <div className="flex items-baseline gap-1">
+          <span className={cn(
+            "font-bold",
+            isMobile ? "text-xl" : "text-2xl"
+          )}>
+            {value}
+          </span>
+          {suffix && (
+            <span className="text-sm lg:text-base text-muted-foreground">
+              {suffix}
+            </span>
           )}
         </div>
-      </CardContent>
-    </Card>
+        <p className={cn(
+          "text-muted-foreground line-clamp-2",
+          isMobile ? "text-xs mt-1" : "text-sm mt-0.5"
+        )}>
+          {title}
+        </p>
+      </div>
+    </div>
   );
 };
 
