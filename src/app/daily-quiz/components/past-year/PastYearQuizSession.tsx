@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+
+import React, { useState, useEffect, useRef } from 'react';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
@@ -36,7 +37,7 @@ export default function PastYearQuizSession({
   const [quizState, setQuizState] = useState<QuizState>('in-progress');
   const [startTime] = useState<number>(Date.now());
   const [timeTaken, setTimeTaken] = useState<number>(0);
-  const [timerInterval, setTimerInterval] = useState<NodeJS.Timeout | null>(null);
+  const timerIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const [showExplanation, setShowExplanation] = useState(false);
   const { user } = useAuth();
 
@@ -50,10 +51,9 @@ export default function PastYearQuizSession({
     setUserAnswers(initialAnswers);
 
     // Start the timer
-    const interval = setInterval(() => {
+    timerIntervalRef.current = setInterval(() => {
       setTimeTaken(Math.floor((Date.now() - startTime) / 1000));
     }, 1000);
-    setTimerInterval(interval);
 
     // Fetch user progress data if logged in
     const fetchProgressData = async () => {
@@ -71,9 +71,9 @@ export default function PastYearQuizSession({
     fetchProgressData();
 
     return () => {
-      if (timerInterval) clearInterval(timerInterval);
+      if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
     };
-  }, [questionSet, startTime, user, timerInterval]);
+  }, [questionSet, startTime, user]);
 
   const currentQuestion = questionSet.questions[currentQuestionIndex];
 
@@ -112,7 +112,7 @@ export default function PastYearQuizSession({
 
   const handleFinish = () => {
     // Stop timer
-    if (timerInterval) clearInterval(timerInterval);
+    if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
     
     // Save any unanswered questions as skipped
     if (user?.uid) {
