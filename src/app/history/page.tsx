@@ -7,7 +7,6 @@ import { useAuth } from '@/contexts/AuthContext';
 import { getFullHistory, type HistoryEntry, deleteHistoryEntry } from '@/services/historyService';
 import { useRouter } from 'next/navigation';
 import Header from '@/components/layout/header';
-import Footer from '@/components/landing/footer';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -403,7 +402,6 @@ export default function FullHistoryPage() {
                     </Card>
                 )}
             </main>
-            <Footer />
         </div>
     );
 }

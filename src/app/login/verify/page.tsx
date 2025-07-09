@@ -11,7 +11,6 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import Header from '@/components/layout/header';
-import Footer from '@/components/landing/footer';
 
 export default function VerifyLoginPage() {
     const router = useRouter();
@@ -135,7 +134,6 @@ export default function VerifyLoginPage() {
                     </CardContent>
                 </Card>
             </main>
-            <Footer />
         </div>
     );
 }

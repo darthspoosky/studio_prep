@@ -8,7 +8,6 @@ import { getMainsQuestions, type MainsQuestionWithContext } from '@/services/his
 import { getAllMainsAnswers, saveMainsAnswer } from '@/services/mainsAnswerService';
 import { useRouter } from 'next/navigation';
 import Header from '@/components/layout/header';
-import Footer from '@/components/landing/footer';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -178,7 +177,6 @@ export default function MainsQuestionBankPage() {
                     )}
                 </div>
             </main>
-            <Footer />
         </div>
     );
 }

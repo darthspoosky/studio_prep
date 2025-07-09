@@ -11,7 +11,6 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import Header from '@/components/layout/header';
-import Footer from '@/components/landing/footer';
 import { ArrowLeft, Loader2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { storage } from '@/lib/firebase';
@@ -237,7 +236,6 @@ export default function ProfilePage() {
           </Card>
         </div>
       </main>
-      <Footer />
     </div>
   );
 }

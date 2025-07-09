@@ -1,5 +1,4 @@
 import Header from '@/components/layout/header';
-import Footer from '@/components/landing/footer';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 
 export default function TermsPage() {
@@ -22,7 +21,6 @@ export default function TermsPage() {
           </Card>
         </div>
       </main>
-      <Footer />
     </div>
   );
 }

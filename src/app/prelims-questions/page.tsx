@@ -11,7 +11,6 @@ import { saveQuizAttempt, getAllUserAttempts } from '@/services/quizAttemptsServ
 import { useRouter } from 'next/navigation';
 
 import Header from '@/components/layout/header';
-import Footer from '@/components/landing/footer';
 import { Button } from '@/components/ui/button';
 import { Card, CardHeader, CardContent, CardTitle, CardDescription } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -314,7 +313,6 @@ export default function PrelimsQuestionBankPage() {
                     )}
                 </div>
             </main>
-            <Footer />
         </div>
     );
 }
