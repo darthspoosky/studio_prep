@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useState } from 'react';
@@ -101,6 +102,7 @@ const LeftSidebar: React.FC<LeftSidebarProps> = ({
   const hoverAnimation = {
     hover: { scale: 1.03, transition: { type: "spring", stiffness: 400, damping: 10 } }
   };
+  
   const mainLinks = [
     {
       href: "/dashboard",
