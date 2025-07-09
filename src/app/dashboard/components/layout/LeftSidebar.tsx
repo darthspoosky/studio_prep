@@ -122,7 +122,7 @@ const LeftSidebar: React.FC<LeftSidebarProps> = ({
     {
       href: "/daily-quiz",
       icon: <FileQuestion className="w-5 h-5" />,
-      label: "Daily Quiz"
+      label: "Question Bank"
     },
     {
       href: "/writing-practice",
@@ -133,7 +133,7 @@ const LeftSidebar: React.FC<LeftSidebarProps> = ({
 
   const resourceLinks = [
     {
-      href: "/prelims-questions",
+      href: "/daily-quiz",
       icon: <FileQuestion className="w-5 h-5" />,
       label: "Prelims Q-Bank"
     },

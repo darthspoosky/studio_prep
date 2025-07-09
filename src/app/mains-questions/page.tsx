@@ -134,7 +134,7 @@ export default function MainsQuestionBankPage() {
                         Mains Question Bank
                     </h1>
                     <p className="text-muted-foreground mt-4 max-w-2xl mx-auto text-lg">
-                        All the Mains questions you&apos;ve generated, ready for practice.
+                        All the Mains questions you've generated, ready for practice.
                     </p>
                 </div>
 
