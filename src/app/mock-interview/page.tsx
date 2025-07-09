@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import { Button } from "@/components/ui/button";
@@ -172,11 +173,6 @@ export default function MockInterviewPage() {
     <MainLayout
       leftSidebar={<LeftSidebar usageStats={usageStats} />}
       rightSidebar={<RightSidebar quizStats={quizStats} />}
-      mobileHeader={<MobileHeader 
-        usageStats={usageStats}
-        pageTitle="Mock Interview" 
-        userNav={<UserNav />} 
-      />}
     >
         {!sessionStarted ? (
             <>

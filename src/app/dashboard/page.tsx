@@ -212,11 +212,6 @@ export default function DashboardPage() {
     <MainLayout
       leftSidebar={<LeftSidebar usageStats={usageStats} />}
       rightSidebar={<RightSidebar quizStats={quizStats} />}
-      mobileHeader={<MobileHeader 
-        usageStats={usageStats}
-        pageTitle="Dashboard" 
-        userNav={<UserNav />} 
-      />}
     >
       <div className="space-y-8">
         {/* Hero/Welcome section with glassmorphic styling */}

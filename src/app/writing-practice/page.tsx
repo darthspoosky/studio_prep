@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import { Button } from "@/components/ui/button";
@@ -78,11 +79,6 @@ export default function WritingPracticePage() {
     <MainLayout
       leftSidebar={<LeftSidebar usageStats={usageStats} />}
       rightSidebar={<RightSidebar quizStats={quizStats} />}
-      mobileHeader={<MobileHeader 
-        usageStats={usageStats}
-        pageTitle="Writing Practice" 
-        userNav={<UserNav />} 
-      />}
     >
         <div className="max-w-4xl mx-auto">
             <div className="text-center mb-16">

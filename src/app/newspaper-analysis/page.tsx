@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import React, { useState, useMemo, useEffect, useRef } from "react";
@@ -794,11 +795,6 @@ export default function NewspaperAnalysisPage() {
     <MainLayout
       leftSidebar={<LeftSidebar usageStats={usageStats} />}
       rightSidebar={<RightSidebar quizStats={quizStats} />}
-      mobileHeader={<MobileHeader 
-        usageStats={usageStats}
-        pageTitle="Newspaper Analysis" 
-        userNav={<UserNav />} 
-      />}
     >
         <div className="text-center mb-16">
             <h1 className="font-headline text-4xl sm:text-5xl font-bold tracking-tighter">

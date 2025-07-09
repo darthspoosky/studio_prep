@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import { Button } from "@/components/ui/button";
@@ -117,11 +118,6 @@ export default function DailyQuizPage() {
     <MainLayout
       leftSidebar={<LeftSidebar usageStats={usageStats} />}
       rightSidebar={<RightSidebar quizStats={quizStats} />}
-      mobileHeader={<MobileHeader 
-        usageStats={usageStats}
-        pageTitle="Daily Quiz" 
-        userNav={<UserNav />} 
-      />}
     >
         <div className="text-center mb-16">
             <h1 className="font-headline text-4xl sm:text-5xl font-bold tracking-tighter">
