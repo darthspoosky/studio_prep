@@ -1,3 +1,4 @@
+
 'use client';
 
 import {
@@ -18,10 +19,12 @@ import {
 import { useAuth } from '@/contexts/AuthContext';
 import { auth } from '@/lib/firebase';
 import { signOut } from 'firebase/auth';
-import { LayoutDashboard, LogOut, User } from 'lucide-react';
+import { LayoutDashboard, LogOut, User, ShieldCheck } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useToast } from '@/hooks/use-toast';
+
+const ADMIN_UID = '1g3Lq4Tq4Pgj3Z9d1Z7q7Z9d1Z7'; 
 
 export function UserNav() {
   const { user } = useAuth();
@@ -52,6 +55,8 @@ export function UserNav() {
     }
     return name[0].toUpperCase();
   };
+
+  const isAdmin = user.uid === ADMIN_UID;
 
   return (
     <DropdownMenu>
@@ -86,6 +91,14 @@ export function UserNav() {
               <span>Profile</span>
             </Link>
           </DropdownMenuItem>
+          {isAdmin && (
+            <DropdownMenuItem asChild>
+              <Link href="/admin/upload">
+                <ShieldCheck className="mr-2 h-4 w-4" />
+                <span>Admin Panel</span>
+              </Link>
+            </DropdownMenuItem>
+          )}
         </DropdownMenuGroup>
         <DropdownMenuSeparator />
         <DropdownMenuItem onClick={handleLogout}>
