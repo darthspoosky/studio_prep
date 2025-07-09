@@ -3,7 +3,6 @@ import Hero from '@/components/landing/hero';
 import ToolsShowcase from '@/components/landing/tools-showcase';
 import FeedbackWall from '@/components/landing/feedback-wall';
 import Differentiator from '@/components/landing/differentiator';
-import SurveyCTA from '@/components/landing/survey-cta';
 import Footer from '@/components/landing/footer';
 import { getGlobalUsage } from '@/services/usageService';
 
@@ -18,7 +17,6 @@ export default async function Home() {
         <ToolsShowcase globalUsage={globalUsage} />
         <FeedbackWall />
         <Differentiator />
-        <SurveyCTA />
       </main>
       <Footer />
     </div>

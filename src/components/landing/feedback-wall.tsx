@@ -5,6 +5,8 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { motion } from 'framer-motion';
 import { onIdeasUpdate, type Idea } from '@/services/ideasService';
+import { Button } from '@/components/ui/button';
+import SurveyModal from '@/components/survey-modal';
 
 const initialIdeas: Idea[] = [
   {
@@ -83,6 +85,7 @@ const IdeaCard = ({ featureRequests, author, role, avatar, glowColor }: Idea) =>
 
 const FeedbackWall = () => {
     const [ideas, setIdeas] = useState<Idea[]>(initialIdeas);
+    const [isModalOpen, setIsModalOpen] = useState(false);
 
     useEffect(() => {
         const unsubscribe = onIdeasUpdate((newIdeasFromDb) => {
@@ -96,39 +99,51 @@ const FeedbackWall = () => {
     const duplicatedIdeas = ideas.length > 0 ? [...ideas, ...ideas] : [];
 
     return (
-        <section className="relative py-24 sm:py-32 flex flex-col justify-center overflow-hidden bg-background">
-            <div className="container mx-auto px-4 text-center mb-16">
-                <h2 className="font-headline text-4xl md:text-5xl font-bold tracking-tight">
-                    <span className="animate-gradient-anim bg-[length:200%_auto] bg-gradient-to-r from-primary via-accent to-pink-500 bg-clip-text text-transparent">
-                        From the PrepTalk Community
-                    </span>
-                </h2>
-                <p className="mt-4 max-w-2xl mx-auto text-lg md:text-xl text-muted-foreground">
-                    Our real-time idea wall, shaped by you and powered by AI.
-                </p>
-            </div>
-            
-            <div className="w-full flex flex-col gap-8 -rotate-2 py-8">
-                <motion.div 
-                    className="flex gap-8"
-                    animate={{ x: ['0%', '-100%'] }}
-                    transition={{ ease: 'linear', duration: 50, repeat: Infinity }}
-                >
-                    {duplicatedIdeas.map((item, index) => (
-                        <IdeaCard key={`marquee-1-${item.id || item.featureRequests}-${index}`} {...item} />
-                    ))}
-                </motion.div>
-                <motion.div 
-                    className="flex gap-8"
-                    animate={{ x: ['-100%', '0%'] }}
-                    transition={{ ease: 'linear', duration: 50, repeat: Infinity }}
-                >
-                    {duplicatedIdeas.map((item, index) => (
-                        <IdeaCard key={`marquee-2-${item.id || item.featureRequests}-${index}`} {...item} />
-                    ))}
-                </motion.div>
-            </div>
-        </section>
+        <>
+            <section className="relative py-24 sm:py-32 flex flex-col justify-center overflow-hidden bg-background">
+                <div className="container mx-auto px-4 text-center mb-16">
+                    <h2 className="font-headline text-4xl md:text-5xl font-bold tracking-tight">
+                        <span className="animate-gradient-anim bg-[length:200%_auto] bg-gradient-to-r from-primary via-accent to-pink-500 bg-clip-text text-transparent">
+                            From the PrepTalk Community
+                        </span>
+                    </h2>
+                    <p className="mt-4 max-w-2xl mx-auto text-lg md:text-xl text-muted-foreground">
+                        Our real-time idea wall is shaped by you. Your feedback is crucial—take a 1-minute survey to tell us what you need, and we'll build it.
+                    </p>
+                    <div className="mt-8">
+                        <Button
+                            size="lg"
+                            className="bg-primary hover:bg-primary/90 animate-pulse-cta"
+                            onClick={() => setIsModalOpen(true)}
+                        >
+                            Take the Survey
+                        </Button>
+                    </div>
+                </div>
+                
+                <div className="w-full flex flex-col gap-8 -rotate-2 py-8">
+                    <motion.div 
+                        className="flex gap-8"
+                        animate={{ x: ['0%', '-100%'] }}
+                        transition={{ ease: 'linear', duration: 50, repeat: Infinity }}
+                    >
+                        {duplicatedIdeas.map((item, index) => (
+                            <IdeaCard key={`marquee-1-${item.id || item.featureRequests}-${index}`} {...item} />
+                        ))}
+                    </motion.div>
+                    <motion.div 
+                        className="flex gap-8"
+                        animate={{ x: ['-100%', '0%'] }}
+                        transition={{ ease: 'linear', duration: 50, repeat: Infinity }}
+                    >
+                        {duplicatedIdeas.map((item, index) => (
+                            <IdeaCard key={`marquee-2-${item.id || item.featureRequests}-${index}`} {...item} />
+                        ))}
+                    </motion.div>
+                </div>
+            </section>
+            <SurveyModal isOpen={isModalOpen} onOpenChange={setIsModalOpen} />
+        </>
     );
 };
 
