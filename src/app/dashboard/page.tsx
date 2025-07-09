@@ -243,7 +243,6 @@ export default function DashboardPage() {
                 <div className="flex items-center gap-4">
                   <div className="w-24 h-24 relative">
                     <DailyGoalChart progress={72} />
-                    <div className="absolute inset-0 flex items-center justify-center font-bold text-lg">72%</div>
                   </div>
                   <div>
                     <p className="font-medium">Great progress!</p>
