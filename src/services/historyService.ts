@@ -2,7 +2,7 @@
 'use client';
 
 import { db } from '@/lib/firebase';
-import { collection, addDoc, query, where, orderBy, getDocs, Timestamp, doc, getDoc, onSnapshot, limit } from 'firebase/firestore';
+import { collection, addDoc, query, where, orderBy, getDocs, Timestamp, doc, getDoc, onSnapshot, limit, deleteDoc } from 'firebase/firestore';
 import type { NewspaperAnalysisOutput, MCQ, MainsQuestion } from '@/ai/flows/newspaper-analysis-flow';
 
 export interface HistoryEntry {
@@ -110,6 +110,20 @@ export async function getHistoryEntry(id: string): Promise<HistoryEntry | null> 
     console.error("Error fetching history entry: ", error);
     return null;
   }
+}
+
+export async function deleteHistoryEntry(id: string): Promise<void> {
+    if (!db) {
+      console.log("Firestore not initialized. Skipping deleteHistoryEntry.");
+      return;
+    }
+    try {
+      const docRef = doc(db, 'userHistory', id);
+      await deleteDoc(docRef);
+    } catch (error) {
+      console.error("Error deleting history entry: ", error);
+      throw new Error("Could not delete the analysis entry.");
+    }
 }
 
 export async function getPrelimsQuestions(userId: string): Promise<PrelimsQuestionWithContext[]> {

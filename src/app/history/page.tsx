@@ -4,21 +4,41 @@
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useAuth } from '@/contexts/AuthContext';
-import { getFullHistory, type HistoryEntry } from '@/services/historyService';
+import { getFullHistory, type HistoryEntry, deleteHistoryEntry } from '@/services/historyService';
 import { useRouter } from 'next/navigation';
 import Header from '@/components/layout/header';
 import Footer from '@/components/landing/footer';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
-import { ArrowLeft, Library, Brain, BarChart, FileText, Activity, SortDesc } from 'lucide-react';
+import { ArrowLeft, Library, Brain, BarChart, FileText, Activity, SortDesc, MoreVertical, Trash2 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Separator } from '@/components/ui/separator';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
+import { useToast } from '@/hooks/use-toast';
 
-// New AI-powered history card component that replaces the old HistoryCard
-const AIAnalysisCard = ({ entry }: { entry: HistoryEntry }) => {
+const GS_PAPER_COLORS: Record<string, string> = {
+    'GS-I': 'from-orange-400 to-amber-500',
+    'GS-II': 'from-blue-400 to-sky-500',
+    'GS-III': 'from-emerald-400 to-teal-500',
+    'GS-IV': 'from-purple-400 to-indigo-500',
+    'Default': 'from-slate-400 to-gray-500',
+};
+
+const getGSPaperColor = (syllabusTopic?: string | null): string => {
+    if (!syllabusTopic) return GS_PAPER_COLORS.Default;
+    if (syllabusTopic.includes('GS-I') || syllabusTopic.includes('Paper-II')) return GS_PAPER_COLORS['GS-I'];
+    if (syllabusTopic.includes('GS-II') || syllabusTopic.includes('Paper-III')) return GS_PAPER_COLORS['GS-II'];
+    if (syllabusTopic.includes('GS-III') || syllabusTopic.includes('Paper-IV')) return GS_PAPER_COLORS['GS-III'];
+    if (syllabusTopic.includes('GS-IV') || syllabusTopic.includes('Paper-V')) return GS_PAPER_COLORS['GS-IV'];
+    return GS_PAPER_COLORS.Default;
+};
+
+
+const AIAnalysisCard = ({ entry, onDelete }: { entry: HistoryEntry, onDelete: (id: string) => void }) => {
   const date = new Date(entry.timestamp.seconds * 1000).toLocaleDateString('en-US', {
     month: 'long',
     day: 'numeric',
@@ -31,63 +51,85 @@ const AIAnalysisCard = ({ entry }: { entry: HistoryEntry }) => {
     hour12: true
   });
 
-  // Get MCQ stats
   const mcqCount = entry.analysis.prelims?.mcqs?.length || 0;
   const averageMCQDifficulty = mcqCount > 0 
-    ? entry.analysis.prelims?.mcqs?.reduce((acc, mcq) => acc + (mcq.difficulty || 5), 0) / mcqCount 
+    ? (entry.analysis.prelims?.mcqs?.reduce((acc, mcq) => acc + (mcq.difficulty || 5), 0) || 0) / mcqCount 
     : 0;
   
-  // Get Mains stats
   const mainsCount = entry.analysis.mains?.questions?.length || 0;
   const averageMainsDifficulty = mainsCount > 0 && entry.analysis.mains?.questions
     ? entry.analysis.mains.questions.reduce((acc, q) => acc + (q.difficulty || 5), 0) / mainsCount
     : 0;
 
-  // Get knowledge graph stats
   const entityCount = entry.analysis.knowledgeGraph?.nodes?.length || 0;
   const relationshipCount = entry.analysis.knowledgeGraph?.edges?.length || 0;
   
-  // Get processing stats
   const processingTime = entry.analysis.processingTime || 0;
-  const totalTokens = entry.analysis.totalTokens || 0;
+  const qualityScore = entry.analysis.qualityScore ? (entry.analysis.qualityScore * 10).toFixed(1) : '-';
+
+  const cardColorGradient = getGSPaperColor(entry.analysis.syllabusTopic);
 
   return (
     <Card className="flex flex-col overflow-hidden hover:shadow-lg transition-all duration-300 border border-border/40 bg-card/90 backdrop-blur-sm hover:scale-[1.01]">
-      {/* AI Status Bar */}
-      <div className="bg-gradient-to-r from-primary/20 via-primary/30 to-primary/20 px-4 py-1.5 flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <Brain className="w-4 h-4 text-primary" />
-          <span className="text-xs font-medium text-primary">AI Analysis</span>
-        </div>
-        <Badge variant="outline" className="text-xs bg-background/50 border-primary/20">
-          Quality: {entry.analysis.qualityScore || '—'}
-        </Badge>
-      </div>
+      <div className={`h-2 bg-gradient-to-r ${cardColorGradient} rounded-t-lg`} />
       
       <CardHeader className="pb-2">
         <div className="flex items-start justify-between">
-          <div>
+          <div className="pr-4">
             <CardTitle className="text-base font-semibold line-clamp-2">
-              {/* Show first few words of summary as title if no explicit title */}
-              {entry.analysis.summary?.split(' ').slice(0, 7).join(' ') + '...' || 'Newspaper Analysis'}
+              {entry.analysis.summary?.split(' ').slice(0, 10).join(' ') + '...' || 'Newspaper Analysis'}
             </CardTitle>
             <CardDescription className="text-xs flex items-center gap-1.5 mt-1">
               <Activity className="h-3 w-3" />
               <span>{date} • {time}</span>
             </CardDescription>
           </div>
-          <Badge className="shrink-0 bg-primary/10 text-primary border-0 text-xs">
-            {entry.analysis.syllabusTopic || 'General Analysis'}
-          </Badge>
+           <AlertDialog>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" size="icon" className="h-8 w-8 flex-shrink-0 -mt-1 -mr-2">
+                      <MoreVertical className="w-4 h-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <AlertDialogTrigger asChild>
+                    <DropdownMenuItem className="text-destructive focus:bg-destructive/10 focus:text-destructive">
+                      <Trash2 className="mr-2 h-4 w-4" />
+                      Delete
+                    </DropdownMenuItem>
+                  </AlertDialogTrigger>
+                </DropdownMenuContent>
+              </DropdownMenu>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    This action cannot be undone. This will permanently delete this analysis and all associated data from our servers.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                  <AlertDialogAction onClick={() => onDelete(entry.id)} className="bg-destructive hover:bg-destructive/90 text-destructive-foreground">Delete</AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+           </AlertDialog>
+        </div>
+        <div className="mt-2">
+            <Badge variant="outline" className="text-xs border-primary/20">
+                {entry.analysis.syllabusTopic || 'General Analysis'}
+            </Badge>
         </div>
       </CardHeader>
       
-      <CardContent className="pt-0">
-        <p className="text-sm text-muted-foreground line-clamp-2 mb-4">
-          {entry.analysis.summary || 'No summary available for this analysis.'}
-        </p>
+      <CardContent className="pt-2">
+        {entry.analysis.tags && entry.analysis.tags.length > 0 && (
+            <div className="flex flex-wrap gap-1.5 mb-4">
+                {entry.analysis.tags.map(tag => (
+                    <Badge key={tag} variant="secondary" className="font-normal">{tag}</Badge>
+                ))}
+            </div>
+        )}
         
-        {/* AI Generated Metrics */}
         <div className="grid grid-cols-2 gap-3 mb-2">
           <div className="flex flex-col p-2 bg-muted/30 rounded-md">
             <span className="text-xs text-muted-foreground mb-1">MCQs Generated</span>
@@ -114,18 +156,18 @@ const AIAnalysisCard = ({ entry }: { entry: HistoryEntry }) => {
           </div>
         </div>
         
-        <div className="grid grid-cols-3 gap-2 mb-4">
-          <div className="text-center">
+        <div className="grid grid-cols-3 gap-2">
+          <div className="text-center p-1 bg-muted/30 rounded-md">
             <div className="text-lg font-medium">{entityCount}</div>
             <div className="text-xs text-muted-foreground">Entities</div>
           </div>
-          <div className="text-center">
+          <div className="text-center p-1 bg-muted/30 rounded-md">
             <div className="text-lg font-medium">{relationshipCount}</div>
             <div className="text-xs text-muted-foreground">Connections</div>
           </div>
-          <div className="text-center">
-            <div className="text-lg font-medium">{totalTokens > 0 ? (totalTokens / 1000).toFixed(1) + 'K' : '—'}</div>
-            <div className="text-xs text-muted-foreground">Tokens</div>
+           <div className="text-center p-1 bg-muted/30 rounded-md">
+            <div className="text-lg font-medium">{qualityScore}</div>
+            <div className="text-xs text-muted-foreground">Quality Score</div>
           </div>
         </div>
       </CardContent>
@@ -133,11 +175,11 @@ const AIAnalysisCard = ({ entry }: { entry: HistoryEntry }) => {
       <CardFooter className="pt-1 mt-auto border-t border-border/30 flex justify-between">
         <Button 
           asChild 
-          variant="ghost" 
+          variant="link" 
           size="sm"
-          className="text-xs font-medium text-primary hover:text-primary/80 hover:bg-primary/10 p-0 h-8"
+          className="text-xs font-medium p-0 h-8 text-primary"
         >
-          <Link href={`/history/${entry.id}`} className="flex items-center gap-1 px-3">
+          <Link href={`/history/${entry.id}`} className="px-3">
             View Full Analysis
           </Link>
         </Button>
@@ -158,8 +200,8 @@ export default function FullHistoryPage() {
     const [isLoading, setIsLoading] = useState(true);
     const [activeTab, setActiveTab] = useState<string>("all");
     const [sortBy, setSortBy] = useState<string>("newest");
+    const { toast } = useToast();
     
-    // Group entries by syllabus topic for better organization
     const [groupBy, setGroupBy] = useState<string>("none");
 
     useEffect(() => {
@@ -178,12 +220,23 @@ export default function FullHistoryPage() {
                 });
         }
     }, [user, authLoading, router]);
+    
+    const handleDelete = async (id: string) => {
+        const originalHistory = [...history];
+        setHistory(prev => prev.filter(entry => entry.id !== id));
+        try {
+            await deleteHistoryEntry(id);
+            toast({ title: "Analysis Deleted" });
+        } catch (error) {
+            setHistory(originalHistory);
+            toast({ variant: "destructive", title: "Deletion Failed", description: "Could not delete the analysis. Please try again." });
+        }
+    };
 
     if (authLoading || !user) {
         return null;
     }
     
-    // Sort history based on selected option
     const sortedHistory = [...history].sort((a, b) => {
         if (sortBy === "newest") {
             return b.timestamp.seconds - a.timestamp.seconds;
@@ -199,19 +252,18 @@ export default function FullHistoryPage() {
         return 0;
     });
     
-    // Get unique syllabus topics for grouping
     const syllabusTopics = [...new Set(history.map(entry => entry.analysis.syllabusTopic || 'Uncategorized'))];
     
-    // Group history entries if needed
     const getGroupedHistory = () => {
         if (groupBy === "none") {
             return { "All Analyses": sortedHistory };
         } else if (groupBy === "syllabusTopic") {
             const grouped: Record<string, HistoryEntry[]> = {};
             syllabusTopics.forEach(topic => {
-                grouped[topic] = sortedHistory.filter(entry => 
-                    (entry.analysis.syllabusTopic || 'Uncategorized') === topic
-                );
+                const entriesForTopic = sortedHistory.filter(entry => (entry.analysis.syllabusTopic || 'Uncategorized') === topic);
+                if (entriesForTopic.length > 0) {
+                    grouped[topic] = entriesForTopic;
+                }
             });
             return grouped;
         }
@@ -245,7 +297,7 @@ export default function FullHistoryPage() {
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 max-w-7xl mx-auto">
                         {Array.from({ length: 6 }).map((_, i) => (
                             <Card key={i} className="overflow-hidden">
-                                <div className="h-8 bg-muted/50"></div>
+                                <Skeleton className="h-2 w-full" />
                                 <CardHeader><Skeleton className="h-10 w-3/4" /></CardHeader>
                                 <CardContent>
                                     <Skeleton className="h-4 w-full mb-3" />
@@ -255,7 +307,6 @@ export default function FullHistoryPage() {
                                         <Skeleton className="h-16 w-full" />
                                     </div>
                                     <div className="flex justify-between">
-                                        <Skeleton className="h-5 w-20" />
                                         <Skeleton className="h-5 w-20" />
                                         <Skeleton className="h-5 w-20" />
                                     </div>
@@ -319,7 +370,7 @@ export default function FullHistoryPage() {
                                             )}
                                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                                                 {entries.map(entry => (
-                                                    <AIAnalysisCard key={entry.id} entry={entry} />
+                                                    <AIAnalysisCard key={entry.id} entry={entry} onDelete={handleDelete} />
                                                 ))}
                                             </div>
                                         </div>
@@ -328,7 +379,7 @@ export default function FullHistoryPage() {
                                 <TabsContent value="newspaper">
                                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                                         {sortedHistory.map(entry => (
-                                            <AIAnalysisCard key={entry.id} entry={entry} />
+                                            <AIAnalysisCard key={entry.id} entry={entry} onDelete={handleDelete} />
                                         ))}
                                     </div>
                                 </TabsContent>

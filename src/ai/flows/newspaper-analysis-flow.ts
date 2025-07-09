@@ -89,6 +89,7 @@ const NewspaperAnalysisOutputSchema = z.object({
   mains: z.object({ questions: z.array(MainsQuestionSchema) }).optional(),
   knowledgeGraph: KnowledgeGraphSchema,
   syllabusTopic: z.string().optional().nullable(),
+  tags: z.array(z.string()).optional().describe("A list of 2-3 broader syllabus tags related to the topic (e.g., 'Polity', 'Governance', 'International Relations')."),
   qualityScore: z.number().optional(),
   questionsCount: z.number().optional(),
   inputTokens: z.number().optional(),
@@ -108,6 +109,7 @@ const NewspaperAnalysisChunkSchema = z.discriminatedUnion("type", [
   z.object({ type: z.literal('metadata'), data: z.object({
     syllabusTopic: z.string().optional().nullable(),
     qualityScore: z.number().optional(),
+    tags: z.array(z.string()).optional(),
     questionsCount: z.number().optional(),
     totalTokens: z.number().optional(),
     cost: z.number().optional()
@@ -254,10 +256,12 @@ Adhere strictly to authentic UPSC Civil Services (P) Examination patterns. Gener
 From the article, identify the key entities and the relationships between them. Structure this as a knowledge graph with nodes and edges.
 - **Nodes**: Each node must have a unique 'id' (camelCase or PascalCase), a 'label' (the entity's name), and a 'type' (Person, Organization, Location, Policy, Concept, Date, Statistic).
 - **Edges**: Each edge must link two nodes by their 'id's and have a concise 'label' describing their relationship (e.g., "criticized by", "announced", "impacts", "located in").
-
 This information should be populated in the 'knowledgeGraph' field of the JSON output.
 
-Generate the questions and knowledge graph now.`,
+## **ADDITIONAL TASK: TAGGING**
+Based on the 'Identified Syllabus Topic' and the content, identify 2-3 broader, high-level tags from the syllabus. Examples: 'Indian Society', 'Polity', 'Governance', 'International Relations', 'Economic Development'. Populate these in the 'tags' field.
+
+Generate the questions, knowledge graph, and tags now.`,
 });
 
 // --- AGENT 3: Verification Editor (definition remains the same) ---
@@ -277,6 +281,7 @@ const verificationEditorAgent = ai.definePrompt({
 **3. SUMMARY SANITIZATION**: The 'summary' MUST be 2-3 sentences of clean text. If the summary is missing, empty, or inadequate in the input, you MUST generate a new one from the source article. Strip all tags.
 **4. KNOWLEDGE GRAPH VERIFICATION**: Ensure the extracted nodes and edges are factual and directly supported by the article text. The graph should be coherent and relationships logical. Node IDs must be valid identifiers.
 **5. METRICS**: Calculate and include 'questionsCount' and a 'qualityScore' (0-1).
+**6. TAGS**: Ensure the 'tags' array contains 2-3 relevant, high-level topics.
 
 Return the perfected analysis as a valid JSON object.
 
@@ -407,6 +412,7 @@ const analyzeNewspaperArticleFlow = ai.defineFlow(
         data: {
             syllabusTopic: relevanceResult.syllabusTopic,
             qualityScore: finalAnalysis.qualityScore,
+            tags: finalAnalysis.tags,
             questionsCount,
             totalTokens,
             cost: Math.round(cost * 100) / 100,
