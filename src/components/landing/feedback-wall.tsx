@@ -1,3 +1,4 @@
+
 "use client";
 
 import React, { useState, useEffect } from 'react';
@@ -10,76 +11,76 @@ import SurveyModal from '@/components/survey-modal';
 
 const initialIdeas: Idea[] = [
   {
-    featureRequests: "An AI that creates a personalized study schedule based on my weak areas would be amazing.",
-    author: 'Priya S.',
-    role: 'Beta Tester',
-    avatar: 'PS',
+    featureRequests: "AI-powered analysis of my Detailed Application Form (DAF) to generate personalized mock interview questions.",
+    author: 'Aarav Sharma',
+    role: 'UPSC Aspirant',
+    avatar: 'AS',
     glowColor: 'hsl(var(--primary))',
   },
   {
-    featureRequests: "What if we could upload our own practice essays and get instant feedback on structure and grammar?",
-    author: 'Ben C.',
-    role: 'Early Adopter',
-    avatar: 'BC',
+    featureRequests: "A 'focus mode' that blocks distracting websites and apps on my phone during scheduled study sessions.",
+    author: 'Ishika Patel',
+    role: 'RBI Grade B Aspirant',
+    avatar: 'IP',
     glowColor: 'hsl(var(--accent))',
   },
   {
-    featureRequests: "I'd love a 'cram session' mode that drills you on the topics you struggle with most, right before an exam.",
-    author: 'Maria G.',
-    role: 'Student Voice',
-    avatar: 'MG',
+    featureRequests: "Automatically generate visual mind-maps and summaries from long newspaper editorials.",
+    author: 'Rohan Gupta',
+    role: 'Student',
+    avatar: 'RG',
     glowColor: 'hsl(200 96% 87%)',
   },
   {
-    featureRequests: "Could the mock interviewer simulate different personality types, like a friendly or a very strict one?",
-    author: 'Alex J.',
+    featureRequests: "Track my accuracy and time-per-question not just by subject, but by specific micro-topics within the syllabus.",
+    author: 'Aditi Rao',
     role: 'Power User',
-    avatar: 'AJ',
+    avatar: 'AR',
     glowColor: 'hsl(300 96% 87%)',
   },
   {
-    featureRequests: "Gamify the daily quizzes! Leaderboards, points, and streaks would make studying much more fun.",
-    author: 'Samantha L.',
-    role: 'Beta Tester',
-    avatar: 'SL',
+    featureRequests: "A Text-to-Speech (TTS) feature to listen to saved articles and notes during my commute.",
+    author: 'Vikram Singh',
+    role: 'Working Professional',
+    avatar: 'VS',
     glowColor: 'hsl(150 96% 87%)',
   },
   {
-    featureRequests: "A feature to connect with other students studying for the same exam would be great for motivation.",
-    author: 'David C.',
+    featureRequests: "Anonymously compare my quiz performance and study pace with other users preparing for the same exam.",
+    author: 'Neha Reddy',
     role: 'Community Member',
-    avatar: 'DC',
+    avatar: 'NR',
     glowColor: 'hsl(50 96% 87%)',
   },
 ];
 
-const IdeaCard = ({ featureRequests, author, role, avatar, glowColor }: Idea) => (
-    <motion.div
-        whileHover={{
-            scale: 1.05,
-            y: -8,
-            boxShadow: `0 0 30px 5px ${glowColor}`,
-            zIndex: 50
-        }}
-        transition={{ type: 'spring', stiffness: 300 }}
-        className="relative w-[300px] sm:w-[350px] lg:w-[400px] shrink-0"
-    >
-        <Card className="w-full h-full glassmorphic">
-            <CardContent className="pt-6 flex flex-col h-full">
-                <p className="mb-4 text-foreground flex-grow text-base md:text-lg">"{featureRequests}"</p>
-                <div className="flex items-center mt-auto">
-                    <Avatar>
-                        <AvatarImage data-ai-hint="person" src={`https://placehold.co/40x40.png`} />
+
+const IdeaCard = ({ featureRequests, author, role, avatar }: Idea) => (
+    <div className="w-[300px] sm:w-[350px] lg:w-[400px] shrink-0">
+        <Card className="w-full h-full bg-stone-50 dark:bg-stone-800/50 border-stone-200 dark:border-stone-700/50 shadow-md transition-all duration-300 hover:shadow-xl hover:-translate-y-1">
+            <CardContent className="p-6 flex flex-col h-full">
+                <div className="flex justify-between items-center pb-2 border-b border-stone-200 dark:border-stone-700">
+                    <h3 className="font-headline text-xs uppercase tracking-widest text-stone-500 dark:text-stone-400">From the Community</h3>
+                    <div className="w-3 h-3 border-2 border-stone-400 dark:border-stone-500 rounded-full" />
+                </div>
+                
+                <p className="font-serif text-lg md:text-xl my-6 text-stone-800 dark:text-stone-200 flex-grow">
+                    {featureRequests}
+                </p>
+                
+                <div className="flex items-center mt-auto pt-4 border-t border-stone-200 dark:border-stone-700">
+                    <Avatar className="h-8 w-8">
+                        <AvatarImage data-ai-hint="person" src={`https://placehold.co/40x40.png`} className="filter grayscale" />
                         <AvatarFallback>{avatar}</AvatarFallback>
                     </Avatar>
-                    <div className="ml-4 text-left">
-                        <p className="font-semibold text-foreground">{author}</p>
-                        <p className="text-sm text-muted-foreground">{role}</p>
+                    <div className="ml-3 text-left">
+                        <p className="font-semibold text-sm text-stone-700 dark:text-stone-300">{author}</p>
+                        <p className="text-xs text-stone-500 dark:text-stone-400">{role}</p>
                     </div>
                 </div>
             </CardContent>
         </Card>
-    </motion.div>
+    </div>
 );
 
 
