@@ -15,7 +15,10 @@ export async function GET(req: NextRequest) {
       },
     });
     if (!resp.ok) {
-      return NextResponse.json({ error: 'Failed to fetch article' }, { status: 400 });
+      return NextResponse.json(
+        { error: `The website returned an error: ${resp.status} ${resp.statusText}.` },
+        { status: resp.status }
+      );
     }
     const html = await resp.text();
     const dom = new JSDOM(html, { url: targetUrl });
@@ -27,6 +30,6 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ text: parsed.textContent });
   } catch (err) {
     console.error('Article fetch error:', err);
-    return NextResponse.json({ error: 'Unexpected server error' }, { status: 500 });
+    return NextResponse.json({ error: 'Unexpected server error while trying to fetch the URL.' }, { status: 500 });
   }
 }

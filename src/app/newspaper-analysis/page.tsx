@@ -584,12 +584,21 @@ export default function NewspaperAnalysisPage() {
             toast({ variant: 'destructive', title: "Input Required", description: "Please provide an article URL or paste the text to analyze." });
             return;
         }
+        setIsLoading(true);
         try {
-            setIsLoading(true);
             const res = await fetch(`/api/readArticle?url=${encodeURIComponent(inputs.url)}`);
             if (!res.ok) {
                 const err = await res.json().catch(() => ({}));
-                throw new Error(err.error || 'Fetch failed');
+                const description = err.error 
+                    ? `Reason: ${err.error}`
+                    : 'The website might be blocking requests, or the URL might be incorrect. Try pasting the article text directly.';
+                toast({
+                    variant: 'destructive',
+                    title: 'Article Fetch Failed',
+                    description: description,
+                });
+                setIsLoading(false);
+                return;
             }
             const data = await res.json();
             sourceText = data.text || '';
@@ -597,8 +606,8 @@ export default function NewspaperAnalysisPage() {
             console.error('Article fetch error:', err);
             toast({
                 variant: 'destructive',
-                title: 'Fetch Failed',
-                description: 'Could not retrieve the article. Please check the URL and try again.',
+                title: 'Network Error',
+                description: 'Could not connect to the server to fetch the article. Please check your internet connection.',
             });
             setIsLoading(false);
             return;
@@ -609,10 +618,15 @@ export default function NewspaperAnalysisPage() {
 
     if (!sourceText.trim() || !inputs.examType || !inputs.analysisFocus) {
         toast({ variant: 'destructive', title: "Input Required", description: "Please complete all fields." });
+        setIsLoading(false); // Make sure to stop loading if validation fails after a fetch
         return;
     }
     
-    setIsLoading(true);
+    // This was already set to true for URL fetch, ensure it's set for text paste too
+    if (activeTab === 'text') {
+        setIsLoading(true);
+    }
+    
     setAnalysisResult({ prelims: { mcqs: [] }, mains: { questions: [] }, knowledgeGraph: { nodes: [], edges: [] }});
     finalAnalysisForHistory.current = { prelims: { mcqs: [] }, mains: { questions: [] }, knowledgeGraph: { nodes: [], edges: [] } };
     setHistoryId(null);
