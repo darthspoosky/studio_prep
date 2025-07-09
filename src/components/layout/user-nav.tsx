@@ -24,7 +24,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useToast } from '@/hooks/use-toast';
 
-const ADMIN_UID = '1g3Lq4Tq4Pgj3Z9d1Z7q7Z9d1Z7'; 
+const ADMIN_UID = 'qjDA9FVi48QidKnbYjMEkdFf3QP2'; 
 
 export function UserNav() {
   const { user } = useAuth();

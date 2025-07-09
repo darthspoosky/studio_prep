@@ -14,7 +14,7 @@ import { type Question } from '@/types/quiz';
 import { uploadBulkPastYearQuestions } from '@/services/adminService';
 
 // In a real app, this should come from a secure source like custom claims
-const ADMIN_UID = '1g3Lq4Tq4Pgj3Z9d1Z7q7Z9d1Z7'; 
+const ADMIN_UID = 'qjDA9FVi48QidKnbYjMEkdFf3QP2'; 
 
 const exampleJson = `
 [
