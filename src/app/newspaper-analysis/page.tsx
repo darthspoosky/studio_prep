@@ -9,14 +9,20 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
-import Footer from "@/components/landing/footer";
-import Header from "@/components/layout/header";
-import Link from "next/link";
 import { ArrowLeft, Loader2, Sparkles, CheckCircle, XCircle, Circle, Info, Maximize, Volume2, Gauge, IndianRupee, MoveRight, Share2, Bookmark } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-// Import types but not the actual implementations to avoid bundling server-only code
 import type { NewspaperAnalysisInput, NewspaperAnalysisOutput, MCQ as MCQType, MainsQuestion, KnowledgeGraph, NewspaperAnalysisChunk } from "@/ai/flows/newspaper-analysis-flow";
 import { analyzeNewspaperArticle } from "@/ai/flows/newspaper-analysis-flow";
+
+// Layout Imports
+import MainLayout from '@/app/dashboard/components/layout/MainLayout';
+import LeftSidebar from '@/app/dashboard/components/layout/LeftSidebar';
+import RightSidebar from '@/app/dashboard/components/layout/RightSidebar';
+import MobileHeader from '@/app/dashboard/components/layout/MobileHeader';
+import { UserNav } from '@/components/layout/user-nav';
+import { getUserUsage, type UsageStats } from '@/services/usageService';
+import { getUserQuizStats, type UserQuizStats } from '@/services/quizAttemptsService';
+
 
 const textToSpeech = async (text: string): Promise<{ audio: string }> => {
   const response = await fetch('/api/tts', {
@@ -507,17 +513,16 @@ const UsageStats = ({
   );
 };
 
+interface ExtendedUserQuizStats extends UserQuizStats {
+    streak: number;
+    improvement: number;
+}
+
 
 export default function NewspaperAnalysisPage() {
   const { user, loading } = useAuth();
   const router = useRouter();
   const finalAnalysisForHistory = useRef<Partial<NewspaperAnalysisOutput>>({});
-
-  useEffect(() => {
-    if (!loading && !user) {
-      router.push('/login');
-    }
-  }, [user, loading, router]);
 
   const [isLoading, setIsLoading] = useState(false);
   const [isGeneratingAudio, setIsGeneratingAudio] = useState(false);
@@ -535,6 +540,32 @@ export default function NewspaperAnalysisPage() {
     outputLanguage: "English",
   });
   const { toast } = useToast();
+  
+  // Layout-related state
+  const [quizStats, setQuizStats] = useState<ExtendedUserQuizStats | null>(null);
+  const [usageStats, setUsageStats] = useState<UsageStats | null>(null);
+
+  useEffect(() => {
+    if (!loading && !user) {
+      router.push('/login');
+    }
+     if (user?.uid) {
+      const fetchStats = async () => {
+        try {
+          const [stats, usage] = await Promise.all([
+            getUserQuizStats(user.uid),
+            getUserUsage(user.uid)
+          ]);
+          setQuizStats({ ...stats, streak: 0, improvement: 0 }); // Add dummy data
+          setUsageStats(usage);
+        } catch (error) {
+          console.error("Error fetching dashboard stats:", error);
+        }
+      };
+      
+      fetchStats();
+    }
+  }, [user, loading, router]);
 
   const handleInputChange = (field: keyof typeof inputs, value: string) => {
     setInputs(prev => ({ ...prev, [field]: value }));
@@ -760,13 +791,15 @@ export default function NewspaperAnalysisPage() {
   }
 
   return (
-    <div className="flex flex-col min-h-screen bg-gray-50 dark:bg-gray-900">
-      <Header />
-      <main className="flex-1 container mx-auto px-4 py-24 sm:py-32">
-        <Link href="/dashboard" className="inline-flex items-center text-sm text-muted-foreground hover:text-primary transition-colors mb-8">
-            <ArrowLeft className="mr-2 h-4 w-4" />
-            Back to Dashboard
-        </Link>
+    <MainLayout
+      leftSidebar={<LeftSidebar usageStats={usageStats} />}
+      rightSidebar={<RightSidebar quizStats={quizStats} />}
+      mobileHeader={<MobileHeader 
+        usageStats={usageStats}
+        pageTitle="Newspaper Analysis" 
+        userNav={<UserNav />} 
+      />}
+    >
         <div className="text-center mb-16">
             <h1 className="font-headline text-4xl sm:text-5xl font-bold tracking-tighter">
             <span className="animate-gradient-anim bg-[length:200%_auto] bg-gradient-to-r from-primary via-accent to-pink-500 bg-clip-text text-transparent">
@@ -790,7 +823,6 @@ export default function NewspaperAnalysisPage() {
                         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
                             <TabsList className="grid w-full grid-cols-2">
                                 <TabsTrigger value="url">From URL</TabsTrigger>
-
                                 <TabsTrigger value="text">Paste Text</TabsTrigger>
                             </TabsList>
                             <TabsContent value="url" className="pt-4">
@@ -1020,8 +1052,6 @@ export default function NewspaperAnalysisPage() {
                 </Dialog>
             </div>
         </div>
-      </main>
-      <Footer />
-    </div>
+    </MainLayout>
   );
 }

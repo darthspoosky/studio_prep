@@ -5,73 +5,23 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import Footer from "@/components/landing/footer";
-import Header from "@/components/layout/header";
-import Link from "next/link";
-import { ArrowLeft, Loader2, Target, Flame, CheckCircle, XCircle, Timer, Award, Brain, Zap, 
-         BookOpen, ChevronRight, HelpCircle, 
-         BarChart4, Calendar, RefreshCcw } from "lucide-react";
+import { ArrowLeft, Loader2, Target, BarChart4, ChevronRight } from "lucide-react";
 import QuizDashboardWidgets from "./components/widgets/QuizDashboardWidgets";
 import { useEffect, useState, useCallback } from "react";
 import { useToast } from "@/hooks/use-toast";
-import { Progress } from "@/components/ui/progress";
 import { useAuth } from "@/contexts/AuthContext";
 import { useRouter } from "next/navigation";
-import { getRandomPrelimsQuestions, type PrelimsQuestionWithContext } from "@/services/historyService";
-import { saveQuizAttempt } from "@/services/quizAttemptsService";
-import { cn } from "@/lib/utils";
-
-enum QuizState {
-  CONFIG = 'CONFIG',
-  LOADING = 'LOADING',
-  ACTIVE = 'ACTIVE',
-  RESULTS = 'RESULTS',
-  ERROR = 'ERROR'
-}
-
-const FormattedQuestion = ({ text }: { text: string }) => {
-    const lines = text.split('\n').filter(line => line.trim() !== '');
-    if (lines.length <= 1) {
-        return <p className="font-semibold leading-relaxed text-foreground">{text}</p>;
-    }
-    const firstStatementIndex = lines.findIndex(line => /^\d+\.\s/.test(line.trim()));
-    if (firstStatementIndex === -1) {
-        return <p className="font-semibold leading-relaxed text-foreground" style={{ whiteSpace: 'pre-line' }}>{text}</p>;
-    }
-    const preamble = lines.slice(0, firstStatementIndex).join('\n');
-    let lastStatementIndex = firstStatementIndex;
-    for (let i = firstStatementIndex + 1; i < lines.length; i++) {
-        if (/^\d+\.\s/.test(lines[i].trim())) {
-            lastStatementIndex = i;
-        } else {
-            break; 
-        }
-    }
-    const statements = lines.slice(firstStatementIndex, lastStatementIndex + 1);
-    const conclusion = lines.slice(lastStatementIndex + 1).join('\n');
-    return (
-        <div className="font-semibold leading-relaxed text-foreground">
-            {preamble && <p className="mb-3" style={{ whiteSpace: 'pre-line' }}>{preamble}</p>}
-            <ol className="list-decimal list-inside space-y-2 my-3">
-                {statements.map((stmt, index) => (
-                    <li key={index} className="pl-2">{stmt.trim().replace(/^\d+\.\s/, '')}</li>
-                ))}
-            </ol>
-            {conclusion && <p className="mt-3" style={{ whiteSpace: 'pre-line' }}>{conclusion}</p>}
-        </div>
-    );
-};
-
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { motion, AnimatePresence } from "framer-motion";
-import { Badge } from "@/components/ui/badge";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { getUserQuizStats } from '@/services/quizAttemptsService';
-import { getUserQuizStreak, createQuizSession, submitQuizAnswer, completeQuizSession, QuizSession as ServiceQuizSession } from '@/services/dailyQuizService';
-import { incrementToolUsage } from '@/services/usageService';
 import type { MCQ } from "@/ai/flows/daily-quiz-flow";
+import Link from 'next/link';
+
+// Layout Imports
+import MainLayout from '@/app/dashboard/components/layout/MainLayout';
+import LeftSidebar from '@/app/dashboard/components/layout/LeftSidebar';
+import RightSidebar from '@/app/dashboard/components/layout/RightSidebar';
+import MobileHeader from '@/app/dashboard/components/layout/MobileHeader';
+import { UserNav } from '@/components/layout/user-nav';
+import { getUserUsage, type UsageStats } from '@/services/usageService';
+import { getUserQuizStats, type UserQuizStats } from '@/services/quizAttemptsService';
 
 // Define the types that might be missing
 interface QuizAttempt {
@@ -81,13 +31,6 @@ interface QuizAttempt {
   selectedAnswer: string;
   isCorrect: boolean;
   createdAt: Date;
-}
-
-interface UsageStats {
-  newspaperAnalysis?: number;
-  mockInterview?: number;
-  dailyQuiz?: number;
-  writingPractice?: number;
 }
 
 interface QuizQuestion {
@@ -113,69 +56,9 @@ interface QuizSession {
   createdAt: Date;
 }
 
-interface QuizStreak {
-  currentStreak: number;
-  longestStreak: number;
-  lastQuizDate: Date | null;
-}
-
-interface UserQuizStats {
-  totalAttempted: number;
-  totalCorrect: number;
-  accuracy: number;
-}
-
-// Constants for quiz configuration
-const SUBJECTS = [
-  { value: 'general-studies', label: 'General Studies (Polity, History, Geo)' },
-  { value: 'quantitative-aptitude', label: 'Quantitative Aptitude (CSAT)' },
-  { value: 'reasoning', label: 'Logical Reasoning & Data Interpretation' },
-  { value: 'english', label: 'English & Comprehension' },
-  { value: 'current-affairs', label: 'Current Affairs & GK' },
-];
-
-const DIFFICULTY_LEVELS = [
-  { value: "easy", label: "Easy" }, 
-  { value: "medium", label: "Medium" },
-  { value: "hard", label: "Hard" },
-  { value: "adaptive", label: "Adaptive (AI)" },
-];
-
-const QUESTION_COUNTS = [
-  { value: "5", label: "5" },
-  { value: "10", label: "10" },
-  { value: "15", label: "15" },
-  { value: "20", label: "20" },
-];
-
-// Constants for quiz states already defined above
-
-// Question timer component
-function QuestionTimer({ seconds, onComplete }: { seconds: number, onComplete: () => void }) {
-  const [timeLeft, setTimeLeft] = useState(seconds);
-  
-  useEffect(() => {
-    if (timeLeft <= 0) {
-      onComplete();
-      return;
-    }
-    
-    const timer = setTimeout(() => {
-      setTimeLeft(prev => prev - 1);
-    }, 1000);
-    
-    return () => clearTimeout(timer);
-  }, [timeLeft, onComplete]);
-  
-  const percentage = (timeLeft / seconds) * 100;
-  
-  return (
-    <div className="flex items-center gap-2 mb-4">
-      <Timer className="h-4 w-4 text-primary" />
-      <Progress value={percentage} className="w-full" />
-      <span className="text-sm font-medium">{timeLeft}s</span>
-    </div>
-  );
+interface ExtendedUserQuizStats extends UserQuizStats {
+    streak: number;
+    improvement: number;
 }
 
 export default function DailyQuizPage() {
@@ -183,44 +66,26 @@ export default function DailyQuizPage() {
   const router = useRouter();
   const { toast } = useToast();
 
-  // Quiz configuration state
-  const [subject, setSubject] = useState<string>('general-studies');
-  const [difficulty, setDifficulty] = useState<string>('medium');
-  const [numQuestions, setNumQuestions] = useState<string>('10');
-  const [difficultyLevel, setDifficultyLevel] = useState<number>(2); // medium = 2
-  
-  // Quiz session state
-  const [quizState, setQuizState] = useState<QuizState>(QuizState.CONFIG);
-  const [questions, setQuestions] = useState<PrelimsQuestionWithContext[]>([]);
-  const [quizSession, setQuizSession] = useState<ServiceQuizSession | null>(null);
-  const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
-  const [selectedAnswer, setSelectedAnswer] = useState<string>("");
-  const [isAnswered, setIsAnswered] = useState(false);
-  const [score, setScore] = useState(0);
-  const [answers, setAnswers] = useState<Record<number, { selected: string, correct: boolean }>>({});
-  const [showExplanation, setShowExplanation] = useState(false);
-  const [streakData, setStreakData] = useState<QuizStreak>({ currentStreak: 0, longestStreak: 0, lastQuizDate: null });
-  const [quizStats, setQuizStats] = useState<UserQuizStats>({ totalAttempted: 0, totalCorrect: 0, accuracy: 0 });
-  const [usageData, setUsageData] = useState<UsageStats>({ newspaperAnalysis: 0, mockInterview: 0, dailyQuiz: 0, writingPractice: 0 });
-  const [isResultsDialogOpen, setIsResultsDialogOpen] = useState(false);
+  // Component State
   const [isLoading, setIsLoading] = useState(false);
 
-  // Load user stats when the component mounts
+  // Layout-related state
+  const [quizStats, setQuizStats] = useState<ExtendedUserQuizStats | null>(null);
+  const [usageStats, setUsageStats] = useState<UsageStats | null>(null);
+
+  // Load user stats for layout
   useEffect(() => {
     if (user?.uid) {
       const fetchStats = async () => {
         try {
-          const stats = await getUserQuizStats(user.uid);
-          setQuizStats(stats);
-          
-          const streak = await getUserQuizStreak(user.uid);
-          setStreakData({
-            currentStreak: streak.currentStreak,
-            longestStreak: streak.longestStreak,
-            lastQuizDate: streak.lastQuizDate,
-          });
+          const [stats, usage] = await Promise.all([
+            getUserQuizStats(user.uid),
+            getUserUsage(user.uid)
+          ]);
+          setQuizStats({ ...stats, streak: 0, improvement: 0 }); // Add dummy data
+          setUsageStats(usage);
         } catch (error) {
-          console.error("Error fetching user stats:", error);
+          console.error("Error fetching dashboard stats:", error);
         }
       };
       
@@ -234,57 +99,30 @@ export default function DailyQuizPage() {
       router.push('/login');
     }
   }, [user, authLoading, router]);
-
+  
   const handleStartQuiz = async () => {
-    if (!user) return;
-    setQuizState(QuizState.LOADING);
-    try {
-      const fetchedQuestions = await getRandomPrelimsQuestions(user.uid, parseInt(numQuestions));
-      if (fetchedQuestions.length < parseInt(numQuestions)) {
-        toast({
-          variant: "destructive",
-          title: "Not enough questions!",
-          description: `We could only find ${fetchedQuestions.length} questions. Please analyze more articles to build your question bank.`,
-        });
-        if (fetchedQuestions.length === 0) {
-            setQuizState(QuizState.CONFIG);
-            return;
-        }
-      }
-      setQuestions(fetchedQuestions);
-      setScore(0);
-      setCurrentQuestionIndex(0);
-      setSelectedAnswer("");
-      setIsAnswered(false);
-      setQuizState(QuizState.ACTIVE);
-    } catch (error) {
-      console.error(error);
-      toast({
+    setIsLoading(true);
+    toast({
         title: "Coming Soon!",
-        description: "The daily quiz feature is under development. Stay tuned!",
-      });
-      setIsLoading(false);
-    }
+        description: "The full daily quiz feature is under development. In the meantime, check out the Past Year Question Bank!",
+    });
+    setTimeout(() => setIsLoading(false), 1000);
   };
 
-  useEffect(() => {
-    if (!authLoading && !user) {
-      router.push('/login');
-    }
-  }, [authLoading, user, router]);
-  
-  if (isLoading || !user) {
+  if (authLoading || !user) {
     return null;
   }
 
   return (
-    <div className="flex flex-col min-h-screen bg-gray-50 dark:bg-gray-900">
-      <Header />
-      <main className="flex-1 container mx-auto px-4 py-24 sm:py-32">
-        <Link href="/dashboard" className="inline-flex items-center text-sm text-muted-foreground hover:text-primary transition-colors mb-8">
-            <ArrowLeft className="mr-2 h-4 w-4" />
-            Back to Dashboard
-        </Link>
+    <MainLayout
+      leftSidebar={<LeftSidebar usageStats={usageStats} />}
+      rightSidebar={<RightSidebar quizStats={quizStats} />}
+      mobileHeader={<MobileHeader 
+        usageStats={usageStats}
+        pageTitle="Daily Quiz" 
+        userNav={<UserNav />} 
+      />}
+    >
         <div className="text-center mb-16">
             <h1 className="font-headline text-4xl sm:text-5xl font-bold tracking-tighter">
             <span className="animate-gradient-anim bg-[length:200%_auto] bg-gradient-to-r from-primary via-accent to-pink-500 bg-clip-text text-transparent">
@@ -297,7 +135,6 @@ export default function DailyQuizPage() {
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
-            {/* Left Column: Quiz Configuration */}
             <div className="lg:col-span-2">
                 <Card className="glassmorphic shadow-2xl shadow-primary/10">
                     <CardHeader>
@@ -357,7 +194,6 @@ export default function DailyQuizPage() {
                     </CardFooter>
                 </Card>
             </div>
-            {/* Right Column: Stats */}
             <div className="lg:col-span-1 space-y-6">
                 <Card className="glassmorphic shadow-2xl shadow-primary/10">
                     <CardHeader>
@@ -368,7 +204,6 @@ export default function DailyQuizPage() {
                         <CardDescription>Track your performance and focus areas</CardDescription>
                     </CardHeader>
                     <CardContent>
-                        {/* New dynamic dashboard widgets */}
                         <QuizDashboardWidgets />
                     </CardContent>
                     <CardFooter className="flex justify-between">
@@ -382,8 +217,6 @@ export default function DailyQuizPage() {
                 </Card>
             </div>
         </div>
-      </main>
-      <Footer />
-    </div>
+    </MainLayout>
   );
 }

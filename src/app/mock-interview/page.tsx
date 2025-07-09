@@ -1,3 +1,4 @@
+
 "use client";
 
 import { Button } from "@/components/ui/button";
@@ -5,14 +6,26 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import Footer from "@/components/landing/footer";
-import Header from "@/components/layout/header";
-import Link from "next/link";
 import { ArrowLeft, Loader2, Bot, Video, Mic, MicOff, Play } from "lucide-react";
 import { useEffect, useState, useRef } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { useRouter } from "next/navigation";
+
+// Layout Imports
+import MainLayout from '@/app/dashboard/components/layout/MainLayout';
+import LeftSidebar from '@/app/dashboard/components/layout/LeftSidebar';
+import RightSidebar from '@/app/dashboard/components/layout/RightSidebar';
+import MobileHeader from '@/app/dashboard/components/layout/MobileHeader';
+import { UserNav } from '@/components/layout/user-nav';
+import { getUserUsage, type UsageStats } from '@/services/usageService';
+import { getUserQuizStats, type UserQuizStats } from '@/services/quizAttemptsService';
+
+
+interface ExtendedUserQuizStats extends UserQuizStats {
+    streak: number;
+    improvement: number;
+}
 
 export default function MockInterviewPage() {
   const { user, loading } = useAuth();
@@ -27,7 +40,7 @@ export default function MockInterviewPage() {
 
   // Interview session state
   const [sessionStarted, setSessionStarted] = useState(false);
-  const [interviewData, setInterviewData] = useState(null);
+  const [interviewData, setInterviewData] = useState<any>(null);
   const [transcription, setTranscription] = useState("");
 
   // Recording state
@@ -35,9 +48,29 @@ export default function MockInterviewPage() {
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
 
+  // Layout-related state
+  const [quizStats, setQuizStats] = useState<ExtendedUserQuizStats | null>(null);
+  const [usageStats, setUsageStats] = useState<UsageStats | null>(null);
+
   useEffect(() => {
     if (!loading && !user) {
       router.push('/login');
+    }
+     if (user?.uid) {
+      const fetchStats = async () => {
+        try {
+          const [stats, usage] = await Promise.all([
+            getUserQuizStats(user.uid),
+            getUserUsage(user.uid)
+          ]);
+          setQuizStats({ ...stats, streak: 0, improvement: 0 }); // Add dummy data
+          setUsageStats(usage);
+        } catch (error) {
+          console.error("Error fetching dashboard stats:", error);
+        }
+      };
+      
+      fetchStats();
     }
   }, [user, loading, router]);
 
@@ -136,14 +169,15 @@ export default function MockInterviewPage() {
   }
 
   return (
-    <div className="flex flex-col min-h-screen bg-gray-50 dark:bg-gray-900">
-      <Header />
-      <main className="flex-1 container mx-auto px-4 py-24 sm:py-32">
-        <Link href="/dashboard" className="inline-flex items-center text-sm text-muted-foreground hover:text-primary transition-colors mb-8">
-            <ArrowLeft className="mr-2 h-4 w-4" />
-            Back to Dashboard
-        </Link>
-        
+    <MainLayout
+      leftSidebar={<LeftSidebar usageStats={usageStats} />}
+      rightSidebar={<RightSidebar quizStats={quizStats} />}
+      mobileHeader={<MobileHeader 
+        usageStats={usageStats}
+        pageTitle="Mock Interview" 
+        userNav={<UserNav />} 
+      />}
+    >
         {!sessionStarted ? (
             <>
                 <div className="text-center mb-16">
@@ -212,9 +246,15 @@ export default function MockInterviewPage() {
                 <Card className="text-left w-full max-w-4xl mx-auto glassmorphic mb-8">
                     <CardHeader><CardTitle>AI Interviewer</CardTitle></CardHeader>
                     <CardContent>
-                        <p className="text-muted-foreground">The AI is waiting for your response.</p>
-                        <Button onClick={() => playQuestion("Hello, how are you?")}><Play className="mr-2"/> Play Question</Button>
-                        {transcription && <p className="mt-4">{transcription}</p>}
+                         {interviewData?.report?.firstQuestion && (
+                            <div className="flex items-center gap-4">
+                                <p className="text-lg flex-1">{interviewData.report.firstQuestion}</p>
+                                <Button onClick={() => playQuestion(interviewData.report.firstQuestion)} variant="outline" size="icon">
+                                    <Play className="h-4 w-4"/>
+                                </Button>
+                            </div>
+                        )}
+                        {transcription && <p className="mt-4 p-4 bg-muted/50 rounded-md">{transcription}</p>}
                     </CardContent>
                 </Card>
                 <div className="mt-6">
@@ -225,15 +265,13 @@ export default function MockInterviewPage() {
                     )}
                 </div>
                 <Card className="text-left w-full max-w-4xl mx-auto glassmorphic mt-8">
-                    <CardHeader><CardTitle>Session Details</CardTitle></CardHeader>
+                    <CardHeader><CardTitle>Session Details (Debug)</CardTitle></CardHeader>
                     <CardContent>
                         <pre className="bg-gray-900 text-white p-4 rounded-md overflow-x-auto">{JSON.stringify(interviewData, null, 2)}</pre>
                     </CardContent>
                 </Card>
             </div>
         )}
-      </main>
-      <Footer />
-    </div>
+    </MainLayout>
   );
 }

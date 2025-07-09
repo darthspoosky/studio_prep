@@ -24,7 +24,7 @@ pnpm-debug.log*
 # Editor directories
 .vscode
 .idea
-
+.genkit
 # System files
 .DS_Store
 
