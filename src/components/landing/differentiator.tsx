@@ -16,7 +16,7 @@ const Differentiator = () => {
   return (
     <section
       ref={targetRef}
-      className="h-[150vh] bg-background relative"
+      className="h-[120vh] bg-background relative"
     >
       <div className="sticky top-0 h-screen flex items-center justify-center">
         <motion.div
