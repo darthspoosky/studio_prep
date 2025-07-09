@@ -12,6 +12,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { useRouter } from "next/navigation";
 import type { MCQ } from "@/ai/flows/daily-quiz-flow";
+import Link from 'next/link';
 
 // Layout Imports
 import MainLayout from '@/app/dashboard/components/layout/MainLayout';
