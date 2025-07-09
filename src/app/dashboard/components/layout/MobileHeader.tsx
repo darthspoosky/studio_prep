@@ -5,16 +5,7 @@ import Link from 'next/link';
 import { motion } from 'framer-motion';
 import { Menu, Bell, Search } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { 
-  Sheet, 
-  SheetContent, 
-  SheetDescription, 
-  SheetHeader, 
-  SheetTitle, 
-  SheetTrigger 
-} from '@/components/ui/sheet';
 import { UsageStats } from '@/services/usageService';
-import { glassmorphicStyles } from '../../styles/glassmorphic';
 
 interface MobileHeaderProps {
   /** Usage statistics to pass to the sidebar */
@@ -23,8 +14,8 @@ interface MobileHeaderProps {
   pageTitle?: string;
   /** User navigation component */
   userNav?: React.ReactNode;
-  /** Sidebar content component - defaults to standard sidebar */
-  sidebarContent?: React.ReactNode;
+  /** Function to toggle the mobile sidebar */
+  onMenuToggle?: () => void;
   /** Logo component or element */
   logo?: React.ReactNode;
   /** Show title */
@@ -44,7 +35,7 @@ const MobileHeader: React.FC<MobileHeaderProps> = ({
   usageStats,
   pageTitle,
   userNav,
-  sidebarContent,
+  onMenuToggle,
   logo,
   showTitle = true,
   actions,
@@ -62,53 +53,25 @@ const MobileHeader: React.FC<MobileHeaderProps> = ({
 
   return (
     <motion.header 
-      className={`lg:hidden sticky top-0 z-40 flex h-16 items-center justify-between border-b border-white/5 bg-background/30 backdrop-blur-xl px-4 ${className}`}
+      className={`lg:hidden sticky top-0 z-20 flex h-16 items-center justify-between border-b border-white/5 bg-background/30 backdrop-blur-xl px-4 ${className}`}
       initial={{ opacity: 0, y: -10 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.3 }}
     >
       {/* Subtle gradient highlight at the top */}
       <div className="absolute inset-x-0 top-0 h-[1px] bg-gradient-to-r from-transparent via-white/20 to-transparent"></div>
-      <Sheet>
-        <SheetTrigger asChild>
-          <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-            <Button 
-              size="icon" 
-              variant="outline" 
-              className="bg-white/5 hover:bg-white/10 border-white/10 backdrop-blur-xl shadow-sm"
-            >
-              <Menu className="h-5 w-5 text-foreground/80" />
-              <span className="sr-only">Toggle Menu</span>
-            </Button>
-          </motion.div>
-        </SheetTrigger>
-        <SheetContent side="left" className="w-72 p-0 border-r border-white/10 bg-background/60 backdrop-blur-2xl">
-          <SheetHeader className="sr-only">
-            <SheetTitle>Navigation Menu</SheetTitle>
-            <SheetDescription>
-              Main menu for the PrepTalk application, containing links to dashboard, tools, and other resources.
-            </SheetDescription>
-          </SheetHeader>
-          
-          {/* Render provided sidebar content or load dynamic content */}
-          {sidebarContent ? (
-            sidebarContent
-          ) : (
-            <div className="p-4">
-              {/* This would be replaced with your SidebarContent component */}
-              <div className="text-lg font-bold mb-4">PrepTalk</div>
-              <nav className="flex flex-col gap-2">
-                <Link href="/dashboard" className="flex items-center gap-3 p-3 bg-primary/10 text-primary rounded-lg font-semibold">
-                  Dashboard
-                </Link>
-                <Link href="/newspaper-analysis" className="flex items-center gap-3 p-3 text-muted-foreground hover:bg-muted/50 hover:text-foreground rounded-lg transition-colors">
-                  Newspaper Analysis
-                </Link>
-              </nav>
-            </div>
-          )}
-        </SheetContent>
-      </Sheet>
+      
+      <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+        <Button 
+          size="icon" 
+          variant="outline"
+          onClick={onMenuToggle}
+          className="bg-white/5 hover:bg-white/10 border-white/10 backdrop-blur-xl shadow-sm"
+        >
+          <Menu className="h-5 w-5 text-foreground/80" />
+          <span className="sr-only">Toggle Menu</span>
+        </Button>
+      </motion.div>
 
       {/* Middle section: Logo or Title with gradient effect */}
       {showTitle ? (

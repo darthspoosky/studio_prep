@@ -1,12 +1,15 @@
 'use client';
 
-import React from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
 import { glassmorphicStyles, predefinedStyles } from '../../styles/glassmorphic';
 import LeftSidebar from './LeftSidebar';
 import RightSidebar from './RightSidebar';
 import MobileHeader from './MobileHeader';
 import { UsageStats } from '@/services/usageService';
+import { UserNav } from '@/components/layout/user-nav';
+import { cn } from '@/lib/utils';
+
 
 // Types for necessary services
 interface UserQuizStats {
@@ -16,15 +19,6 @@ interface UserQuizStats {
   streak: number;
   improvement: number;
 }
-
-// UserNav component placeholder - replace with actual component when available
-const UserNav = () => (
-  <div className="flex items-center space-x-2 rounded-full bg-background/50 p-2 backdrop-blur-sm">
-    <div className="h-8 w-8 rounded-full bg-primary/20 flex items-center justify-center text-primary">
-      <span className="text-sm font-medium">U</span>
-    </div>
-  </div>
-);
 
 interface MainLayoutProps {
   children: React.ReactNode;
@@ -48,54 +42,90 @@ const MainLayout: React.FC<MainLayoutProps> = ({
   quizStats = null, 
   usageStats = null
 }) => {
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+  
+  // Prevent body scroll when sidebar is open on mobile
+  useEffect(() => {
+    if (isSidebarOpen && window.innerWidth < 1024) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = 'unset';
+    }
+    
+    return () => {
+      document.body.style.overflow = 'unset';
+    };
+  }, [isSidebarOpen]);
+  
   return (
-    <div className="min-h-screen w-full relative bg-slate-100 dark:bg-slate-900 overflow-hidden">
-      {/* Background gradient effects */}
-      <div className="fixed inset-0 z-0">
-        <div className="absolute top-[-10%] right-[-10%] w-[500px] h-[500px] bg-gradient-to-br from-primary/30 to-purple-600/20 rounded-full blur-3xl opacity-30"></div>
-        <div className="absolute bottom-[-10%] left-[-10%] w-[500px] h-[500px] bg-gradient-to-tr from-cyan-400/30 to-blue-600/20 rounded-full blur-3xl opacity-30"></div>
-        <div className="absolute top-[40%] left-[25%] w-[400px] h-[400px] bg-gradient-to-tr from-amber-400/20 to-pink-600/10 rounded-full blur-3xl opacity-20"></div>
+    <div className="min-h-screen w-full relative bg-slate-100 dark:bg-slate-900">
+      {/* Background gradient effects with proper z-index */}
+      <div className="fixed inset-0 z-0 pointer-events-none">
+        <div className="absolute top-[-10%] right-[-10%] w-[500px] h-[500px] bg-gradient-to-br from-primary/30 to-purple-600/20 rounded-full blur-3xl opacity-30" />
+        <div className="absolute bottom-[-10%] left-[-10%] w-[500px] h-[500px] bg-gradient-to-tr from-cyan-400/30 to-blue-600/20 rounded-full blur-3xl opacity-30" />
       </div>
-
-      {/* Mobile header - shown only on mobile devices */}
-      {mobileHeader || (
-        <MobileHeader 
-          usageStats={usageStats} 
-          userNav={<UserNav />}
-        />
-      )}
       
-      <div className="flex h-screen pt-16 lg:pt-0">
-        {/* Left sidebar */}
-        <div className="w-64 hidden lg:block border-r border-white/10 h-screen sticky top-0 overflow-y-auto">
-          {leftSidebar || <LeftSidebar usageStats={usageStats} />}
-        </div>
+      {/* Skip to main content for accessibility */}
+      <a href="#main-content" className="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 bg-primary text-white p-2 rounded z-50">
+        Skip to main content
+      </a>
+      
+      {/* Mobile header with sidebar toggle */}
+      <div className="lg:hidden">
+        {mobileHeader || (
+          <MobileHeader 
+            usageStats={usageStats} 
+            userNav={<UserNav />}
+            onMenuToggle={() => setIsSidebarOpen(!isSidebarOpen)}
+          />
+        )}
+      </div>
+      
+      <div className="flex h-full lg:h-screen">
+        {/* Left sidebar with mobile drawer */}
+        <aside 
+          className={cn(
+            "fixed inset-y-0 left-0 z-40 w-64 transform transition-transform duration-300 ease-in-out lg:relative lg:translate-x-0 lg:block border-r border-white/10",
+            isSidebarOpen ? "translate-x-0" : "-translate-x-full"
+          )}
+        >
+          <div className="h-full overflow-y-auto overscroll-contain">
+            {leftSidebar || <LeftSidebar usageStats={usageStats} />}
+          </div>
+        </aside>
+        
+        {/* Mobile backdrop */}
+        {isSidebarOpen && (
+          <div 
+            className="fixed inset-0 z-30 bg-black/50 lg:hidden"
+            onClick={() => setIsSidebarOpen(false)}
+          />
+        )}
         
         {/* Main content area */}
-        <main className="flex-1 overflow-auto px-4 py-6 lg:px-6">
+        <main 
+          id="main-content"
+          ref={scrollContainerRef}
+          className="flex-1 overflow-y-auto overscroll-contain px-4 py-6 lg:px-6"
+          style={{ height: '100vh' }}
+        >
           <motion.div
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, delay: 0.1 }}
-            className="max-w-full mx-auto"
+            className="max-w-full mx-auto pb-20 lg:pb-6"
           >
-            {/* Main content wrapper with glassmorphic effect */}
-            <div className={`${predefinedStyles.mainContainer}`}>
-              {/* Subtle gradient overlays */}
-              <div className={`${glassmorphicStyles.gradientOverlay} ${glassmorphicStyles.mixedGradient}`}></div>
-              
-              {/* Main content */}
-              <div className="relative z-10">
-                {children}
-              </div>
-            </div>
+            {children}
           </motion.div>
         </main>
         
-        {/* Right sidebar */}
-        <div className="w-72 hidden xl:block h-screen sticky top-0 overflow-y-auto">
-          {rightSidebar || <RightSidebar quizStats={quizStats} userNav={<UserNav />} />}
-        </div>
+        {/* Right sidebar - desktop only */}
+        <aside className="hidden xl:block w-72 h-screen sticky top-0">
+          <div className="h-full overflow-y-auto overscroll-contain">
+            {rightSidebar || <RightSidebar quizStats={quizStats} userNav={<UserNav />} />}
+          </div>
+        </aside>
       </div>
     </div>
   );
