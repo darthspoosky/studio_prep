@@ -32,12 +32,22 @@ export async function addHistory(userId: string, analysis: NewspaperAnalysisOutp
     return null;
   }
   try {
-    const docRef = await addDoc(collection(db, 'userHistory'), {
+    const dataToAdd: {
+      userId: string;
+      analysis: NewspaperAnalysisOutput;
+      timestamp: Date;
+      articleUrl?: string;
+    } = {
       userId,
       analysis,
       timestamp: new Date(),
-      articleUrl,
-    });
+    };
+
+    if (articleUrl) {
+      dataToAdd.articleUrl = articleUrl;
+    }
+
+    const docRef = await addDoc(collection(db, 'userHistory'), dataToAdd);
     return docRef.id;
   } catch (error) {
     console.error("Error adding history document: ", error);
