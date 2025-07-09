@@ -97,6 +97,14 @@ export default {
           '0%, 100%': { 'background-position': '0% 50%' },
           '50%': { 'background-position': '100% 50%' },
         },
+        'float': {
+          '0%, 100%': { transform: 'translateY(0px) rotate(0deg)' },
+          '50%': { transform: 'translateY(-20px) rotate(15deg)' },
+        },
+        'shimmer': {
+            '0%': { 'background-position': '-200% 0' },
+            '100%': { 'background-position': '200% 0' },
+        },
       },
       animation: {
         'accordion-down': 'accordion-down 0.2s ease-out',
@@ -106,6 +114,8 @@ export default {
         'hero-float-alt': 'hero-float-alt 12s ease-in-out infinite',
         'pulse-cta': 'pulse-cta 2s infinite',
         'gradient-anim': 'gradient-anim 6s ease infinite',
+        'float': 'float 6s ease-in-out infinite',
+        'shimmer': 'shimmer 2s infinite',
       },
     },
   },
