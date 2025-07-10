@@ -16,7 +16,7 @@ import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, Upload, FileText, Image, Book, Newspaper, Users, BarChart3, AlertCircle, CheckCircle, X } from 'lucide-react';
+import { Loader2, Upload, FileText, Image, Book, Newspaper, Users, BarChart3, AlertCircle, CheckCircle, X, Wand2 } from 'lucide-react';
 import { type Question } from '@/types/quiz';
 import { uploadBulkPastYearQuestions, uploadContentByType } from '@/services/adminService';
 
@@ -24,7 +24,7 @@ import { uploadBulkPastYearQuestions, uploadContentByType } from '@/services/adm
 const ADMIN_UID = 'qjDA9FVi48QidKnbYjMEkdFf3QP2';
 
 // Content types for admin upload
-type ContentType = 'questions' | 'books' | 'images' | 'news' | 'syllabus' | 'users' | 'analytics';
+type ContentType = 'questions' | 'pdf-to-quiz' | 'books' | 'images' | 'news' | 'syllabus' | 'users' | 'analytics';
 
 // Upload status tracking
 type UploadStatus = 'idle' | 'uploading' | 'success' | 'error';
@@ -34,6 +34,7 @@ interface UploadResult {
   count?: number;
   errors?: string[];
   message?: string;
+  data?: any;
 } 
 
 const exampleJson = `
@@ -70,6 +71,9 @@ export default function AdminUploadPage() {
   const [uploadResults, setUploadResults] = useState<UploadResult[]>([]);
   const [isAuthorized, setIsAuthorized] = useState(false);
   const [formData, setFormData] = useState<Record<string, any>>({});
+  const [pdfToQuizConfig, setPdfToQuizConfig] = useState({ examType: 'prelims', questionCount: 10 });
+  const [extractedQuestions, setExtractedQuestions] = useState<Question[] | null>(null);
+
 
   useEffect(() => {
     if (!loading) {
@@ -90,6 +94,9 @@ export default function AdminUploadPage() {
     const file = event.target.files?.[0];
     if (file) {
       setFileInput(file);
+      if (activeTab === 'pdf-to-quiz') {
+        setExtractedQuestions(null); // Reset extracted questions if a new file is chosen
+      }
     }
   };
 
@@ -144,6 +151,42 @@ export default function AdminUploadPage() {
         title: 'Upload Failed',
         description: error.message || 'Could not upload questions to the database.',
       });
+    }
+  };
+
+  const handlePdfToQuizConversion = async () => {
+    if (!fileInput) {
+      toast({ variant: 'destructive', title: 'No File Selected', description: 'Please select a PDF file to convert.' });
+      return;
+    }
+    
+    setUploadStatus('uploading');
+    setExtractedQuestions(null);
+    
+    const formData = new FormData();
+    formData.append('file', fileInput);
+    formData.append('examType', pdfToQuizConfig.examType);
+    formData.append('questionCount', pdfToQuizConfig.questionCount.toString());
+    
+    try {
+      const response = await fetch('/api/pdf-to-quiz', {
+        method: 'POST',
+        body: formData,
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to convert PDF.');
+      }
+      
+      const result = await response.json();
+      setExtractedQuestions(result.questions);
+      toast({ title: 'Conversion Successful', description: `${result.questions.length} questions extracted from the PDF.` });
+      setUploadStatus('success');
+    } catch (error: any) {
+      console.error('PDF to Quiz conversion error:', error);
+      toast({ variant: 'destructive', title: 'Conversion Failed', description: error.message });
+      setUploadStatus('error');
     }
   };
 
@@ -277,10 +320,14 @@ export default function AdminUploadPage() {
           </div>
 
           <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as ContentType)} className="space-y-6">
-            <TabsList className="grid w-full grid-cols-7">
+            <TabsList className="grid w-full grid-cols-8">
               <TabsTrigger value="questions" className="flex items-center gap-2">
                 <FileText className="h-4 w-4" />
                 Questions
+              </TabsTrigger>
+              <TabsTrigger value="pdf-to-quiz" className="flex items-center gap-2">
+                <Wand2 className="h-4 w-4" />
+                PDF to Quiz
               </TabsTrigger>
               <TabsTrigger value="books" className="flex items-center gap-2">
                 <Book className="h-4 w-4" />
@@ -402,6 +449,82 @@ export default function AdminUploadPage() {
                   >
                     {uploadStatus === 'uploading' && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                     {uploadStatus === 'uploading' ? 'Uploading...' : 'Upload Questions'}
+                  </Button>
+                </CardFooter>
+              </Card>
+            </TabsContent>
+            
+            {/* PDF to Quiz Converter */}
+            <TabsContent value="pdf-to-quiz">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Wand2 className="h-5 w-5 text-primary" />
+                    AI-Powered PDF to Quiz Converter
+                  </CardTitle>
+                  <CardDescription>
+                    Upload a PDF of a past paper or study material, and let AI extract the questions.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="space-y-2">
+                      <Label htmlFor="pdf-file-input">Upload PDF File</Label>
+                      <Input
+                        id="pdf-file-input"
+                        type="file"
+                        accept=".pdf"
+                        onChange={handleFileUpload}
+                      />
+                      {fileInput && (
+                        <Badge variant="secondary" className="mt-2">{fileInput.name}</Badge>
+                      )}
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="pdf-exam-type">Exam Type</Label>
+                       <Select value={pdfToQuizConfig.examType} onValueChange={(value) => setPdfToQuizConfig(prev => ({ ...prev, examType: value }))}>
+                          <SelectTrigger id="pdf-exam-type">
+                              <SelectValue placeholder="Select exam type" />
+                          </SelectTrigger>
+                          <SelectContent>
+                              <SelectItem value="prelims">Prelims (MCQ)</SelectItem>
+                              <SelectItem value="mains">Mains (Descriptive)</SelectItem>
+                          </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                  {extractedQuestions && (
+                    <div className="mt-6">
+                      <h3 className="font-semibold mb-2">Extracted Questions ({extractedQuestions.length})</h3>
+                      <div className="p-4 bg-muted rounded-md max-h-60 overflow-y-auto text-sm space-y-2">
+                        {extractedQuestions.map((q, i) => (
+                           <div key={i} className="p-2 border-b">
+                             <p className="font-medium">{i+1}. {q.question}</p>
+                             <p className="text-xs text-muted-foreground pl-4">Correct Answer: {q.options.find(o => o.correct)?.text}</p>
+                           </div>
+                        ))}
+                      </div>
+                      <Button className="mt-4" onClick={() => {
+                        setJsonInput(JSON.stringify(extractedQuestions, null, 2));
+                        setActiveTab('questions');
+                        toast({ title: 'Questions Loaded', description: 'Extracted questions have been moved to the JSON uploader tab for review.' });
+                      }}>
+                        Review & Upload Extracted Questions
+                      </Button>
+                    </div>
+                  )}
+                </CardContent>
+                <CardFooter>
+                  <Button 
+                    onClick={handlePdfToQuizConversion} 
+                    disabled={uploadStatus === 'uploading' || !fileInput}
+                  >
+                    {uploadStatus === 'uploading' ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Converting PDF...
+                      </>
+                    ) : 'Convert to Quiz'}
                   </Button>
                 </CardFooter>
               </Card>
