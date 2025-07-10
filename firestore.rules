@@ -61,5 +61,45 @@ service cloud.firestore {
       allow read: if request.auth != null;
       allow write: if false;  // Admin only
     }
+
+    // ADMIN-MANAGED CONTENT COLLECTIONS
+    // Study materials (books, PDFs, etc.)
+    match /studyMaterials/{materialId} {
+      allow read: if request.auth != null;
+      allow write: if false;  // Admin only via Firebase Admin SDK
+    }
+
+    // Media assets (images, diagrams, etc.)
+    match /mediaAssets/{assetId} {
+      allow read: if request.auth != null;
+      allow write: if false;  // Admin only via Firebase Admin SDK
+    }
+
+    // News articles for current affairs
+    match /newsArticles/{articleId} {
+      allow read: if request.auth != null;
+      allow write: if false;  // Admin only via Firebase Admin SDK
+    }
+
+    // Bulk user import queue
+    match /bulkUserImports/{importId} {
+      allow read, write: if false;  // Admin only via Firebase Admin SDK
+    }
+
+    // Analytics imports
+    match /analyticsImports/{importId} {
+      allow read, write: if false;  // Admin only via Firebase Admin SDK
+    }
+
+    // Admin audit logs
+    match /adminAuditLogs/{logId} {
+      allow read, write: if false;  // Admin only via Firebase Admin SDK
+    }
+
+    // System configuration
+    match /systemConfig/{configId} {
+      allow read: if request.auth != null;  // Users can read certain configs
+      allow write: if false;  // Admin only via Firebase Admin SDK
+    }
   }
 }
