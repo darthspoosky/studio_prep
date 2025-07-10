@@ -2,7 +2,7 @@
 'use server';
 /**
  * @fileOverview A multi-agent AI workflow to analyze newspaper articles for exam preparation.
- * This flow now supports streaming results back to the client.
+ * This flow now supports streaming results back to the client and includes fallbacks for multiple AI providers.
  *
  * - analyzeNewspaperArticle: The public-facing flow that orchestrates the workflow.
  */
@@ -11,6 +11,47 @@ import { ai } from '@/ai/genkit';
 import { z } from 'zod';
 import fs from 'fs';
 import path from 'path';
+import { type GenerationResponse, type GenerateRequest, type ModelDefinition, type ModelReference, type PromptArgument } from '@genkit-ai/core/generate';
+
+// --- Model Configuration with Fallbacks ---
+const MODEL_CANDIDATES: ModelReference[] = [
+    ai.model('googleai/gemini-1.5-flash'),
+];
+
+async function generateWithFallbacks(request: Omit<GenerateRequest, 'model'>): Promise<GenerationResponse> {
+    let lastError: any;
+    for (const model of MODEL_CANDIDATES) {
+        try {
+            console.log(`Attempting to generate content with model: ${model.name}`);
+            const response = await ai.generate({ ...request, model });
+            console.log(`Successfully generated content with model: ${model.name}`);
+            return response;
+        } catch (error) {
+            console.warn(`Model ${model.name} failed:`, error);
+            lastError = error;
+        }
+    }
+    console.error("All models failed. Throwing last known error.");
+    throw lastError;
+}
+
+async function runPromptWithFallbacks<I, O>(prompt: ModelDefinition<z.ZodSchema<I>, z.ZodSchema<O>>, input: I): Promise<GenerationResponse<O>> {
+    let lastError: any;
+    for (const model of MODEL_CANDIDATES) {
+        try {
+            console.log(`Attempting to run prompt '${prompt.name}' with model: ${model.name}`);
+            const response = await prompt.with({ model })(input);
+            console.log(`Successfully ran prompt '${prompt.name}' with model: ${model.name}`);
+            return response;
+        } catch (error) {
+            console.warn(`Prompt '${prompt.name}' with model ${model.name} failed:`, error);
+            lastError = error;
+        }
+    }
+    console.error(`Prompt '${prompt.name}' failed with all models. Throwing last known error.`);
+    throw lastError;
+}
+
 
 // Cache syllabus content
 const syllabusCache: { prelims?: string; mains?: string } = {};
@@ -326,7 +367,7 @@ const analyzeNewspaperArticleFlow = ai.defineFlow(
     const OUTPUT_PRICE_PER_1K_TOKENS_USD = 0.00105;
 
     // STEP 1: Run Relevance Analyst Agent
-    const relevanceAgentResponse = await relevanceAnalystAgent(flowInputWithSyllabus);
+    const relevanceAgentResponse = await runPromptWithFallbacks(relevanceAnalystAgent, flowInputWithSyllabus);
     const relevanceResult = relevanceAgentResponse.output;
     
     // @ts-expect-error - Handling metadata usage which may not be in current type definitions
@@ -344,7 +385,7 @@ const analyzeNewspaperArticleFlow = ai.defineFlow(
     }
 
     // STEP 2: Run Question Generator Agent
-    const questionAgentResponse = await questionGeneratorAgent({
+    const questionAgentResponse = await runPromptWithFallbacks(questionGeneratorAgent, {
       ...flowInputWithSyllabus,
       identifiedSyllabusTopic: relevanceResult.syllabusTopic || '',
     });
@@ -371,7 +412,7 @@ const analyzeNewspaperArticleFlow = ai.defineFlow(
         outputLanguage: input.outputLanguage || 'English',
         analysisFocus: input.analysisFocus || 'Generate Questions',
     }
-    const verificationAgentResponse = await verificationEditorAgent(verificationInput);
+    const verificationAgentResponse = await runPromptWithFallbacks(verificationEditorAgent, verificationInput);
     const verifiedAnalysis = verificationAgentResponse.output;
 
     // @ts-expect-error - Handling metadata usage which may not be in current type definitions

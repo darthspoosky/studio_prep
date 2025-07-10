@@ -848,6 +848,7 @@ export default function NewspaperAnalysisPage() {
                                 </div>
                             </TabsContent>
                         </Tabs>
+                        
                         <div className="space-y-2">
                             <Label htmlFor="analysis-focus">Analysis Focus</Label>
                             <Select value={inputs.analysisFocus} onValueChange={(value) => handleInputChange("analysisFocus", value)}>
