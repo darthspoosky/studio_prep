@@ -147,16 +147,73 @@ export default function AdminUploadPage() {
     }
   };
 
+  const validateFormData = () => {
+    const errors: string[] = [];
+    
+    switch (activeTab) {
+      case 'books':
+        if (!formData.title) errors.push('Title is required');
+        if (!formData.author) errors.push('Author is required');
+        if (!formData.subject) errors.push('Subject is required');
+        if (!formData.category) errors.push('Category is required');
+        if (!fileInput) errors.push('File is required');
+        break;
+      case 'images':
+        if (!formData.imageCategory) errors.push('Category is required');
+        if (!formData.imageSubject) errors.push('Subject is required');
+        if (!fileInput) errors.push('File is required');
+        break;
+      case 'news':
+        if (!formData.newsSource) errors.push('Source is required');
+        if (!formData.newsCategory) errors.push('Category is required');
+        if (!formData.newsRelevance) errors.push('Relevance is required');
+        if (!jsonInput) errors.push('Article content is required');
+        break;
+      case 'syllabus':
+        if (!formData.syllabusType) errors.push('Syllabus type is required');
+        if (!jsonInput) errors.push('Syllabus data is required');
+        break;
+      case 'users':
+        if (!formData.userOperation) errors.push('Operation is required');
+        break;
+      case 'analytics':
+        if (!formData.analyticsType) errors.push('Analytics type is required');
+        break;
+    }
+    
+    return errors;
+  };
+
   const handleContentUpload = async () => {
     if (activeTab === 'questions') {
       await handleJsonUpload();
       return;
     }
 
+    // Validate form data before upload
+    const validationErrors = validateFormData();
+    if (validationErrors.length > 0) {
+      toast({
+        variant: 'destructive',
+        title: 'Validation Error',
+        description: validationErrors.join(', '),
+      });
+      return;
+    }
+
     setUploadStatus('uploading');
     try {
+      // Clean form data to remove empty strings and undefined values
+      const cleanFormData = Object.fromEntries(
+        Object.entries(formData).filter(([_, value]) => value !== '' && value !== undefined && value !== null)
+      );
+      
       // Upload content using the appropriate service
-      const result = await handleUploadByType(activeTab, { fileInput, jsonInput, formData });
+      const result = await handleUploadByType(activeTab, { 
+        fileInput, 
+        jsonInput: jsonInput.trim() || undefined, 
+        formData: cleanFormData 
+      });
       setUploadResults(prev => [...prev, result]);
       setUploadStatus('success');
       toast({

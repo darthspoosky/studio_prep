@@ -148,7 +148,7 @@ export async function uploadBulkStudyMaterials(materials: StudyMaterial[]): Prom
   materials.forEach(material => {
     const materialRef = doc(materialsCollection);
     const materialWithTimestamp = {
-      ...material,
+      ...sanitizeData(material),
       uploadedAt: serverTimestamp(),
       lastUpdated: serverTimestamp()
     };
@@ -180,7 +180,7 @@ export async function uploadBulkMediaAssets(assets: MediaAsset[]): Promise<numbe
   assets.forEach(asset => {
     const assetRef = doc(assetsCollection);
     const assetWithTimestamp = {
-      ...asset,
+      ...sanitizeData(asset),
       uploadedAt: serverTimestamp(),
       lastUpdated: serverTimestamp()
     };
@@ -212,7 +212,7 @@ export async function uploadBulkNewsArticles(articles: NewsArticle[]): Promise<n
   articles.forEach(article => {
     const articleRef = doc(articlesCollection);
     const articleWithTimestamp = {
-      ...article,
+      ...sanitizeData(article),
       extractedAt: serverTimestamp(),
       lastUpdated: serverTimestamp(),
       processed: false
@@ -307,7 +307,7 @@ export async function uploadAnalyticsData(analyticsData: AnalyticsData): Promise
 
   const analyticsCollection = collection(db, 'analyticsImports');
   const dataWithTimestamp = {
-    ...analyticsData,
+    ...sanitizeData(analyticsData),
     importedAt: serverTimestamp()
   };
 
@@ -318,6 +318,23 @@ export async function uploadAnalyticsData(analyticsData: AnalyticsData): Promise
     console.error("Error uploading analytics data:", error);
     throw new Error("Failed to upload analytics data to the database.");
   }
+}
+
+/**
+ * Sanitizes data by removing undefined values and empty strings
+ * @param obj The object to sanitize
+ * @returns Sanitized object with no undefined values
+ */
+function sanitizeData(obj: any): any {
+  const sanitized: any = {};
+  
+  for (const [key, value] of Object.entries(obj)) {
+    if (value !== undefined && value !== null && value !== '') {
+      sanitized[key] = value;
+    }
+  }
+  
+  return sanitized;
 }
 
 /**
@@ -345,7 +362,7 @@ export async function uploadContentByType(
 
       case 'books':
         if (data.formData && data.fileInput) {
-          const material: StudyMaterial = {
+          const rawMaterial = {
             title: data.formData.title,
             author: data.formData.author,
             subject: data.formData.subject,
@@ -356,6 +373,9 @@ export async function uploadContentByType(
             fileSize: data.fileInput.size,
             uploadedAt: serverTimestamp()
           };
+          
+          // Sanitize the material object to remove undefined values
+          const material = sanitizeData(rawMaterial) as StudyMaterial;
           count = await uploadBulkStudyMaterials([material]);
           message = `Study material "${material.title}" uploaded successfully`;
         }
@@ -363,7 +383,7 @@ export async function uploadContentByType(
 
       case 'images':
         if (data.fileInput && data.formData) {
-          const asset: MediaAsset = {
+          const rawAsset = {
             fileName: data.fileInput.name,
             fileUrl: '', // Would be set after file upload to storage
             category: data.formData.imageCategory,
@@ -372,6 +392,9 @@ export async function uploadContentByType(
             fileSize: data.fileInput.size,
             uploadedAt: serverTimestamp()
           };
+          
+          // Sanitize the asset object to remove undefined values
+          const asset = sanitizeData(rawAsset) as MediaAsset;
           count = await uploadBulkMediaAssets([asset]);
           message = `Media asset "${asset.fileName}" uploaded successfully`;
         }
@@ -379,7 +402,7 @@ export async function uploadContentByType(
 
       case 'news':
         if (data.jsonInput && data.formData) {
-          const article: NewsArticle = {
+          const rawArticle = {
             content: data.jsonInput,
             source: data.formData.newsSource,
             url: data.formData.newsUrl,
@@ -389,6 +412,9 @@ export async function uploadContentByType(
             extractedAt: serverTimestamp(),
             processed: false
           };
+          
+          // Sanitize the article object to remove undefined values
+          const article = sanitizeData(rawArticle) as NewsArticle;
           count = await uploadBulkNewsArticles([article]);
           message = `News article from ${article.source} uploaded successfully`;
         }
@@ -412,7 +438,7 @@ export async function uploadContentByType(
 
       case 'analytics':
         if (data.formData) {
-          const analyticsData: AnalyticsData = {
+          const rawAnalyticsData = {
             type: data.formData.analyticsType,
             data: data.fileInput ? {} : JSON.parse(data.jsonInput || '{}'),
             dateRange: {
@@ -422,6 +448,9 @@ export async function uploadContentByType(
             description: data.formData.analyticsDescription,
             importedAt: serverTimestamp()
           };
+          
+          // Sanitize the analytics data object to remove undefined values
+          const analyticsData = sanitizeData(rawAnalyticsData) as AnalyticsData;
           await uploadAnalyticsData(analyticsData);
           count = 1;
           message = `Analytics data for "${analyticsData.type}" imported successfully`;
