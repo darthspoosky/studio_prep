@@ -64,3 +64,29 @@ This change isolates the unpredictable AI from the strict requirements of format
     *   The complex and unreliable `verificationPrompt` and `fixMCQFormatting` functions will be **removed**, as they are now obsolete.
 
 This architectural improvement ensures that the `explanation` is always present and correctly formatted, and allows us to focus the AI's power on making its *content* world-class.
+
+### Ticket-002: Add CI pipeline and sample tests
+- **Status**: Completed
+- **Date**: 2024-07-26
+
+#### Problem Statement
+
+Automated tests and a continuous integration workflow were missing, as noted in issue #4 of `issues.md`.
+
+#### Proposed Solution
+
+Introduce a minimal Jest setup with one component test and a GitHub Actions workflow to run lint, type checks, and tests on each push.
+
+#### Affected Files
+
+1. `.github/workflows/ci.yml`
+2. `jest.config.js`
+3. `package.json`
+4. `src/test/setup.ts`
+5. `src/components/ui/button.test.tsx`
+
+#### Implementation Details
+
+- Added a CI workflow that installs dependencies and runs `npm run lint`, `npm run typecheck`, and `npm test`.
+- Created Jest configuration with coverage thresholds and a setup file.
+- Added a simple button component test and a `test` npm script.
