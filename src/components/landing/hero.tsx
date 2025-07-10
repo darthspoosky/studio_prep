@@ -1,8 +1,13 @@
+
+'use client';
+
 import React from 'react';
-import { Bot, FileQuestion, PenLine, Mic, Users, BookOpen, Target } from 'lucide-react';
+import { Bot, FileQuestion, PenLine, Mic, Users, BookOpen, Target, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
+import { useAuth } from '@/contexts/AuthContext';
+import { useRouter } from 'next/navigation';
 
 const FloatingIcon = ({ icon, className, animation, delay, gradient }: { icon: React.ReactNode, className?: string, animation?: string, delay?: string, gradient?: string }) => (
     <div 
@@ -19,6 +24,17 @@ const FloatingIcon = ({ icon, className, animation, delay, gradient }: { icon: R
 );
 
 const Hero = () => {
+  const { user, loading } = useAuth();
+  const router = useRouter();
+
+  const handleGetStarted = () => {
+    if (user) {
+      router.push('/dashboard');
+    } else {
+      router.push('/login');
+    }
+  };
+
   return (
     <section className="relative w-full h-screen min-h-[700px] flex items-center justify-center overflow-hidden">
         <div className="absolute inset-0 z-0">
@@ -38,8 +54,9 @@ const Hero = () => {
               We combine cutting-edge AI with community feedback to create a prep experience that truly adapts to you.
             </p>
             <div className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-4">
-                <Button asChild size="lg">
-                    <Link href="/login">Get Started</Link>
+                <Button size="lg" onClick={handleGetStarted} disabled={loading}>
+                    {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                    Get Started
                 </Button>
                 <Button asChild size="lg" variant="outline" className="bg-background/50">
                     <a href="#tools">Explore Tools</a>
