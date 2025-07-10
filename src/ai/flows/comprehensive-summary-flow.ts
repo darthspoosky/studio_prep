@@ -11,6 +11,7 @@ import { ai } from '@/ai/genkit'; // Assuming '@/ai/genkit' correctly imports th
 import { z } from 'zod';
 
 // --- Input and Output Schemas ---
+// Define the schema to use for both type inference and validation
 const ComprehensiveSummaryInputSchema = z.object({
   sourceText: z.string().min(100).max(50000),
   examType: z.string().default('UPSC Civil Services'),
@@ -105,20 +106,25 @@ export async function generateComprehensiveSummary(input: ComprehensiveSummaryIn
     // Return the validated summary
     return validatedSummary;
 
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Error in comprehensive summary generation:', error);
     // Provide more specific error messages if possible
     if (error instanceof z.ZodError) {
       // Handle Zod validation errors
       console.error('Zod validation error details:', error.errors);
       throw new Error(`Failed to parse AI response: Invalid structure. Details: ${error.message}`);
-    } else if (error.message && error.message.includes('API error')) {
+    } else if (error instanceof Error) {
+      // Type guard to handle Error objects
+      if (error.message.includes('API error')) {
         // Handle potential API errors from the AI provider
         throw new Error(`AI API error: ${error.message}`);
-    }
-      else {
-      // Handle other unexpected errors
-      throw new Error(`Failed to generate summary: ${error.message || error}`);
+      } else {
+        // Handle other Error objects
+        throw new Error(`Failed to generate summary: ${error.message}`);
+      }
+    } else {
+      // Handle non-Error objects
+      throw new Error('Failed to generate summary: Unknown error');
     }
   }
 }

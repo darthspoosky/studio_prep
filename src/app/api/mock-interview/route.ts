@@ -1,7 +1,6 @@
 
-import { mockInterviewFlow } from '@/ai/flows/mock-interview-flow';
 import { NextRequest, NextResponse } from 'next/server';
-import { createMockInterviewSession, updateMockInterviewSession } from '@/services/mockInterviewService';
+import { createMockInterviewSession, getMockInterviewSession, updateMockInterviewWithAnswer } from '@/services/mockInterviewService';
 
 async function getUserIdFromRequest(req: NextRequest): Promise<string | null> {
     // In a real app, you'd verify a JWT or session token here.
@@ -12,50 +11,60 @@ async function getUserIdFromRequest(req: NextRequest): Promise<string | null> {
 
 export async function POST(req: NextRequest) {
   try {
-    const { interviewType, difficulty, roleProfile } = await req.json();
+    const { interviewType, difficulty, roleProfile, answer, sessionId: existingSessionId } = await req.json();
 
     const userId = await getUserIdFromRequest(req);
     if (!userId) {
         return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // 1. Create the session document in Firestore to get a session ID
-    const sessionId = await createMockInterviewSession(userId, { interviewType, difficulty, roleProfile });
-
-    // 2. Prepare the input for the first call to the flow
-    const flowInput = {
-      interviewType,
-      difficulty,
-      roleProfile,
-      transcript: [], // Start with an empty transcript
-      questionCount: 0,
-    };
-    
-    // 3. Call the flow directly to get the first question
-    const initialResult = await mockInterviewFlow(flowInput);
-
-    if (!initialResult.question) {
-        throw new Error("The AI failed to generate the first question.");
+    // Check if this is an answer to an existing session or a new session creation
+    if (existingSessionId && answer) {
+      // Process answer and get next question
+      const result = await updateMockInterviewWithAnswer(existingSessionId, answer);
+      
+      if (result.isComplete) {
+        // Interview is complete, return final feedback
+        return NextResponse.json({
+          sessionId: existingSessionId,
+          report: {
+            status: 'completed',
+            finalFeedback: result.feedback
+          }
+        });
+      } else {
+        // Return next question
+        return NextResponse.json({
+          sessionId: existingSessionId,
+          report: {
+            status: 'in-progress',
+            nextQuestion: result.question
+          }
+        });
+      }
+    } else {
+      // Create a new session
+      const sessionId = await createMockInterviewSession(userId, { interviewType, difficulty, roleProfile });
+      
+      // Get the session to access the first question
+      const session = await getMockInterviewSession(sessionId);
+      if (!session || session.questionsAndAnswers.length === 0) {
+        throw new Error("Failed to initialize interview session");
+      }
+      
+      // Send response with the first question
+      const firstQuestion = session.questionsAndAnswers[0].question;
+      return NextResponse.json({
+        sessionId,
+        report: {
+          status: 'in-progress',
+          firstQuestion
+        }
+      });
     }
-
-    // 4. Update the session with the first question and set status to 'in-progress'
-    await updateMockInterviewSession(sessionId, { 
-        status: 'in-progress', 
-        questionsAndAnswers: [{ question: initialResult.question, answer: '', feedback: '' }]
-    });
-
-    // 5. Send a response that the frontend can handle
-    // The current frontend expects a 'report' object, so we'll wrap the question in that.
-    const report = {
-        firstQuestion: initialResult.question,
-        status: 'Interview initiated. Please answer the first question.',
-    };
-
-    return NextResponse.json({ sessionId, report });
-
   } catch (error) {
-    console.error('Error starting mock interview:', error);
+    console.error('Error in mock interview API:', error);
     const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
-    return NextResponse.json({ error: `Failed to start interview session: ${errorMessage}` }, { status: 500 });
+    return NextResponse.json({ error: `Interview session error: ${errorMessage}` }, { status: 500 });
   }
 }
