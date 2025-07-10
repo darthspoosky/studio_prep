@@ -2,10 +2,7 @@ import React from 'react';
 import type { Metadata } from 'next';
 import { Inter, Space_Grotesk } from 'next/font/google';
 import './globals.css';
-import { Toaster } from '@/components/ui/toaster';
-import { AuthProvider } from '@/contexts/AuthContext';
-import { ErrorBoundary } from '@/components/error-boundary';
-import { setupWebVitals } from '@/lib/analytics';
+import { ClientProviders } from './client-providers';
 
 const inter = Inter({ subsets: ['latin'], variable: '--font-inter' });
 const spaceGrotesk = Space_Grotesk({
@@ -30,22 +27,12 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  // Setup analytics and performance monitoring
-  React.useEffect(() => {
-    setupWebVitals();
-  }, []);
-
   return (
     <html lang="en" suppressHydrationWarning>
       <body
         className={`${inter.variable} ${spaceGrotesk.variable} font-body antialiased min-h-screen bg-gradient-to-br from-background to-background/80 selection:bg-primary/20 selection:text-primary`}
       >
-        <ErrorBoundary>
-          <AuthProvider>
-            {children}
-            <Toaster />
-          </AuthProvider>
-        </ErrorBoundary>
+        <ClientProviders>{children}</ClientProviders>
       </body>
     </html>
   );

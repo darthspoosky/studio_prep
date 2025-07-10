@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useState } from 'react';
@@ -155,9 +156,6 @@ const RightSidebar: React.FC<RightSidebarProps> = ({
                 </div>
               </motion.div>
             </div>
-          </>
-        )}
-
             {/* Activity stats with enhanced UI */}
             <div className="grid grid-cols-2 gap-4 px-2 mb-6">
               <SidebarStatCard 
