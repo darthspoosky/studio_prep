@@ -12,10 +12,11 @@ import { z } from 'zod';
 import fs from 'fs';
 import path from 'path';
 import { type GenerationResponse, type GenerateRequest, type ModelDefinition, type ModelReference, type PromptArgument } from '@genkit-ai/core/generate';
+import { googleAI } from '@genkit-ai/googleai';
 
 // --- Model Configuration with Fallbacks ---
 const MODEL_CANDIDATES: ModelReference[] = [
-    ai.model('googleai/gemini-1.5-flash'),
+    googleAI.model('gemini-1.5-flash'),
 ];
 
 async function generateWithFallbacks(request: Omit<GenerateRequest, 'model'>): Promise<GenerationResponse> {
