@@ -155,6 +155,7 @@ const RightSidebar: React.FC<RightSidebarProps> = ({
                 </div>
               </motion.div>
             </div>
+          </>
         )}
 
             {/* Activity stats with enhanced UI */}
