@@ -19,53 +19,6 @@ const MODEL_CANDIDATES: ModelReference[] = [
     googleAI.model('gemini-1.5-flash'),
 ];
 
-async function generateWithFallbacks(request: Omit<GenerateRequest, 'model'>): Promise<GenerationResponse> {
-    let lastError: any;
-    for (const model of MODEL_CANDIDATES) {
-        try {
-            console.log(`Attempting to generate content with model: ${model.name}`);
-            const response = await ai.generate({ ...request, model });
-            console.log(`Successfully generated content with model: ${model.name}`);
-            return response;
-        } catch (error) {
-            console.warn(`Model ${model.name} failed:`, error);
-            lastError = error;
-        }
-    }
-    console.error("All models failed. Throwing last known error.");
-    throw lastError;
-}
-
-async function runPromptWithFallbacks<I extends z.ZodTypeAny, O extends z.ZodTypeAny>(
-  prompt: PromptDefinition<I, O>,
-  input: z.infer<I>
-): Promise<GenerationResponse<z.infer<O>>> {
-  let lastError: any;
-  for (const model of MODEL_CANDIDATES) {
-    try {
-      console.log(`Attempting to run prompt '${prompt.name}' with model: ${model.name}`);
-      const response = await ai.generate({
-        model,
-        prompt: prompt.prompt, // Use the raw prompt string
-        input, // Pass the structured input
-        output: {
-          format: 'json',
-          schema: prompt.output.schema,
-        },
-        config: prompt.config, // Pass the original prompt's config
-      });
-      console.log(`Successfully ran prompt '${prompt.name}' with model: ${model.name}`);
-      return response as GenerationResponse<z.infer<O>>;
-    } catch (error) {
-      console.warn(`Prompt '${prompt.name}' with model ${model.name} failed:`, error);
-      lastError = error;
-    }
-  }
-  console.error(`Prompt '${prompt.name}' failed with all models. Throwing last known error.`);
-  throw lastError;
-}
-
-
 // Cache syllabus content
 const syllabusCache: { prelims?: string; mains?: string } = {};
 function getSyllabusContent() {
@@ -380,7 +333,7 @@ const analyzeNewspaperArticleFlow = ai.defineFlow(
     const OUTPUT_PRICE_PER_1K_TOKENS_USD = 0.00105;
 
     // STEP 1: Run Relevance Analyst Agent
-    const relevanceAgentResponse = await runPromptWithFallbacks(relevanceAnalystAgent, flowInputWithSyllabus);
+    const relevanceAgentResponse = await relevanceAnalystAgent(flowInputWithSyllabus);
     const relevanceResult = relevanceAgentResponse.output;
     
     // @ts-expect-error - Handling metadata usage which may not be in current type definitions
@@ -398,7 +351,7 @@ const analyzeNewspaperArticleFlow = ai.defineFlow(
     }
 
     // STEP 2: Run Question Generator Agent
-    const questionAgentResponse = await runPromptWithFallbacks(questionGeneratorAgent, {
+    const questionAgentResponse = await questionGeneratorAgent({
       ...flowInputWithSyllabus,
       identifiedSyllabusTopic: relevanceResult.syllabusTopic || '',
     });
@@ -425,7 +378,7 @@ const analyzeNewspaperArticleFlow = ai.defineFlow(
         outputLanguage: input.outputLanguage || 'English',
         analysisFocus: input.analysisFocus || 'Generate Questions',
     }
-    const verificationAgentResponse = await runPromptWithFallbacks(verificationEditorAgent, verificationInput);
+    const verificationAgentResponse = await verificationEditorAgent(verificationInput);
     const verifiedAnalysis = verificationAgentResponse.output;
 
     // @ts-expect-error - Handling metadata usage which may not be in current type definitions
