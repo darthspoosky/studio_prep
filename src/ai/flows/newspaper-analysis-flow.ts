@@ -15,7 +15,7 @@ import { type GenerationResponse, type GenerateRequest, type ModelReference, typ
 import { googleAI } from '@genkit-ai/googleai';
 
 // --- Model Configuration with Fallbacks ---
-const MODEL_CANDIDATES: ModelReference[] = [
+const MODEL_CANDIDATES: ModelReference<any>[] = [
     googleAI.model('gemini-1.5-flash'),
 ];
 
@@ -320,7 +320,7 @@ const analyzeNewspaperArticleFlow = ai.defineFlow(
     // Load syllabus content inside the flow
     const { prelims: prelimsSyllabus, mains: mainsSyllabus } = getSyllabusContent();
 
-    const flowInputWithSyllabus: SyllabusInputSchema = {
+    const flowInputWithSyllabus: z.infer<typeof SyllabusInputSchema> = {
       ...input,
       prelimsSyllabus: prelimsSyllabus as string,
       mainsSyllabus: mainsSyllabus as string,
@@ -332,20 +332,36 @@ const analyzeNewspaperArticleFlow = ai.defineFlow(
     const INPUT_PRICE_PER_1K_TOKENS_USD = 0.00035;
     const OUTPUT_PRICE_PER_1K_TOKENS_USD = 0.00105;
 
+    // Define the hasTokenUsage function with proper typing
+    function hasTokenUsage(response: GenerateResponse): response is GenerateResponse & { metadata: { usage: TokenUsage } } {
+      return response && 
+        'metadata' in response && 
+        !!response.metadata && 
+        typeof response.metadata === 'object' && 
+        response.metadata !== null && 
+        'usage' in response.metadata;
+    }
+
     // STEP 1: Run Relevance Analyst Agent
     const relevanceAgentResponse = await relevanceAnalystAgent(flowInputWithSyllabus);
     const relevanceResult = relevanceAgentResponse.output;
     
-    // @ts-expect-error - Handling metadata usage which may not be in current type definitions
-    if (relevanceAgentResponse.metadata?.usage) {
-      // @ts-expect-error - Accessing properties that may not be in current type definitions
-      totalInputTokens += relevanceAgentResponse.metadata.usage.inputTokens || 0;
-      // @ts-expect-error - Accessing properties that may not be in current type definitions
-      totalOutputTokens += relevanceAgentResponse.metadata.usage.outputTokens || 0;
+    // Handle token usage from the response metadata
+    if (hasTokenUsage(relevanceAgentResponse)) {
+      totalInputTokens += relevanceAgentResponse.metadata.usage?.inputTokens || 0;
+      totalOutputTokens += relevanceAgentResponse.metadata.usage?.outputTokens || 0;
     }
+    
+    // Type assertion for relevanceResult to fix property access errors
+    const typedRelevanceResult = relevanceResult as {
+      isRelevant: boolean;
+      syllabusTopic: string | null;
+      reasoning?: string;
+      confidenceScore: number;
+    };
 
-    if (!relevanceResult || !relevanceResult.isRelevant || !relevanceResult.syllabusTopic) {
-      const reason = relevanceResult?.reasoning || 'Article assessed as not relevant for UPSC preparation.';
+    if (!typedRelevanceResult || !typedRelevanceResult.isRelevant || !typedRelevanceResult.syllabusTopic) {
+      const reason = typedRelevanceResult?.reasoning || 'Article assessed as not relevant for UPSC preparation.';
       yield { type: 'error', data: reason };
       return;
     }
@@ -353,73 +369,75 @@ const analyzeNewspaperArticleFlow = ai.defineFlow(
     // STEP 2: Run Question Generator Agent
     const questionAgentResponse = await questionGeneratorAgent({
       ...flowInputWithSyllabus,
-      identifiedSyllabusTopic: relevanceResult.syllabusTopic || '',
+      identifiedSyllabusTopic: typedRelevanceResult.syllabusTopic || '',
     });
     const initialAnalysis = questionAgentResponse.output;
 
-    // @ts-expect-error - Handling metadata usage which may not be in current type definitions
-    if (questionAgentResponse.metadata?.usage) {
-      // @ts-expect-error - Accessing properties that may not be in current type definitions
-      totalInputTokens += questionAgentResponse.metadata.usage.inputTokens || 0;
-      // @ts-expect-error - Accessing properties that may not be in current type definitions
-      totalOutputTokens += questionAgentResponse.metadata.usage.outputTokens || 0;
+    // Handle token usage from the response metadata
+    if (hasTokenUsage(questionAgentResponse)) {
+      totalInputTokens += questionAgentResponse.metadata.usage?.inputTokens || 0;
+      totalOutputTokens += questionAgentResponse.metadata.usage?.outputTokens || 0;
     }
+    
+    // Type assertion for initialAnalysis to fix property access errors
+    const typedInitialAnalysis = initialAnalysis as NewspaperAnalysisOutput;
 
-    if (!initialAnalysis) {
+    if (!typedInitialAnalysis) {
       yield { type: 'error', data: 'Question Generator Agent failed to produce an analysis.' };
       return;
     }
 
     // STEP 3: Run Verification Editor Agent
     const verificationInput = {
-        ...initialAnalysis,
+        ...typedInitialAnalysis,
         sourceText: input.sourceText,
-        generatedAnalysisString: JSON.stringify(initialAnalysis),
+        generatedAnalysisString: JSON.stringify(typedInitialAnalysis),
         outputLanguage: input.outputLanguage || 'English',
         analysisFocus: input.analysisFocus || 'Generate Questions',
     }
     const verificationAgentResponse = await verificationEditorAgent(verificationInput);
     const verifiedAnalysis = verificationAgentResponse.output;
 
-    // @ts-expect-error - Handling metadata usage which may not be in current type definitions
-    if (verificationAgentResponse.metadata?.usage) {
-        // @ts-expect-error - Accessing properties that may not be in current type definitions
-        totalInputTokens += verificationAgentResponse.metadata.usage.inputTokens || 0;
-        // @ts-expect-error - Accessing properties that may not be in current type definitions
-        totalOutputTokens += verificationAgentResponse.metadata.usage.outputTokens || 0;
+    // Handle token usage from the response metadata
+    if (hasTokenUsage(verificationAgentResponse)) {
+        totalInputTokens += verificationAgentResponse.metadata.usage?.inputTokens || 0;
+        totalOutputTokens += verificationAgentResponse.metadata.usage?.outputTokens || 0;
     }
+    
+    // Type assertion for verifiedAnalysis to fix property access errors
+    const typedVerifiedAnalysis = verifiedAnalysis as NewspaperAnalysisOutput;
 
-    const finalAnalysis = verifiedAnalysis || initialAnalysis; // Fallback to initial if verification fails
+    const finalAnalysis = typedVerifiedAnalysis || typedInitialAnalysis; // Fallback to initial if verification fails
     
     // STEP 4: Stream the results piece by piece
-    if (finalAnalysis.summary) {
+    if (finalAnalysis?.summary) {
         yield { type: 'summary', data: finalAnalysis.summary };
     }
-    if (finalAnalysis.prelims?.mcqs) {
+    if (finalAnalysis?.prelims?.mcqs) {
         for (const mcq of finalAnalysis.prelims.mcqs) {
             yield { type: 'prelims', data: mcq };
         }
     }
-    if (finalAnalysis.mains?.questions) {
+    if (finalAnalysis?.mains?.questions) {
         for (const question of finalAnalysis.mains.questions) {
             yield { type: 'mains', data: question };
         }
     }
-    if (finalAnalysis.knowledgeGraph) {
+    if (finalAnalysis?.knowledgeGraph) {
         yield { type: 'knowledgeGraph', data: finalAnalysis.knowledgeGraph };
     }
 
     // STEP 5: Final metadata
-    const questionsCount = (finalAnalysis.prelims?.mcqs?.length || 0) + (finalAnalysis.mains?.questions?.length || 0);
+    const questionsCount = (finalAnalysis?.prelims?.mcqs?.length || 0) + (finalAnalysis?.mains?.questions?.length || 0);
     const totalTokens = totalInputTokens + totalOutputTokens;
     const cost = ((totalInputTokens / 1000) * INPUT_PRICE_PER_1K_TOKENS_USD + (totalOutputTokens / 1000) * OUTPUT_PRICE_PER_1K_TOKENS_USD) * USD_TO_INR_RATE;
     
     yield {
         type: 'metadata',
         data: {
-            syllabusTopic: relevanceResult.syllabusTopic,
-            qualityScore: finalAnalysis.qualityScore,
-            tags: finalAnalysis.tags,
+            syllabusTopic: typedRelevanceResult.syllabusTopic,
+            qualityScore: finalAnalysis?.qualityScore,
+            tags: finalAnalysis?.tags,
             questionsCount,
             totalTokens,
             cost: Math.round(cost * 100) / 100,

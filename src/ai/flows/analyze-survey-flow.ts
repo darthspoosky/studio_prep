@@ -59,7 +59,7 @@ async function moderateAndStoreIdea(input: SurveyAnalysisInput) {
       
       // If we get here, content passed safety filters
       console.log('Idea passed content safety filter');
-    } catch (error) {
+    } catch (_error) {
       // If an error is thrown during generation, it's likely due to safety filters
       console.log('Idea rejected by content safety filter:', input.featureRequests);
       return;
