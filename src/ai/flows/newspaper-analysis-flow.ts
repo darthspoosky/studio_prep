@@ -4,14 +4,14 @@
  * @fileOverview A multi-agent AI workflow to analyze newspaper articles for exam preparation.
  * This flow now supports streaming results back to the client and includes fallbacks for multiple AI providers.
  *
- * - analyzeNewspaperArticle: The public-facing flow that orchestrates the workflow.
+ * - analyzeNewspaperArticle: The public-facing function that orchestrates the workflow.
  */
 
 import { ai } from '@/ai/genkit';
 import { z } from 'zod';
 import fs from 'fs';
 import path from 'path';
-import { type GenerationResponse, type GenerateRequest, type ModelDefinition, type ModelReference, type PromptArgument } from '@genkit-ai/core/generate';
+import { type GenerationResponse, type GenerateRequest, type ModelReference, type PromptDefinition } from '@genkit-ai/core/generate';
 import { googleAI } from '@genkit-ai/googleai';
 
 // --- Model Configuration with Fallbacks ---
@@ -36,21 +36,33 @@ async function generateWithFallbacks(request: Omit<GenerateRequest, 'model'>): P
     throw lastError;
 }
 
-async function runPromptWithFallbacks<I, O>(prompt: ModelDefinition<z.ZodSchema<I>, z.ZodSchema<O>>, input: I): Promise<GenerationResponse<O>> {
-    let lastError: any;
-    for (const model of MODEL_CANDIDATES) {
-        try {
-            console.log(`Attempting to run prompt '${prompt.name}' with model: ${model.name}`);
-            const response = await prompt.with({ model })(input);
-            console.log(`Successfully ran prompt '${prompt.name}' with model: ${model.name}`);
-            return response;
-        } catch (error) {
-            console.warn(`Prompt '${prompt.name}' with model ${model.name} failed:`, error);
-            lastError = error;
-        }
+async function runPromptWithFallbacks<I extends z.ZodTypeAny, O extends z.ZodTypeAny>(
+  prompt: PromptDefinition<I, O>,
+  input: z.infer<I>
+): Promise<GenerationResponse<z.infer<O>>> {
+  let lastError: any;
+  for (const model of MODEL_CANDIDATES) {
+    try {
+      console.log(`Attempting to run prompt '${prompt.name}' with model: ${model.name}`);
+      const response = await ai.generate({
+        model,
+        prompt: prompt.prompt, // Use the raw prompt string
+        input, // Pass the structured input
+        output: {
+          format: 'json',
+          schema: prompt.output.schema,
+        },
+        config: prompt.config, // Pass the original prompt's config
+      });
+      console.log(`Successfully ran prompt '${prompt.name}' with model: ${model.name}`);
+      return response as GenerationResponse<z.infer<O>>;
+    } catch (error) {
+      console.warn(`Prompt '${prompt.name}' with model ${model.name} failed:`, error);
+      lastError = error;
     }
-    console.error(`Prompt '${prompt.name}' failed with all models. Throwing last known error.`);
-    throw lastError;
+  }
+  console.error(`Prompt '${prompt.name}' failed with all models. Throwing last known error.`);
+  throw lastError;
 }
 
 
