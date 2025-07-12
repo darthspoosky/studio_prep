@@ -1,0 +1,64 @@
+name: 🐛 Bug Report
+description: Report a bug or issue with PrepTalk
+title: "[BUG] "
+labels: ["bug", "needs-triage"]
+
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to report a bug! Please fill out the information below to help us diagnose and fix the issue.
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: Component Area
+      description: Which part of the application is affected?
+      options:
+        - Daily Quiz
+        - Writing Practice
+        - Mock Interview
+        - Newspaper Analysis
+        - Admin Panel
+        - Dashboard
+        - Authentication
+        - PDF Processing
+        - AI Features
+        - Database/Firebase
+        - UI/UX
+        - Other
+    validations:
+      required: true
+
+  - type: textarea
+    id: description
+    attributes:
+      label: Bug Description
+      description: A clear and concise description of what the bug is.
+      placeholder: Describe the bug in detail...
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Steps to Reproduce
+      description: Steps to reproduce the behavior
+      placeholder: |
+        1. Go to '...'
+        2. Click on '....'
+        3. See error
+    validations:
+      required: true
+
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      description: Please provide environment details
+      placeholder: |
+        - OS: [e.g. Windows 10, macOS 12.0]
+        - Browser: [e.g. Chrome 120, Firefox 115]
+        - Device: [e.g. Desktop, Mobile]
+    validations:
+      required: true

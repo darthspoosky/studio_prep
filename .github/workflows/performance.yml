@@ -1,0 +1,137 @@
+name: Performance Monitoring
+
+on:
+  schedule:
+    - cron: '0 6 * * *' # Run daily at 6 AM UTC
+  workflow_dispatch:
+    inputs:
+      url:
+        description: 'URL to test (default: production)'
+        required: false
+        default: 'https://preptalk-upsc.web.app'
+
+env:
+  TEST_URL: ${{ github.event.inputs.url || 'https://preptalk-upsc.web.app' }}
+
+jobs:
+  lighthouse:
+    name: Lighthouse Performance Audit
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20.x'
+
+    - name: Install Lighthouse CI
+      run: npm install -g @lhci/cli
+
+    - name: Run Lighthouse CI
+      run: |
+        lhci autorun --collect.url=${{ env.TEST_URL }} \
+          --collect.url=${{ env.TEST_URL }}/dashboard \
+          --collect.url=${{ env.TEST_URL }}/daily-quiz \
+          --collect.url=${{ env.TEST_URL }}/writing-practice \
+          --collect.url=${{ env.TEST_URL }}/mock-interview \
+          --collect.url=${{ env.TEST_URL }}/newspaper-analysis
+      continue-on-error: true
+
+    - name: Upload Lighthouse results
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: lighthouse-results
+        path: .lighthouseci/
+
+  bundle-analysis:
+    name: Bundle Size Analysis
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20.x'
+        cache: 'npm'
+
+    - name: Install dependencies
+      run: npm ci
+
+    - name: Build application
+      run: npm run build
+
+    - name: Analyze bundle size
+      run: |
+        npx @next/bundle-analyzer
+        
+        # Get bundle sizes
+        echo "## Bundle Size Report" > bundle-report.md
+        echo "Generated: $(date)" >> bundle-report.md
+        echo "" >> bundle-report.md
+        
+        if [ -d ".next/static" ]; then
+          echo "### JavaScript Bundles:" >> bundle-report.md
+          find .next/static -name "*.js" -type f -exec ls -lh {} \; | awk '{print "- " $9 ": " $5}' >> bundle-report.md
+          
+          echo "" >> bundle-report.md
+          echo "### Total Bundle Size:" >> bundle-report.md
+          TOTAL_SIZE=$(du -sh .next/static | cut -f1)
+          echo "- Total: $TOTAL_SIZE" >> bundle-report.md
+        fi
+
+    - name: Upload bundle analysis
+      uses: actions/upload-artifact@v4
+      with:
+        name: bundle-analysis
+        path: |
+          bundle-report.md
+          .next/analyze/
+
+  performance-report:
+    name: Performance Summary
+    runs-on: ubuntu-latest
+    needs: [lighthouse, bundle-analysis]
+    if: always()
+    
+    steps:
+    - name: Download all artifacts
+      uses: actions/download-artifact@v4
+
+    - name: Generate performance report
+      run: |
+        echo "# Performance Report" > performance-report.md
+        echo "Date: $(date)" >> performance-report.md
+        echo "URL: ${{ env.TEST_URL }}" >> performance-report.md
+        echo "" >> performance-report.md
+        
+        echo "## Test Results:" >> performance-report.md
+        echo "- Lighthouse Audit: ${{ needs.lighthouse.result }}" >> performance-report.md
+        echo "- Bundle Analysis: ${{ needs.bundle-analysis.result }}" >> performance-report.md
+        echo "" >> performance-report.md
+        
+        # Add bundle size info if available
+        if [ -f "bundle-analysis/bundle-report.md" ]; then
+          echo "## Bundle Analysis:" >> performance-report.md
+          cat bundle-analysis/bundle-report.md >> performance-report.md
+          echo "" >> performance-report.md
+        fi
+        
+        # Performance recommendations
+        echo "## Recommendations:" >> performance-report.md
+        echo "- Monitor Core Web Vitals regularly" >> performance-report.md
+        echo "- Keep bundle sizes under 250KB for main chunks" >> performance-report.md
+        echo "- Ensure response times stay under 2 seconds" >> performance-report.md
+        echo "- Implement caching strategies for static assets" >> performance-report.md
+
+    - name: Upload performance report
+      uses: actions/upload-artifact@v4
+      with:
+        name: performance-report
+        path: performance-report.md

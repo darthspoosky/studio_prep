@@ -1,0 +1,113 @@
+name: Deploy to Production
+
+on:
+  workflow_run:
+    workflows: ["PrepTalk CI/CD Pipeline"]
+    types:
+      - completed
+    branches: [master]
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Environment to deploy to'
+        required: true
+        default: 'production'
+        type: choice
+        options:
+        - production
+        - staging
+
+env:
+  NODE_VERSION: '20.x'
+
+jobs:
+  deploy:
+    name: Deploy to Firebase
+    runs-on: ubuntu-latest
+    if: ${{ github.event.workflow_run.conclusion == 'success' || github.event_name == 'workflow_dispatch' }}
+    environment: 
+      name: ${{ github.event.inputs.environment || 'production' }}
+      url: https://preptalk-upsc.web.app
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ env.NODE_VERSION }}
+        cache: 'npm'
+
+    - name: Install dependencies
+      run: npm ci
+
+    - name: Build application
+      run: npm run build
+      env:
+        NEXT_TELEMETRY_DISABLED: 1
+
+    - name: Build Firebase Functions
+      run: |
+        cd functions
+        npm ci
+        npm run build
+
+    - name: Setup Firebase CLI
+      run: npm install -g firebase-tools
+
+    - name: Deploy to Firebase
+      run: |
+        echo "Deploying to ${{ github.event.inputs.environment || 'production' }}"
+        
+        # Deploy Firestore rules
+        firebase deploy --only firestore:rules --project ${{ secrets.FIREBASE_PROJECT_ID }} --token ${{ secrets.FIREBASE_TOKEN }}
+        
+        # Deploy Functions
+        firebase deploy --only functions --project ${{ secrets.FIREBASE_PROJECT_ID }} --token ${{ secrets.FIREBASE_TOKEN }}
+        
+        # Deploy Hosting
+        firebase deploy --only hosting --project ${{ secrets.FIREBASE_PROJECT_ID }} --token ${{ secrets.FIREBASE_TOKEN }}
+      env:
+        FIREBASE_TOKEN: ${{ secrets.FIREBASE_TOKEN }}
+
+    - name: Verify deployment
+      run: |
+        echo "Verifying deployment..."
+        curl -f https://preptalk-upsc.web.app || exit 1
+        echo "✅ Deployment verification successful"
+
+    - name: Notify deployment status
+      if: always()
+      run: |
+        if [ $? -eq 0 ]; then
+          echo "🚀 Deployment to ${{ github.event.inputs.environment || 'production' }} successful!"
+        else
+          echo "❌ Deployment to ${{ github.event.inputs.environment || 'production' }} failed!"
+          exit 1
+        fi
+
+  post-deploy:
+    name: Post-Deployment Tasks
+    runs-on: ubuntu-latest
+    needs: deploy
+    if: success()
+    
+    steps:
+    - name: Run smoke tests
+      run: |
+        echo "Running post-deployment smoke tests..."
+        
+        # Test main pages
+        curl -f https://preptalk-upsc.web.app/ || exit 1
+        curl -f https://preptalk-upsc.web.app/dashboard || exit 1
+        curl -f https://preptalk-upsc.web.app/daily-quiz || exit 1
+        
+        echo "✅ Smoke tests passed"
+
+    - name: Update deployment status
+      run: |
+        echo "📊 Deployment completed successfully at $(date)"
+        echo "Environment: ${{ github.event.inputs.environment || 'production' }}"
+        echo "Commit: ${{ github.sha }}"
+        echo "Deployed by: ${{ github.actor }}"
