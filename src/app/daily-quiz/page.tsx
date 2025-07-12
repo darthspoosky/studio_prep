@@ -140,7 +140,7 @@ const TopicCard = ({ topic }: { topic: (typeof topics)[0] }) => {
   return (
     <Card className={`flex flex-col text-center items-center transition-all duration-300 hover:shadow-xl hover:-translate-y-1 ${topic.span === 2 ? 'lg:col-span-2' : ''}`}>
       <CardHeader className="items-center">
-        <div className={`w-16 h-16 rounded-full flex items-center justify-center ${variants.bg} ${variants.text}`}>
+        <div className={`w-16 h-16 rounded-full flex items-center justify-center ${variants.bg} ${variants.text}`} aria-hidden="true">
           {React.cloneElement(topic.icon as React.ReactElement, { className: 'w-8 h-8' })}
         </div>
       </CardHeader>

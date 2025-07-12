@@ -31,6 +31,7 @@ import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { glassmorphism } from '@/lib/design-system';
+import { SkipLinks } from '@/components/ui/skip-links';
 
 interface MobileLayoutProps {
   children: React.ReactNode;
@@ -53,12 +54,18 @@ export default function MobileLayout({ children }: MobileLayoutProps) {
 
   return (
     <div className="min-h-screen flex flex-col bg-background">
+      {/* Skip Links for keyboard navigation */}
+      <SkipLinks />
       {/* Mobile Header */}
-      <header className={cn(
-        'fixed top-0 left-0 right-0 z-50 transition-all duration-300 ease-out',
-        glassmorphism.navigation,
-        hasScroll ? 'h-14' : 'h-16'
-      )}>
+      <header 
+        className={cn(
+          'fixed top-0 left-0 right-0 z-50 transition-all duration-300 ease-out',
+          glassmorphism.navigation,
+          hasScroll ? 'h-14' : 'h-16'
+        )}
+        role="banner"
+        aria-label="Main navigation header"
+      >
         <div className="container h-full flex items-center justify-between px-4">
           <div className="flex items-center gap-3">
             <Button
@@ -66,11 +73,14 @@ export default function MobileLayout({ children }: MobileLayoutProps) {
               size="icon"
               className="lg:hidden"
               onClick={() => setMobileMenuOpen(true)}
+              aria-label="Open navigation menu"
+              aria-expanded={mobileMenuOpen}
+              aria-controls="mobile-navigation"
             >
-              <Menu className="h-5 w-5" />
+              <Menu className="h-5 w-5" aria-hidden="true" />
             </Button>
-            <Link href="/dashboard" className="flex items-center gap-2">
-              <div className="h-8 w-8 bg-primary rounded-lg flex items-center justify-center">
+            <Link href="/dashboard" className="flex items-center gap-2" aria-label="PrepTalk - Go to dashboard">
+              <div className="h-8 w-8 bg-primary rounded-lg flex items-center justify-center" aria-hidden="true">
                 <span className="text-primary-foreground font-bold text-sm">P</span>
               </div>
               <span className={cn(
@@ -91,7 +101,12 @@ export default function MobileLayout({ children }: MobileLayoutProps) {
 
       {/* Mobile Navigation Sheet */}
       <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
-        <SheetContent side="left" className="w-[85%] max-w-[320px] p-0">
+        <SheetContent 
+          side="left" 
+          className="w-[85%] max-w-[320px] p-0"
+          id="mobile-navigation"
+          aria-label="Mobile navigation menu"
+        >
           <div className="h-full flex flex-col">
             <SheetHeader className="p-6 pb-4">
               <SheetTitle className="text-left">PrepTalk</SheetTitle>
@@ -108,7 +123,7 @@ export default function MobileLayout({ children }: MobileLayoutProps) {
                 </div>
 
                 {/* Navigation Items */}
-                <div className="space-y-1">
+                <nav className="space-y-1" role="navigation" aria-label="Main navigation" id="navigation">
                   <MobileNavItem
                     href="/dashboard"
                     icon={Home}
@@ -139,12 +154,12 @@ export default function MobileLayout({ children }: MobileLayoutProps) {
                     label="Writing Practice"
                     isActive={pathname.includes('/writing-practice')}
                   />
-                </div>
+                </nav>
 
                 <Separator className="my-4" />
 
                 {/* Settings & Help */}
-                <div className="space-y-1">
+                <nav className="space-y-1" role="navigation" aria-label="Secondary navigation">
                   <MobileNavItem
                     href="/settings"
                     icon={Settings}
@@ -157,7 +172,7 @@ export default function MobileLayout({ children }: MobileLayoutProps) {
                     label="Help & Support"
                     isActive={pathname.includes('/help')}
                   />
-                </div>
+                </nav>
               </div>
             </ScrollArea>
           </div>
@@ -165,7 +180,7 @@ export default function MobileLayout({ children }: MobileLayoutProps) {
       </Sheet>
       
       {/* Main Content */}
-      <main className="flex-1 pt-16 pb-20 lg:pb-0">
+      <main className="flex-1 pt-16 pb-20 lg:pb-0" id="main-content">
         <div className="container px-4 py-6 max-w-screen-2xl">
           {children}
         </div>
@@ -191,19 +206,28 @@ function MobileNavItem({
 }) {
   const { setMobileMenuOpen } = useAppStore();
   
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      setMobileMenuOpen(false);
+    }
+  };
+  
   return (
     <Link
       href={href}
       onClick={() => setMobileMenuOpen(false)}
+      onKeyDown={handleKeyDown}
       className={cn(
         'flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-200',
-        'hover:bg-accent hover:text-accent-foreground',
+        'hover:bg-accent hover:text-accent-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2',
         isActive ? 'bg-primary/10 text-primary font-medium' : 'text-muted-foreground'
       )}
+      aria-current={isActive ? 'page' : undefined}
     >
-      <Icon className="h-5 w-5" />
+      <Icon className="h-5 w-5" aria-hidden="true" />
       <span>{label}</span>
-      {isActive && <ChevronRight className="h-4 w-4 ml-auto" />}
+      {isActive && <ChevronRight className="h-4 w-4 ml-auto" aria-hidden="true" />}
     </Link>
   );
 }
@@ -240,12 +264,18 @@ function NotificationButton() {
   const unreadCount = notifications.filter(n => !n.read).length;
   
   return (
-    <Button variant="ghost" size="icon" className="relative">
-      <Bell className="h-5 w-5" />
+    <Button 
+      variant="ghost" 
+      size="icon" 
+      className="relative"
+      aria-label={`Notifications${unreadCount > 0 ? ` - ${unreadCount} unread` : ''}`}
+    >
+      <Bell className="h-5 w-5" aria-hidden="true" />
       {unreadCount > 0 && (
         <Badge
           variant="destructive"
           className="absolute -top-1 -right-1 h-5 w-5 p-0 text-xs flex items-center justify-center"
+          aria-hidden="true"
         >
           {unreadCount > 9 ? '9+' : unreadCount}
         </Badge>
@@ -273,10 +303,14 @@ function MobileBottomNav() {
   const pathname = usePathname();
   
   return (
-    <nav className={cn(
-      'fixed bottom-0 left-0 right-0 z-40 h-16 lg:hidden',
-      glassmorphism.navigation
-    )}>
+    <nav 
+      className={cn(
+        'fixed bottom-0 left-0 right-0 z-40 h-16 lg:hidden',
+        glassmorphism.navigation
+      )}
+      role="navigation"
+      aria-label="Bottom navigation"
+    >
       <div className="h-full max-w-md mx-auto grid grid-cols-5 items-center">
         <MobileNavButton
           href="/dashboard"
@@ -357,8 +391,10 @@ function MobileNavButton({
   return (
     <Link
       href={href}
-      className="relative flex flex-col items-center justify-center h-full overflow-hidden"
+      className="relative flex flex-col items-center justify-center h-full overflow-hidden focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 rounded-lg"
       onClick={createRipple}
+      aria-current={isActive ? 'page' : undefined}
+      aria-label={`${label}${isActive ? ' - current page' : ''}`}
     >
       <div className={cn(
         'flex flex-col items-center justify-center transition-all duration-200',
@@ -371,13 +407,13 @@ function MobileNavButton({
               ? 'bg-primary text-primary-foreground scale-110' 
               : 'bg-muted text-muted-foreground hover:bg-muted/80'
           )}>
-            <Icon className="h-6 w-6" />
+            <Icon className="h-6 w-6" aria-hidden="true" />
           </div>
         ) : (
           <Icon className={cn(
             'h-5 w-5 transition-colors duration-200',
             isActive ? 'text-primary' : 'text-muted-foreground'
-          )} />
+          )} aria-hidden="true" />
         )}
         
         <span className={cn(

@@ -2,7 +2,7 @@
 'use client';
 
 import { db } from '@/lib/firebase';
-import { collection, writeBatch, doc, addDoc, serverTimestamp } from 'firebase/firestore';
+import { collection, writeBatch, doc, addDoc, serverTimestamp, Timestamp } from 'firebase/firestore';
 import type { Question } from '@/types/quiz';
 
 // Type definitions for different content types
@@ -15,7 +15,7 @@ export interface StudyMaterial {
   fileUrl: string;
   fileName: string;
   fileSize: number;
-  uploadedAt: any;
+  uploadedAt: Timestamp;
   metadata?: {
     pages?: number;
     language?: string;
@@ -35,7 +35,7 @@ export interface MediaAsset {
     width: number;
     height: number;
   };
-  uploadedAt: any;
+  uploadedAt: Timestamp;
   metadata?: {
     description?: string;
     source?: string;
@@ -50,7 +50,7 @@ export interface NewsArticle {
   publishedDate: string;
   category: string;
   relevance: 'high' | 'medium' | 'low';
-  extractedAt: any;
+  extractedAt: Timestamp;
   processed: boolean;
   metadata?: {
     author?: string;
@@ -69,7 +69,7 @@ export interface SyllabusSection {
   weightage?: number;
   difficulty?: number;
   tags: string[];
-  lastUpdated: any;
+  lastUpdated: Timestamp;
 }
 
 export interface UserBulkData {
@@ -87,17 +87,23 @@ export interface UserBulkData {
 
 export interface AnalyticsData {
   type: 'user-performance' | 'question-difficulty' | 'topic-analysis' | 'usage-stats';
-  data: Record<string, any>;
+  data: Record<string, unknown>;
   dateRange: {
     start: string;
     end: string;
   };
   description?: string;
-  importedAt: any;
+  importedAt: Timestamp;
   metadata?: {
     source?: string;
     version?: string;
   };
+}
+
+export interface UploadData {
+  fileInput?: File;
+  jsonInput?: string;
+  formData?: Record<string, string | number | boolean>;
 }
 
 /**
@@ -148,7 +154,7 @@ export async function uploadBulkStudyMaterials(materials: StudyMaterial[]): Prom
   materials.forEach(material => {
     const materialRef = doc(materialsCollection);
     const materialWithTimestamp = {
-      ...sanitizeData(material),
+      ...sanitizeData(material as unknown as Record<string, unknown>),
       uploadedAt: serverTimestamp(),
       lastUpdated: serverTimestamp()
     };
@@ -180,7 +186,7 @@ export async function uploadBulkMediaAssets(assets: MediaAsset[]): Promise<numbe
   assets.forEach(asset => {
     const assetRef = doc(assetsCollection);
     const assetWithTimestamp = {
-      ...sanitizeData(asset),
+      ...sanitizeData(asset as unknown as Record<string, unknown>),
       uploadedAt: serverTimestamp(),
       lastUpdated: serverTimestamp()
     };
@@ -212,7 +218,7 @@ export async function uploadBulkNewsArticles(articles: NewsArticle[]): Promise<n
   articles.forEach(article => {
     const articleRef = doc(articlesCollection);
     const articleWithTimestamp = {
-      ...sanitizeData(article),
+      ...sanitizeData(article as unknown as Record<string, unknown>),
       extractedAt: serverTimestamp(),
       lastUpdated: serverTimestamp(),
       processed: false
@@ -307,7 +313,7 @@ export async function uploadAnalyticsData(analyticsData: AnalyticsData): Promise
 
   const analyticsCollection = collection(db, 'analyticsImports');
   const dataWithTimestamp = {
-    ...sanitizeData(analyticsData),
+    ...sanitizeData(analyticsData as unknown as Record<string, unknown>),
     importedAt: serverTimestamp()
   };
 
@@ -325,8 +331,8 @@ export async function uploadAnalyticsData(analyticsData: AnalyticsData): Promise
  * @param obj The object to sanitize
  * @returns Sanitized object with no undefined values
  */
-function sanitizeData(obj: any): any {
-  const sanitized: any = {};
+function sanitizeData(obj: Record<string, unknown>): Record<string, unknown> {
+  const sanitized: Record<string, unknown> = {};
   
   for (const [key, value] of Object.entries(obj)) {
     if (value !== undefined && value !== null && value !== '') {
@@ -337,6 +343,8 @@ function sanitizeData(obj: any): any {
   return sanitized;
 }
 
+// Using the exported UploadData interface defined above
+
 /**
  * Generic file upload handler that processes different content types
  * @param contentType The type of content being uploaded
@@ -345,7 +353,7 @@ function sanitizeData(obj: any): any {
  */
 export async function uploadContentByType(
   contentType: string,
-  data: any
+  data: UploadData
 ): Promise<{ success: boolean; count?: number; message?: string }> {
   try {
     let count = 0;
@@ -375,7 +383,7 @@ export async function uploadContentByType(
           };
           
           // Sanitize the material object to remove undefined values
-          const material = sanitizeData(rawMaterial) as StudyMaterial;
+          const material = sanitizeData(rawMaterial) as unknown as StudyMaterial;
           count = await uploadBulkStudyMaterials([material]);
           message = `Study material "${material.title}" uploaded successfully`;
         }
@@ -388,13 +396,13 @@ export async function uploadContentByType(
             fileUrl: '', // Would be set after file upload to storage
             category: data.formData.imageCategory,
             subject: data.formData.imageSubject,
-            tags: data.formData.imageTags ? data.formData.imageTags.split(',').map((t: string) => t.trim()) : [],
+            tags: data.formData.imageTags ? String(data.formData.imageTags).split(',').map((t: string) => t.trim()) : [],
             fileSize: data.fileInput.size,
             uploadedAt: serverTimestamp()
           };
           
           // Sanitize the asset object to remove undefined values
-          const asset = sanitizeData(rawAsset) as MediaAsset;
+          const asset = sanitizeData(rawAsset) as unknown as MediaAsset;
           count = await uploadBulkMediaAssets([asset]);
           message = `Media asset "${asset.fileName}" uploaded successfully`;
         }
@@ -414,7 +422,7 @@ export async function uploadContentByType(
           };
           
           // Sanitize the article object to remove undefined values
-          const article = sanitizeData(rawArticle) as NewsArticle;
+          const article = sanitizeData(rawArticle) as unknown as NewsArticle;
           count = await uploadBulkNewsArticles([article]);
           message = `News article from ${article.source} uploaded successfully`;
         }
@@ -450,7 +458,7 @@ export async function uploadContentByType(
           };
           
           // Sanitize the analytics data object to remove undefined values
-          const analyticsData = sanitizeData(rawAnalyticsData) as AnalyticsData;
+          const analyticsData = sanitizeData(rawAnalyticsData) as unknown as AnalyticsData;
           await uploadAnalyticsData(analyticsData);
           count = 1;
           message = `Analytics data for "${analyticsData.type}" imported successfully`;
@@ -462,11 +470,11 @@ export async function uploadContentByType(
     }
 
     return { success: true, count, message };
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error(`Error uploading ${contentType}:`, error);
     return { 
       success: false, 
-      message: error.message || `Failed to upload ${contentType}` 
+      message: error instanceof Error ? error.message : `Failed to upload ${contentType}` 
     };
   }
 }

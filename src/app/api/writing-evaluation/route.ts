@@ -5,42 +5,20 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { WritingEvaluationService } from '@/services/writingEvaluationService';
+import { createAuthenticatedHandler, getRateLimitKey, rateLimit } from '@/lib/auth-middleware';
 import { z } from 'zod';
 
-// Rate limiting (simple in-memory store - use Redis in production)
-const rateLimitStore = new Map<string, { count: number; resetTime: number }>();
-const RATE_LIMIT = {
-  maxRequests: 10,
-  windowMs: 60 * 1000, // 1 minute
-};
-
-function checkRateLimit(clientId: string): boolean {
-  const now = Date.now();
-  const clientData = rateLimitStore.get(clientId);
-
-  if (!clientData || now > clientData.resetTime) {
-    rateLimitStore.set(clientId, { count: 1, resetTime: now + RATE_LIMIT.windowMs });
-    return true;
+async function handler(request: NextRequest) {
+  // Rate limiting - 10 evaluations per minute per user
+  const rateLimitKey = getRateLimitKey(request);
+  if (!rateLimit(rateLimitKey, 10, 60000)) {
+    return NextResponse.json(
+      { error: 'Rate limit exceeded. Please try again later.' },
+      { status: 429 }
+    );
   }
 
-  if (clientData.count >= RATE_LIMIT.maxRequests) {
-    return false;
-  }
-
-  clientData.count++;
-  return true;
-}
-
-export async function POST(request: NextRequest) {
   try {
-    // Rate limiting
-    const clientId = request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || 'anonymous';
-    if (!checkRateLimit(clientId)) {
-      return NextResponse.json(
-        { error: 'Rate limit exceeded. Please try again later.' },
-        { status: 429 }
-      );
-    }
 
     // Parse and validate request body
     const body = await request.json();
@@ -108,7 +86,7 @@ export async function POST(request: NextRequest) {
   }
 }
 
-export async function GET(request: NextRequest) {
+function healthCheckHandler(request: NextRequest) {
   // Health check endpoint
   return NextResponse.json({
     status: 'healthy',
@@ -120,3 +98,6 @@ export async function GET(request: NextRequest) {
     }
   });
 }
+
+export const POST = createAuthenticatedHandler(handler);
+export const GET = createAuthenticatedHandler(healthCheckHandler);

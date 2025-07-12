@@ -278,7 +278,7 @@ export default function LoginPage() {
                                 />
                             </div>
                         </FormControl>
-                        <FormMessage className="text-pink-400" />
+                        <FormMessage className="text-pink-400" id={field.name + '-error'} role="alert" />
                         </FormItem>
                     )}
                   />
@@ -306,7 +306,7 @@ export default function LoginPage() {
                                 </button>
                             </div>
                         </FormControl>
-                        <FormMessage className="text-pink-400" />
+                        <FormMessage className="text-pink-400" id={field.name + '-error'} role="alert" />
                       </FormItem>
                     )}
                   />
@@ -329,7 +329,7 @@ export default function LoginPage() {
                                     />
                                 </div>
                             </FormControl>
-                            <FormMessage className="text-pink-400" />
+                            <FormMessage className="text-pink-400" id={field.name + '-error'} role="alert" />
                         </FormItem>
                         )}
                     />
@@ -375,7 +375,8 @@ export default function LoginPage() {
                   {activeTab === 'login' ? "Don't have an account?" : "Already have an account?"}
                   <button
                     onClick={() => setActiveTab(activeTab === 'login' ? 'register' : 'login')}
-                    className="text-purple-400 hover:text-purple-300 font-medium ml-1 transition-colors"
+                    className="text-purple-400 hover:text-purple-300 font-medium ml-1 transition-colors focus:outline-none focus:ring-2 focus:ring-purple-500/50 rounded"
+                    aria-label={`Switch to ${activeTab === 'login' ? 'sign up' : 'sign in'} form`}
                   >
                     {activeTab === 'login' ? 'Sign up' : 'Sign in'}
                   </button>

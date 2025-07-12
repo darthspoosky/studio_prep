@@ -76,6 +76,7 @@ export default function EnhancedWritingEditor({
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const suggestionTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const lastSuggestionRequestRef = useRef<number>(0);
+  const abortControllerRef = useRef<AbortController | null>(null);
 
   // Timer management
   useEffect(() => {
@@ -95,6 +96,23 @@ export default function EnhancedWritingEditor({
     };
   }, [isStarted, timeSpent, timeLimit, wordCount]);
 
+  // Cleanup effect for component unmount
+  useEffect(() => {
+    return () => {
+      // Clean up timers
+      if (timerRef.current) {
+        clearTimeout(timerRef.current);
+      }
+      if (suggestionTimeoutRef.current) {
+        clearTimeout(suggestionTimeoutRef.current);
+      }
+      // Abort any pending fetch requests
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+      }
+    };
+  }, []);
+
   // Auto-save functionality
   useEffect(() => {
     if (content.length > 50 && onSaveDraft) {
@@ -107,7 +125,7 @@ export default function EnhancedWritingEditor({
   }, [content, onSaveDraft]);
 
   // Real-time suggestions with debouncing
-  const fetchSuggestions = useCallback(async (text: string) => {
+  const fetchSuggestions = useCallback(async (text: string, abortSignal?: AbortSignal) => {
     if (text.length < 100 || !showSuggestions) return;
     
     const now = Date.now();
@@ -124,7 +142,8 @@ export default function EnhancedWritingEditor({
           content: text,
           context: questionText,
           examType
-        })
+        }),
+        signal: abortSignal
       });
 
       if (response.ok) {
@@ -137,7 +156,9 @@ export default function EnhancedWritingEditor({
         setSuggestions(formattedSuggestions);
       }
     } catch (error) {
-      console.error('Failed to fetch suggestions:', error);
+      if (error instanceof Error && error.name !== 'AbortError') {
+        console.error('Failed to fetch suggestions:', error);
+      }
     } finally {
       setIsLoadingSuggestions(false);
     }
@@ -165,12 +186,17 @@ export default function EnhancedWritingEditor({
     }
     setLastTypingTime(now);
 
-    // Debounced suggestions
+    // Debounced suggestions with AbortController
     if (suggestionTimeoutRef.current) {
       clearTimeout(suggestionTimeoutRef.current);
     }
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
+    
     suggestionTimeoutRef.current = setTimeout(() => {
-      fetchSuggestions(newContent);
+      abortControllerRef.current = new AbortController();
+      fetchSuggestions(newContent, abortControllerRef.current.signal);
     }, 3000);
   }, [isStarted, lastTypingTime, fetchSuggestions]);
 

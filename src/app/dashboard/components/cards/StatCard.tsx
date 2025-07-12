@@ -92,35 +92,45 @@ export const StatCard: React.FC<StatCardProps> = ({
     <div 
       className={cn(
         "p-5 h-full",
-        onClick && "cursor-pointer transition-all duration-200 hover:scale-[1.02] active:scale-[0.98]",
+        onClick && "cursor-pointer transition-all duration-200 hover:scale-[1.02] active:scale-[0.98] focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 rounded-lg",
         className
       )}
       onClick={onClick}
-      role={onClick ? "button" : undefined}
+      role={onClick ? "button" : "region"}
       tabIndex={onClick ? 0 : undefined}
       onKeyDown={(e) => {
         if (onClick && (e.key === 'Enter' || e.key === ' ')) {
+          e.preventDefault();
           onClick();
         }
       }}
+      aria-label={onClick ? `${title} - ${value}${suffix || ''}` : undefined}
+      aria-describedby={onClick ? undefined : `stat-${title.replace(/\s+/g, '-').toLowerCase()}`}
     >
       <div className="flex items-start justify-between mb-3">
-        <div className={cn(
-          "p-2.5 rounded-lg",
-          colorMap[color] || colorMap.primary
-        )}>
+        <div 
+          className={cn(
+            "p-2.5 rounded-lg",
+            colorMap[color] || colorMap.primary
+          )}
+          aria-hidden="true"
+        >
           {React.cloneElement(icon as React.ReactElement, {
-            className: cn("h-5 w-5 lg:h-6 lg:w-6", (icon as React.ReactElement).props.className)
+            className: cn("h-5 w-5 lg:h-6 lg:w-6", (icon as React.ReactElement).props.className),
+            'aria-hidden': 'true'
           })}
         </div>
         
         {trend && (
-          <div className={cn(
-            "flex items-center gap-1 text-xs lg:text-sm font-medium",
-            getTrendStyles()
-          )}>
+          <div 
+            className={cn(
+              "flex items-center gap-1 text-xs lg:text-sm font-medium",
+              getTrendStyles()
+            )}
+            aria-label={`Trend: ${trend.direction === 'up' ? 'increasing' : trend.direction === 'down' ? 'decreasing' : 'no change'} by ${Math.abs(trend.value)} percent`}
+          >
             {getTrendIcon()}
-            <span>{Math.abs(trend.value)}%</span>
+            <span aria-hidden="true">{Math.abs(trend.value)}%</span>
           </div>
         )}
       </div>
@@ -139,10 +149,13 @@ export const StatCard: React.FC<StatCardProps> = ({
             </span>
           )}
         </div>
-        <p className={cn(
-          "text-muted-foreground line-clamp-2",
-          isMobile ? "text-xs mt-1" : "text-sm mt-0.5"
-        )}>
+        <p 
+          className={cn(
+            "text-muted-foreground line-clamp-2",
+            isMobile ? "text-xs mt-1" : "text-sm mt-0.5"
+          )}
+          id={onClick ? undefined : `stat-${title.replace(/\s+/g, '-').toLowerCase()}`}
+        >
           {title}
         </p>
       </div>

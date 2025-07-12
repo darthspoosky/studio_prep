@@ -67,6 +67,29 @@ const ChartContainer = React.forwardRef<
 })
 ChartContainer.displayName = "Chart"
 
+// CSS color sanitization function
+function sanitizeColor(color: string): string {
+  // Only allow valid CSS color formats
+  const colorRegex = /^(#([0-9A-Fa-f]{3}){1,2}|rgb\(\s*\d+\s*,\s*\d+\s*,\s*\d+\s*\)|rgba\(\s*\d+\s*,\s*\d+\s*,\s*\d+\s*,\s*[01]?\.?\d*\s*\)|hsl\(\s*\d+\s*,\s*\d+%\s*,\s*\d+%\s*\)|hsla\(\s*\d+\s*,\s*\d+%\s*,\s*\d+%\s*,\s*[01]?\.?\d*\s*\)|[a-zA-Z]+)$/;
+  
+  if (!colorRegex.test(color)) {
+    console.warn(`Invalid color value detected: ${color}. Using fallback.`);
+    return '#000000'; // Safe fallback
+  }
+  
+  return color;
+}
+
+function sanitizeKey(key: string): string {
+  // Only allow alphanumeric characters and hyphens for CSS variable names
+  return key.replace(/[^a-zA-Z0-9-]/g, '');
+}
+
+function sanitizeId(id: string): string {
+  // Sanitize chart ID to prevent CSS injection
+  return id.replace(/[^a-zA-Z0-9-_]/g, '');
+}
+
 const ChartStyle = ({ id, config }: { id: string; config: ChartConfig }) => {
   const colorConfig = Object.entries(config).filter(
     ([, config]) => config.theme || config.color
@@ -76,27 +99,42 @@ const ChartStyle = ({ id, config }: { id: string; config: ChartConfig }) => {
     return null
   }
 
+  const sanitizedId = sanitizeId(id);
+  
+  // Generate CSS safely without dangerouslySetInnerHTML
+  const cssVariables = React.useMemo(() => {
+    const styles: Record<string, React.CSSProperties> = {};
+    
+    Object.entries(THEMES).forEach(([theme, prefix]) => {
+      const selector = prefix ? `${prefix} [data-chart="${sanitizedId}"]` : `[data-chart="${sanitizedId}"]`;
+      
+      const vars: Record<string, string> = {};
+      colorConfig.forEach(([key, itemConfig]) => {
+        const color = itemConfig.theme?.[theme as keyof typeof itemConfig.theme] || itemConfig.color;
+        if (color) {
+          const sanitizedKey = sanitizeKey(key);
+          const sanitizedColor = sanitizeColor(color);
+          vars[`--color-${sanitizedKey}`] = sanitizedColor;
+        }
+      });
+      
+      if (Object.keys(vars).length > 0) {
+        styles[selector] = vars as React.CSSProperties;
+      }
+    });
+    
+    return styles;
+  }, [colorConfig, sanitizedId]);
+
+  // Use CSS-in-JS approach instead of dangerouslySetInnerHTML
   return (
-    <style
-      dangerouslySetInnerHTML={{
-        __html: Object.entries(THEMES)
-          .map(
-            ([theme, prefix]) => `
-${prefix} [data-chart=${id}] {
-${colorConfig
-  .map(([key, itemConfig]) => {
-    const color =
-      itemConfig.theme?.[theme as keyof typeof itemConfig.theme] ||
-      itemConfig.color
-    return color ? `  --color-${key}: ${color};` : null
-  })
-  .join("\n")}
-}
-`
-          )
-          .join("\n"),
-      }}
-    />
+    <>
+      {Object.entries(cssVariables).map(([selector, styles], index) => (
+        <style key={`${sanitizedId}-${index}`}>
+          {`${selector} { ${Object.entries(styles).map(([prop, value]) => `${prop}: ${value};`).join(' ')} }`}
+        </style>
+      ))}
+    </>
   )
 }
 

@@ -11,13 +11,20 @@ import { ai } from '@/ai/genkit';
 import { z } from 'zod';
 import fs from 'fs';
 import path from 'path';
-import { type GenerationResponse, type GenerateRequest, type ModelReference, type PromptDefinition } from '@genkit-ai/core/generate';
-import { googleAI } from '@genkit-ai/googleai';
+// Types for AI response handling
+interface TokenUsage {
+  inputTokens?: number;
+  outputTokens?: number;
+}
 
-// --- Model Configuration with Fallbacks ---
-const MODEL_CANDIDATES: ModelReference<any>[] = [
-    googleAI.model('gemini-1.5-flash'),
-];
+interface ResponseMetadata {
+  usage?: TokenUsage;
+}
+
+interface GenerateResponse<T = any> {
+  data?: T;
+  metadata?: ResponseMetadata;
+}
 
 // Cache syllabus content
 const syllabusCache: { prelims?: string; mains?: string } = {};

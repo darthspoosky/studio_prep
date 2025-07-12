@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useReducer, useEffect, useCallback } from 'react';
+import React, { useReducer, useEffect, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Clock, 
@@ -206,6 +206,7 @@ export default function EnhancedDailyQuizPage() {
   const [state, dispatch] = useReducer(quizReducer, initialState);
   const { toast } = useToast();
   const { trackToolUsage } = useAppStore();
+  const timeoutRefs = useRef<NodeJS.Timeout[]>([]);
 
   // Timer effect
   useEffect(() => {
@@ -221,6 +222,15 @@ export default function EnhancedDailyQuizPage() {
       if (interval) clearInterval(interval);
     };
   }, [state.status, state.timeRemaining]);
+  
+  // Cleanup effect for component unmount
+  useEffect(() => {
+    return () => {
+      // Clean up all timeouts
+      timeoutRefs.current.forEach(timeout => clearTimeout(timeout));
+      timeoutRefs.current = [];
+    };
+  }, []);
 
   // Track tool usage
   useEffect(() => {
@@ -235,9 +245,11 @@ export default function EnhancedDailyQuizPage() {
       
       // In a real app, you would fetch questions from an API
       // For demo purposes, we'll use mock data
-      setTimeout(() => {
+      const questionTimeout = setTimeout(() => {
         dispatch({ type: 'LOAD_QUESTIONS', payload: mockQuestions });
       }, 1000);
+      
+      timeoutRefs.current.push(questionTimeout);
       
     } catch (error) {
       console.error('Error starting quiz:', error);
@@ -252,13 +264,15 @@ export default function EnhancedDailyQuizPage() {
     });
     
     // Auto-advance to next question after a short delay
-    setTimeout(() => {
+    const advanceTimeout = setTimeout(() => {
       if (state.currentQuestionIndex < state.questions.length - 1) {
         dispatch({ type: 'NEXT_QUESTION' });
       } else {
         dispatch({ type: 'COMPLETE_QUIZ' });
       }
     }, 500);
+    
+    timeoutRefs.current.push(advanceTimeout);
   }, [state.currentQuestionIndex, state.questions.length]);
 
   const formatTime = (seconds: number) => {

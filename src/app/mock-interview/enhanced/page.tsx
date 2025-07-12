@@ -256,6 +256,7 @@ export default function EnhancedMockInterviewPage() {
   const { user, trackToolUsage } = useAppStore();
   const videoRef = useRef<HTMLVideoElement>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const cleanupRefs = useRef<(() => void)[]>([]);
 
   // Timer effect
   useEffect(() => {
@@ -279,8 +280,14 @@ export default function EnhancedMockInterviewPage() {
     }
     
     return () => {
+      // Clean up media stream
       if (state.mediaStream) {
         state.mediaStream.getTracks().forEach(track => track.stop());
+      }
+      // Clean up media recorder
+      if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
+        mediaRecorderRef.current.stop();
+        mediaRecorderRef.current = null;
       }
     };
   }, [state.status, state.config]);
@@ -315,9 +322,12 @@ export default function EnhancedMockInterviewPage() {
       dispatch({ type: 'SET_CONFIG', payload: config });
       
       // Load questions (in real app, this would be an API call)
-      setTimeout(() => {
+      const questionTimeout = setTimeout(() => {
         dispatch({ type: 'LOAD_QUESTIONS', payload: mockQuestions });
       }, 1000);
+      
+      // Store timeout for cleanup
+      return () => clearTimeout(questionTimeout);
       
     } catch (error) {
       console.error('Error starting interview:', error);
@@ -342,6 +352,9 @@ export default function EnhancedMockInterviewPage() {
         initiateRecording();
       }
     }, 1000);
+    
+    // Store the interval to clean up if component unmounts
+    return () => clearInterval(countdownInterval);
   }, [state.mediaStream]);
 
   const initiateRecording = useCallback(() => {
@@ -372,8 +385,8 @@ export default function EnhancedMockInterviewPage() {
       
       dispatch({ type: 'STOP_RECORDING', payload: response });
       
-      // Mock feedback generation
-      setTimeout(() => {
+      // Mock feedback generation with cleanup
+      const feedbackTimeout = setTimeout(() => {
         const feedback: InterviewFeedback = {
           questionId: response.questionId,
           score: Math.floor(Math.random() * 40) + 60, // Random score between 60-100
@@ -385,6 +398,9 @@ export default function EnhancedMockInterviewPage() {
         
         dispatch({ type: 'ADD_FEEDBACK', payload: feedback });
       }, 2000);
+      
+      // Store timeout ID for potential cleanup
+      (response as any).feedbackTimeoutId = feedbackTimeout;
     };
     
     mediaRecorder.start();

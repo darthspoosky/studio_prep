@@ -165,6 +165,15 @@ export default function YearGrid() {
               key={yearData.year} 
               className={`hover:shadow-lg transition-all cursor-pointer ${recentActivity[yearData.year] ? 'ring-2 ring-blue-400' : ''}`}
               onClick={() => handleYearSelect(yearData.year)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault();
+                  handleYearSelect(yearData.year);
+                }
+              }}
+              tabIndex={0}
+              role="button"
+              aria-label={`Practice ${yearData.year} UPSC Prelims questions`}
             >
               <CardHeader className="pb-2">
                 <div className="flex justify-between items-center">

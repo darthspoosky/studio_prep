@@ -5,41 +5,20 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { WritingEvaluationService } from '@/services/writingEvaluationService';
+import { createAuthenticatedHandler, getRateLimitKey, rateLimit } from '@/lib/auth-middleware';
 import { z } from 'zod';
 
-const realtimeRateLimit = new Map<string, { count: number; resetTime: number }>();
-const REALTIME_RATE_LIMIT = {
-  maxRequests: 30, // Higher limit for real-time features
-  windowMs: 60 * 1000, // 1 minute
-};
-
-function checkRealtimeRateLimit(clientId: string): boolean {
-  const now = Date.now();
-  const clientData = realtimeRateLimit.get(clientId);
-
-  if (!clientData || now > clientData.resetTime) {
-    realtimeRateLimit.set(clientId, { count: 1, resetTime: now + REALTIME_RATE_LIMIT.windowMs });
-    return true;
+async function handler(request: NextRequest) {
+  // Rate limiting - 30 realtime suggestions per minute per user
+  const rateLimitKey = getRateLimitKey(request);
+  if (!rateLimit(rateLimitKey, 30, 60000)) {
+    return NextResponse.json(
+      { suggestions: [], error: 'Rate limit exceeded' },
+      { status: 429 }
+    );
   }
 
-  if (clientData.count >= REALTIME_RATE_LIMIT.maxRequests) {
-    return false;
-  }
-
-  clientData.count++;
-  return true;
-}
-
-export async function POST(request: NextRequest) {
   try {
-    // Rate limiting for real-time requests
-    const clientId = request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || 'anonymous';
-    if (!checkRealtimeRateLimit(clientId)) {
-      return NextResponse.json(
-        { suggestions: [], error: 'Rate limit exceeded' },
-        { status: 429 }
-      );
-    }
 
     const body = await request.json();
     
@@ -87,10 +66,16 @@ export async function POST(request: NextRequest) {
   }
 }
 
-export async function GET() {
+function healthCheckHandler() {
   return NextResponse.json({
     service: 'realtime-suggestions',
     status: 'active',
-    rateLimit: REALTIME_RATE_LIMIT
+    rateLimit: {
+      maxRequests: 30,
+      windowMs: 60000
+    }
   });
 }
+
+export const POST = createAuthenticatedHandler(handler);
+export const GET = createAuthenticatedHandler(healthCheckHandler);

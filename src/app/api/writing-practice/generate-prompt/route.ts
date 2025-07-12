@@ -1,24 +1,58 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { generate } from '@genkit-ai/ai';
 import { gemini15Flash } from '@genkit-ai/googleai';
+import { createAuthenticatedHandler, getRateLimitKey, rateLimit } from '@/lib/auth-middleware';
+import { z } from 'zod';
 
-export async function POST(request: NextRequest) {
+// Input validation schema
+const inputSchema = z.object({
+  type: z.enum(['essay', 'precis', 'argumentative', 'report', 'descriptive', 'letter']),
+  difficulty: z.enum(['beginner', 'intermediate', 'advanced']),
+  topic: z.string().max(200, 'Topic too long').optional(),
+  examType: z.string().min(1).max(100).default('UPSC Civil Services'),
+  customRequirements: z.string().max(500, 'Custom requirements too long').optional()
+});
+
+async function handler(request: NextRequest) {
+  // Rate limiting - 15 prompt generations per hour per user
+  const rateLimitKey = getRateLimitKey(request);
+  if (!rateLimit(rateLimitKey, 15, 3600000)) {
+    return NextResponse.json(
+      { error: 'Rate limit exceeded. Please try again later.' },
+      { status: 429 }
+    );
+  }
+
   try {
-    const { type, difficulty, topic, examType } = await request.json();
-
-    if (!type || !difficulty) {
+    const body = await request.json();
+    
+    const inputValidation = inputSchema.safeParse(body);
+    if (!inputValidation.success) {
       return NextResponse.json(
-        { error: 'Type and difficulty are required' },
+        { 
+          error: 'Invalid input parameters',
+          details: inputValidation.error.errors.map(e => ({ 
+            field: e.path.join('.'), 
+            message: e.message 
+          }))
+        },
         { status: 400 }
       );
     }
 
-    const prompt = `Generate a writing prompt for ${examType || 'UPSC Civil Services'} exam preparation.
+    const { type, difficulty, topic, examType, customRequirements } = inputValidation.data;
+
+    // Sanitize and validate inputs
+    const sanitizedTopic = topic?.replace(/[<>\"'&]/g, '') || 'Any relevant current affairs or general topic';
+    const sanitizedRequirements = customRequirements?.replace(/[<>\"'&]/g, '') || '';
+    
+    const prompt = `Generate a writing prompt for ${examType} exam preparation.
 
 Requirements:
 - Type: ${type}
 - Difficulty: ${difficulty}
-- Topic area: ${topic || 'Any relevant current affairs or general topic'}
+- Topic area: ${sanitizedTopic}
+${sanitizedRequirements ? `- Additional requirements: ${sanitizedRequirements}` : ''}
 
 For essay prompts:
 - Should be thought-provoking and analytical
@@ -88,6 +122,14 @@ Make it challenging but fair for the specified difficulty level.`;
       };
     }
 
+    // Validate and sanitize generated content
+    if (!result.text() || result.text().trim().length === 0) {
+      return NextResponse.json(
+        { error: 'Failed to generate valid prompt. Please try again.' },
+        { status: 500 }
+      );
+    }
+
     // Ensure all required fields are present
     const finalPrompt = {
       id: 'generated-' + Date.now(),
@@ -98,15 +140,25 @@ Make it challenging but fair for the specified difficulty level.`;
       timeLimit: generatedPrompt.timeLimit || (type === 'precis' ? 30 : 90),
       wordLimit: generatedPrompt.wordLimit,
       guidelines: generatedPrompt.guidelines || `Follow standard ${type} writing conventions.`,
-      tags: generatedPrompt.tags || [type, difficulty, 'AI Generated']
+      tags: generatedPrompt.tags || [type, difficulty, 'AI Generated'],
+      metadata: {
+        examType,
+        generatedAt: new Date().toISOString(),
+        customRequirements: !!customRequirements,
+        topicSpecified: !!topic
+      }
     };
 
     return NextResponse.json(finalPrompt);
   } catch (error) {
     console.error('Prompt generation error:', error);
+    
+    // Don't expose internal errors
     return NextResponse.json(
-      { error: 'Failed to generate prompt' },
+      { error: 'Unable to generate prompt. Please try again with different parameters.' },
       { status: 500 }
     );
   }
 }
+
+export const POST = createAuthenticatedHandler(handler);

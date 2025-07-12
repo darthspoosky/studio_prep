@@ -20,19 +20,48 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // This check is important. If Firebase isn't configured, we shouldn't try to initialize auth.
-    if (!app) {
+    let unsubscribe: (() => void) | undefined;
+    
+    try {
+      // Check if Firebase app is properly configured
+      if (!app) {
         console.warn("Firebase not configured, authentication will be disabled.");
         setLoading(false);
         return;
-    }
-    const auth = getAuth(app);
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
-      setUser(user);
-      setLoading(false);
-    });
+      }
 
-    return () => unsubscribe();
+      const auth = getAuth(app);
+      
+      // Validate auth instance
+      if (!auth) {
+        console.error("Failed to initialize Firebase Auth");
+        setLoading(false);
+        return;
+      }
+
+      unsubscribe = onAuthStateChanged(
+        auth, 
+        (user) => {
+          setUser(user);
+          setLoading(false);
+        },
+        (error) => {
+          console.error("Auth state change error:", error);
+          setUser(null);
+          setLoading(false);
+        }
+      );
+    } catch (error) {
+      console.error("Failed to set up authentication:", error);
+      setUser(null);
+      setLoading(false);
+    }
+
+    return () => {
+      if (unsubscribe) {
+        unsubscribe();
+      }
+    };
   }, []);
 
   // Display a full-page loader while we check for an active session.

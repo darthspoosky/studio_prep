@@ -225,37 +225,44 @@ const QuizDashboardWidgets: React.FC<QuizDashboardWidgetsProps> = ({ className }
   }, [user, fetchDashboardData]);
   
   return (
-    <div className={`grid gap-4 ${className || ''}`}>
+    <div className={`grid gap-4 ${className || ''}`} role="region" aria-label="Quiz performance dashboard">
       {/* Settings and refresh controls */}
       <div className="flex justify-end mb-2">
         <QuizWidgetSettings 
           preferences={preferences}
           onChange={updatePreferences}
           onRefresh={fetchDashboardData}
+          aria-label="Widget settings and refresh controls"
         />
       </div>
       
       {/* Performance widget */}
       {preferences.showPerformanceMetrics && (
-        <QuizPerformanceWidget 
-          data={{
-            accuracy: performanceData.accuracy,
-            currentStreak: performanceData.currentStreak,
-            bestStreak: performanceData.bestStreak,
-            questionsAttempted: performanceData.questionsAttempted,
-            recentImprovement: performanceData.recentImprovement,
-            weeklyPerformance: performanceData.weeklyPerformance
-          }}
-          loading={loading}
-        />
+        <section aria-labelledby="performance-heading">
+          <h2 id="performance-heading" className="sr-only">Quiz Performance Metrics</h2>
+          <QuizPerformanceWidget 
+            data={{
+              accuracy: performanceData.accuracy,
+              currentStreak: performanceData.currentStreak,
+              bestStreak: performanceData.bestStreak,
+              questionsAttempted: performanceData.questionsAttempted,
+              recentImprovement: performanceData.recentImprovement,
+              weeklyPerformance: performanceData.weeklyPerformance
+            }}
+            loading={loading}
+          />
+        </section>
       )}
       
       {/* Weak areas widget */}
       {preferences.showWeakAreas && (
-        <WeakAreaWidget 
-          weakAreas={weakAreas}
-          loading={loading}
-        />
+        <section aria-labelledby="weak-areas-heading">
+          <h2 id="weak-areas-heading" className="sr-only">Areas for Improvement</h2>
+          <WeakAreaWidget 
+            weakAreas={weakAreas}
+            loading={loading}
+          />
+        </section>
       )}
     </div>
   );

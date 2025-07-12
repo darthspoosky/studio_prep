@@ -25,11 +25,12 @@ import { getUserUsage, type UsageStats } from '@/services/usageService';
 import { getUserQuizStats, type UserQuizStats } from '@/services/quizAttemptsService';
 
 
-const textToSpeech = async (text: string): Promise<{ audio: string }> => {
+const textToSpeech = async (text: string, signal?: AbortSignal): Promise<{ audio: string }> => {
   const response = await fetch('/api/tts', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ text }),
+    signal
   });
   if (!response.ok) {
     throw new Error('TTS Failed');
@@ -524,6 +525,7 @@ export default function NewspaperAnalysisPage() {
   const { user, loading } = useAuth();
   const router = useRouter();
   const finalAnalysisForHistory = useRef<Partial<NewspaperAnalysisOutput>>({});
+  const abortControllerRef = useRef<AbortController | null>(null);
 
   const [isLoading, setIsLoading] = useState(false);
   const [isGeneratingAudio, setIsGeneratingAudio] = useState(false);
@@ -567,6 +569,16 @@ export default function NewspaperAnalysisPage() {
       fetchStats();
     }
   }, [user, loading, router]);
+  
+  // Cleanup effect for component unmount
+  useEffect(() => {
+    return () => {
+      // Cancel any pending requests
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+      }
+    };
+  }, []);
 
   const handleInputChange = (field: keyof typeof inputs, value: string) => {
     setInputs(prev => ({ ...prev, [field]: value }));
@@ -585,8 +597,16 @@ export default function NewspaperAnalysisPage() {
             return;
         }
         setIsLoading(true);
+        // Cancel any existing request
+        if (abortControllerRef.current) {
+            abortControllerRef.current.abort();
+        }
+        abortControllerRef.current = new AbortController();
+        
         try {
-            const res = await fetch(`/api/readArticle?url=${encodeURIComponent(inputs.url)}`);
+            const res = await fetch(`/api/readArticle?url=${encodeURIComponent(inputs.url)}`, {
+                signal: abortControllerRef.current.signal
+            });
             if (!res.ok) {
                 const err = await res.json().catch(() => ({}));
                 const description = err.error 
@@ -602,7 +622,11 @@ export default function NewspaperAnalysisPage() {
             }
             const data = await res.json();
             sourceText = data.text || '';
-        } catch (err) {
+        } catch (err: any) {
+            if (err.name === 'AbortError') {
+                // Request was cancelled, don't show error
+                return;
+            }
             console.error('Article fetch error:', err);
             toast({
                 variant: 'destructive',

@@ -1,0 +1,281 @@
+
+> nextn@0.1.0 dev
+> next dev --turbopack -p 9002
+
+   ▲ Next.js 15.3.3 (Turbopack)
+   - Local:        http://localhost:9002
+   - Network:      http://10.255.255.254:9002
+   - Environments: .env.local
+
+ ✓ Starting...
+ ✓ Ready in 3.1s
+ ⚠ Webpack is configured while Turbopack is not, which may cause problems.
+ ⚠ See instructions if you need to configure Turbopack:
+  https://nextjs.org/docs/app/api-reference/next-config-js/turbo
+
+ ○ Compiling /api/writing-evaluation ...
+ ✓ Compiled /api/writing-evaluation in 2.2s
+ ⚠ ./node_modules/@anthropic-ai/sdk/_shims
+Package node-fetch can't be external
+The request node-fetch matches serverExternalPackages (or the default list).
+The package resolves to a different version when requested from the project directory (3.3.2) compared to the package requested from the importing module (2.7.0).
+Make sure to install the same version of the package in both locations.
+
+
+ ⚠ ./node_modules/openai/_shims
+Package node-fetch can't be external
+The request node-fetch matches serverExternalPackages (or the default list).
+The package resolves to a different version when requested from the project directory (3.3.2) compared to the package requested from the importing module (2.7.0).
+Make sure to install the same version of the package in both locations.
+
+
+Writing evaluation failed: Error: 400 Invalid parameter: 'response_format' of type 'json_object' is not supported with this model.
+    at APIError.generate (src/error.ts:72:13)
+    at OpenAI.makeStatusError (src/core.ts:462:20)
+    at OpenAI.makeRequest (src/core.ts:526:23)
+    at async WritingEvaluationService.analyzeLanguage (src/services/writingEvaluationService.ts:230:21)
+    at async WritingEvaluationService.evaluateWriting (src/services/writingEvaluationService.ts:81:69)
+    at async POST (src/app/api/writing-evaluation/route.ts:68:19)
+  228 | }`;
+  229 |
+> 230 |     const response = await openai.chat.completions.create({
+      |                     ^
+  231 |       model: AI_MODELS.openai.gpt4,
+  232 |       messages: [{ role: 'user', content: prompt }],
+  233 |       temperature: DEFAULT_PARAMS.evaluation.temperature, {
+  status: 400,
+  headers: [Object],
+  request_id: 'req_0a727c5860ce5c987384d938adec67a0',
+  error: [Object],
+  code: null,
+  param: 'response_format',
+  type: 'invalid_request_error'
+}
+Writing evaluation API error: Error: Evaluation failed: 400 Invalid parameter: 'response_format' of type 'json_object' is not supported with this model.
+    at WritingEvaluationService.evaluateWriting (src/services/writingEvaluationService.ts:108:12)
+    at async POST (src/app/api/writing-evaluation/route.ts:68:19)
+  106 |     } catch (error) {
+  107 |       console.error('Writing evaluation failed:', error);
+> 108 |       throw new Error(`Evaluation failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      |            ^
+  109 |     }
+  110 |   }
+  111 |
+ POST /api/writing-evaluation 500 in 3568ms
+ ⚠ ./node_modules/@anthropic-ai/sdk/_shims
+Package node-fetch can't be external
+The request node-fetch matches serverExternalPackages (or the default list).
+The package resolves to a different version when requested from the project directory (3.3.2) compared to the package requested from the importing module (2.7.0).
+Make sure to install the same version of the package in both locations.
+
+
+ ⚠ ./node_modules/openai/_shims
+Package node-fetch can't be external
+The request node-fetch matches serverExternalPackages (or the default list).
+The package resolves to a different version when requested from the project directory (3.3.2) compared to the package requested from the importing module (2.7.0).
+Make sure to install the same version of the package in both locations.
+
+
+Evaluation completed for UPSC Mains - Score: 73
+ POST /api/writing-evaluation 200 in 23261ms
+ ⚠ ./node_modules/@anthropic-ai/sdk/_shims
+Package node-fetch can't be external
+The request node-fetch matches serverExternalPackages (or the default list).
+The package resolves to a different version when requested from the project directory (3.3.2) compared to the package requested from the importing module (2.7.0).
+Make sure to install the same version of the package in both locations.
+
+
+ ⚠ ./node_modules/openai/_shims
+Package node-fetch can't be external
+The request node-fetch matches serverExternalPackages (or the default list).
+The package resolves to a different version when requested from the project directory (3.3.2) compared to the package requested from the importing module (2.7.0).
+Make sure to install the same version of the package in both locations.
+
+
+Writing evaluation failed: SyntaxError: Unexpected token T in JSON at position 1247
+    at JSON.parse (<anonymous>)
+    at WritingEvaluationService.analyzeStructure (src/services/writingEvaluationService.ts:194:18)
+    at async WritingEvaluationService.evaluateWriting (src/services/writingEvaluationService.ts:81:69)
+    at async POST (src/app/api/writing-evaluation/route.ts:68:19)
+  192 |     const content = response.content[0];
+  193 |     if (content.type === 'text') {
+> 194 |       return JSON.parse(content.text);
+      |                  ^
+  195 |     }
+  196 |     throw new Error('Unexpected response format from Claude');
+  197 |   }
+Writing evaluation API error: Error: Evaluation failed: Unexpected token T in JSON at position 1247
+    at WritingEvaluationService.evaluateWriting (src/services/writingEvaluationService.ts:108:12)
+    at async POST (src/app/api/writing-evaluation/route.ts:68:19)
+  106 |     } catch (error) {
+  107 |       console.error('Writing evaluation failed:', error);
+> 108 |       throw new Error(`Evaluation failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      |            ^
+  109 |     }
+  110 |   }
+  111 |
+ POST /api/writing-evaluation 500 in 13602ms
+ ○ Compiling /writing-practice ...
+ ✓ Compiled /writing-practice in 16.3s
+ ⚠ Unsupported metadata viewport is configured in metadata export in /writing-practice. Please move it to viewport export instead.
+Read more: https://nextjs.org/docs/app/api-reference/functions/generate-viewport
+ ⚠ Unsupported metadata themeColor is configured in metadata export in /writing-practice. Please move it to viewport export instead.
+Read more: https://nextjs.org/docs/app/api-reference/functions/generate-viewport
+ GET /writing-practice 200 in 18684ms
+ ○ Compiling /favicon.ico ...
+ ✓ Compiled /favicon.ico in 974ms
+ GET /favicon.ico 200 in 1348ms
+ GET /favicon.ico?favicon.56766c03.ico 200 in 400ms
+ ○ Compiling /_not-found/page ...
+ ✓ Compiled /_not-found/page in 4.1s
+ ⚠ Unsupported metadata viewport is configured in metadata export in /manifest.json. Please move it to viewport export instead.
+Read more: https://nextjs.org/docs/app/api-reference/functions/generate-viewport
+ ⚠ Unsupported metadata themeColor is configured in metadata export in /manifest.json. Please move it to viewport export instead.
+Read more: https://nextjs.org/docs/app/api-reference/functions/generate-viewport
+ GET /manifest.json 404 in 4223ms
+ ○ Compiling /api/writing-evaluation/realtime ...
+ ✓ Compiled /api/writing-evaluation/realtime in 1878ms
+ ⚠ ./node_modules/@anthropic-ai/sdk/_shims
+Package node-fetch can't be external
+The request node-fetch matches serverExternalPackages (or the default list).
+The package resolves to a different version when requested from the project directory (3.3.2) compared to the package requested from the importing module (2.7.0).
+Make sure to install the same version of the package in both locations.
+
+
+ ⚠ ./node_modules/openai/_shims
+Package node-fetch can't be external
+The request node-fetch matches serverExternalPackages (or the default list).
+The package resolves to a different version when requested from the project directory (3.3.2) compared to the package requested from the importing module (2.7.0).
+Make sure to install the same version of the package in both locations.
+
+
+Realtime suggestions error: Error [ZodError]: [
+  {
+    "code": "too_big",
+    "maximum": 5000,
+    "type": "string",
+    "inclusive": true,
+    "exact": false,
+    "message": "String must contain at most 5000 character(s)",
+    "path": [
+      "content"
+    ]
+  }
+]
+    at POST (src/app/api/writing-evaluation/realtime/route.ts:53:71)
+  51 |     });
+  52 |
+> 53 |     const { content, context, questionText, examType } = requestSchema.parse(body);
+     |                                                                       ^
+  54 |
+  55 |     // Quick validation - don't process if content is too short
+  56 |     if (content.length < 50) { {
+  issues: [Array],
+  addIssue: [Function (anonymous)],
+  addIssues: [Function (anonymous)]
+}
+ POST /api/writing-evaluation/realtime 400 in 2530ms
+ ⚠ ./node_modules/@anthropic-ai/sdk/_shims
+Package node-fetch can't be external
+The request node-fetch matches serverExternalPackages (or the default list).
+The package resolves to a different version when requested from the project directory (3.3.2) compared to the package requested from the importing module (2.7.0).
+Make sure to install the same version of the package in both locations.
+
+
+ ⚠ ./node_modules/openai/_shims
+Package node-fetch can't be external
+The request node-fetch matches serverExternalPackages (or the default list).
+The package resolves to a different version when requested from the project directory (3.3.2) compared to the package requested from the importing module (2.7.0).
+Make sure to install the same version of the package in both locations.
+
+
+Claude JSON parse error: {
+  "score": 92,
+  "introduction": 95,
+  "flow": 90,
+  "organization": 95,
+  "transitions": 85,
+  "conclusion": 90,
+  "coherence": 95,
+  "strengths": [
+    "Strong opening hook that immediately establishes relevance",
+    "Clear thematic organization with distinct sections",
+    "Excellent use of subheadings to structure complex information",
+    "Comprehensive coverage moving from broad concepts to specific examples",
+    "Balanced treatment of benefits and challenges"
+  ],
+  "improvements": [
+    "Some transitions between major sections could be smoother",
+    "Impact section could be more clearly differentiated from Role section",
+    "Some redundancy between Digital Citizenship and Empowered Citizens sections"
+  ],
+  "structuralSuggestions": [
+    "Consider merging similar subsections under Impact and Role sections",
+    "Add brief transition paragraphs between major sections",
+    "Consider using a numbered structure for the challenges section",
+    "Add summary sentences at the end of major sections to reinforce key points",
+    "Consider moving Way Forward section before Conclusion for better flow"
+  ]
+}
+
+The answer demonstrates excellent overall structure with a clear progression from concept introduction to specific applications, impacts, challenges, and solutions. The introduction effectively hooks readers with the concept of a "silent revolution" and establishes the essay's scope. The body is well-organized with logical groupings and helpful subheadings, though some sections could be more distinctly separated. The conclusion effectively brings together the main themes while adding forward-looking perspective. The primary area for improvement is in transitions between major sections, which sometimes feel abrupt despite the strong internal organization within sections.
+Parse error: SyntaxError: Unexpected token T in JSON at position 1130
+    at JSON.parse (<anonymous>)
+    at WritingEvaluationService.analyzeStructure (src/services/writingEvaluationService.ts:195:20)
+    at async WritingEvaluationService.evaluateWriting (src/services/writingEvaluationService.ts:81:69)
+    at async POST (src/app/api/writing-evaluation/route.ts:68:19)
+  193 |     if (content.type === 'text') {
+  194 |       try {
+> 195 |         return JSON.parse(content.text);
+      |                    ^
+  196 |       } catch (parseError) {
+  197 |         console.error('Claude JSON parse error:', content.text);
+  198 |         console.error('Parse error:', parseError);
+Evaluation completed for UPSC Mains - Score: 85
+ POST /api/writing-evaluation 200 in 28710ms
+ ⚠ Unsupported metadata viewport is configured in metadata export in /writing-practice. Please move it to viewport export instead.
+Read more: https://nextjs.org/docs/app/api-reference/functions/generate-viewport
+ ⚠ Unsupported metadata themeColor is configured in metadata export in /writing-practice. Please move it to viewport export instead.
+Read more: https://nextjs.org/docs/app/api-reference/functions/generate-viewport
+ GET /writing-practice 200 in 227ms
+ GET /favicon.ico 200 in 277ms
+ ⚠ Unsupported metadata viewport is configured in metadata export in /manifest.json. Please move it to viewport export instead.
+Read more: https://nextjs.org/docs/app/api-reference/functions/generate-viewport
+ ⚠ Unsupported metadata themeColor is configured in metadata export in /manifest.json. Please move it to viewport export instead.
+Read more: https://nextjs.org/docs/app/api-reference/functions/generate-viewport
+ GET /manifest.json 404 in 136ms
+ GET /favicon.ico?favicon.56766c03.ico 200 in 304ms
+ ○ Compiling / ...
+ ⚠ Unsupported metadata viewport is configured in metadata export in /api/analytics/collect. Please move it to viewport export instead.
+Read more: https://nextjs.org/docs/app/api-reference/functions/generate-viewport
+ ⚠ Unsupported metadata themeColor is configured in metadata export in /api/analytics/collect. Please move it to viewport export instead.
+Read more: https://nextjs.org/docs/app/api-reference/functions/generate-viewport
+ POST /api/analytics/collect 404 in 391ms
+ ✓ Compiled / in 17.7s
+ ⚠ ./node_modules/gaxios/build/src
+Package node-fetch can't be external
+The request node-fetch matches serverExternalPackages (or the default list).
+The package resolves to a different version when requested from the project directory (3.3.2) compared to the package requested from the importing module (2.7.0).
+Make sure to install the same version of the package in both locations.
+
+
+ ⚠ ./node_modules/google-gax/build/src
+Package node-fetch can't be external
+The request node-fetch matches serverExternalPackages (or the default list).
+The package resolves to a different version when requested from the project directory (3.3.2) compared to the package requested from the importing module (2.7.0).
+Make sure to install the same version of the package in both locations.
+
+
+ ⚠ ./node_modules/teeny-request/build/src
+Package node-fetch can't be external
+The request node-fetch matches serverExternalPackages (or the default list).
+The package resolves to a different version when requested from the project directory (3.3.2) compared to the package requested from the importing module (2.7.0).
+Make sure to install the same version of the package in both locations.
+
+
+ ⚠ Unsupported metadata viewport is configured in metadata export in /. Please move it to viewport export instead.
+Read more: https://nextjs.org/docs/app/api-reference/functions/generate-viewport
+ ⚠ Unsupported metadata themeColor is configured in metadata export in /. Please move it to viewport export instead.
+Read more: https://nextjs.org/docs/app/api-reference/functions/generate-viewport
+ GET / 200 in 23614ms
+ GET /favicon.ico 200 in 285ms

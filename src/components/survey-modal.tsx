@@ -85,6 +85,7 @@ const SurveyModal = ({ isOpen, onOpenChange }: SurveyModalProps) => {
   const [isAwaitingOtherInputFor, setIsAwaitingOtherInputFor] = useState<keyof FormData | null>(null);
   const { toast } = useToast();
   const scrollAreaRef = useRef<HTMLDivElement>(null);
+  const timeoutRefs = useRef<NodeJS.Timeout[]>([]);
 
   const form = useForm<FormData>({
     resolver: zodResolver(formSchema),
@@ -106,14 +107,24 @@ const SurveyModal = ({ isOpen, onOpenChange }: SurveyModalProps) => {
       setMessages([{ id: Date.now(), sender: 'bot', content: questions[0].text }]);
     }
   }, [isOpen]);
+  
+  // Cleanup effect for component unmount
+  useEffect(() => {
+    return () => {
+      // Clean up all timeouts
+      timeoutRefs.current.forEach(timeout => clearTimeout(timeout));
+      timeoutRefs.current = [];
+    };
+  }, []);
 
   useEffect(() => {
     if (scrollAreaRef.current) {
         const viewport = scrollAreaRef.current.querySelector('div[data-radix-scroll-area-viewport]');
         if (viewport) {
-          setTimeout(() => {
+          const scrollTimeout = setTimeout(() => {
             viewport.scrollTop = viewport.scrollHeight;
           }, 100);
+          timeoutRefs.current.push(scrollTimeout);
         }
     }
   }, [messages]);
@@ -128,10 +139,11 @@ const SurveyModal = ({ isOpen, onOpenChange }: SurveyModalProps) => {
     
     const nextIndex = currentQuestionIndex + 1;
     if (nextIndex < questions.length) {
-      setTimeout(() => {
+      const nextTimeout = setTimeout(() => {
         addMessage('bot', questions[nextIndex].text);
         setCurrentQuestionIndex(nextIndex);
       }, 500);
+      timeoutRefs.current.push(nextTimeout);
     } else {
       // All questions answered, submit the form.
       handleSubmit(onSubmit)();
@@ -142,7 +154,7 @@ const SurveyModal = ({ isOpen, onOpenChange }: SurveyModalProps) => {
     if (option === 'Other') {
       addMessage('user', 'Other');
       setIsAwaitingOtherInputFor(key);
-      setTimeout(() => {
+      const promptTimeout = setTimeout(() => {
         let prompt = "Please tell us more.";
         if (key === 'frustrations') {
             prompt = "I see. Could you please describe your frustrations?";
@@ -151,6 +163,7 @@ const SurveyModal = ({ isOpen, onOpenChange }: SurveyModalProps) => {
         }
         addMessage('bot', prompt);
       }, 500);
+      timeoutRefs.current.push(promptTimeout);
     } else {
       proceedToNextStep(key, option);
     }

@@ -34,7 +34,7 @@ interface UploadResult {
   count?: number;
   errors?: string[];
   message?: string;
-  data?: any;
+  data?: unknown;
 } 
 
 const exampleJson = `
@@ -70,7 +70,7 @@ export default function AdminUploadPage() {
   const [uploadStatus, setUploadStatus] = useState<UploadStatus>('idle');
   const [uploadResults, setUploadResults] = useState<UploadResult[]>([]);
   const [isAuthorized, setIsAuthorized] = useState(false);
-  const [formData, setFormData] = useState<Record<string, any>>({});
+  const [formData, setFormData] = useState<Record<string, string | number | boolean>>({});
   const [pdfToQuizConfig, setPdfToQuizConfig] = useState({ examType: 'prelims', questionCount: 10 });
   const [extractedQuestions, setExtractedQuestions] = useState<Question[] | null>(null);
 
@@ -115,11 +115,11 @@ export default function AdminUploadPage() {
           throw new Error('Each question object is missing required fields.');
       }
 
-    } catch (error: any) {
+    } catch (error: unknown) {
       toast({
         variant: 'destructive',
         title: 'Invalid JSON format',
-        description: error.message || 'Please check the format and try again.',
+        description: error instanceof Error ? error.message : 'Please check the format and try again.',
       });
       return;
     }
@@ -139,17 +139,17 @@ export default function AdminUploadPage() {
         description: `${count} questions have been successfully added to the database.`,
       });
       setJsonInput('');
-    } catch (error: any) {
+    } catch (error: unknown) {
       const result: UploadResult = {
         success: false,
-        errors: [error.message || 'Upload failed']
+        errors: [error instanceof Error ? error.message : 'Upload failed']
       };
       setUploadResults(prev => [...prev, result]);
       setUploadStatus('error');
       toast({
         variant: 'destructive',
         title: 'Upload Failed',
-        description: error.message || 'Could not upload questions to the database.',
+        description: error instanceof Error ? error.message : 'Could not upload questions to the database.',
       });
     }
   };
@@ -183,9 +183,9 @@ export default function AdminUploadPage() {
       setExtractedQuestions(result.questions);
       toast({ title: 'Conversion Successful', description: `${result.questions.length} questions extracted from the PDF.` });
       setUploadStatus('success');
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('PDF to Quiz conversion error:', error);
-      toast({ variant: 'destructive', title: 'Conversion Failed', description: error.message });
+      toast({ variant: 'destructive', title: 'Conversion Failed', description: error instanceof Error ? error.message : 'Conversion failed' });
       setUploadStatus('error');
     }
   };
@@ -253,7 +253,7 @@ export default function AdminUploadPage() {
       
       // Upload content using the appropriate service
       const result = await handleUploadByType(activeTab, { 
-        fileInput, 
+        fileInput: fileInput || undefined, 
         jsonInput: jsonInput.trim() || undefined, 
         formData: cleanFormData 
       });
@@ -264,17 +264,17 @@ export default function AdminUploadPage() {
         description: result.message || 'Content uploaded successfully',
       });
       resetForm();
-    } catch (error: any) {
+    } catch (error: unknown) {
       const result: UploadResult = {
         success: false,
-        errors: [error.message || 'Upload failed']
+        errors: [error instanceof Error ? error.message : 'Upload failed']
       };
       setUploadResults(prev => [...prev, result]);
       setUploadStatus('error');
       toast({
         variant: 'destructive',
         title: 'Upload Failed',
-        description: error.message || 'Could not upload content.',
+        description: error instanceof Error ? error.message : 'Could not upload content.',
       });
     }
   };
@@ -291,7 +291,7 @@ export default function AdminUploadPage() {
   };
 
   // Use the actual upload service for different content types
-  const handleUploadByType = async (contentType: ContentType, data: any): Promise<UploadResult> => {
+  const handleUploadByType = async (contentType: ContentType, data: { fileInput: File | undefined; jsonInput?: string; formData: Record<string, string | number | boolean> }): Promise<UploadResult> => {
     const result = await uploadContentByType(contentType, data);
     return {
       success: result.success,
@@ -320,58 +320,63 @@ export default function AdminUploadPage() {
           </div>
 
           <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as ContentType)} className="space-y-6">
-            <TabsList className="grid w-full grid-cols-8">
-              <TabsTrigger value="questions" className="flex items-center gap-2">
-                <FileText className="h-4 w-4" />
+            <TabsList className="grid w-full grid-cols-8" role="tablist" aria-label="Content management sections">
+              <TabsTrigger value="questions" className="flex items-center gap-2" aria-label="Upload past year questions">
+                <FileText className="h-4 w-4" aria-hidden="true" />
                 Questions
               </TabsTrigger>
-              <TabsTrigger value="pdf-to-quiz" className="flex items-center gap-2">
-                <Wand2 className="h-4 w-4" />
+              <TabsTrigger value="pdf-to-quiz" className="flex items-center gap-2" aria-label="Convert PDF to quiz questions">
+                <Wand2 className="h-4 w-4" aria-hidden="true" />
                 PDF to Quiz
               </TabsTrigger>
-              <TabsTrigger value="books" className="flex items-center gap-2">
-                <Book className="h-4 w-4" />
+              <TabsTrigger value="books" className="flex items-center gap-2" aria-label="Upload study materials and books">
+                <Book className="h-4 w-4" aria-hidden="true" />
                 Books
               </TabsTrigger>
-              <TabsTrigger value="images" className="flex items-center gap-2">
-                <Image className="h-4 w-4" />
+              <TabsTrigger value="images" className="flex items-center gap-2" aria-label="Upload media assets and images">
+                <Image className="h-4 w-4" aria-hidden="true" />
                 Images
               </TabsTrigger>
-              <TabsTrigger value="news" className="flex items-center gap-2">
-                <Newspaper className="h-4 w-4" />
+              <TabsTrigger value="news" className="flex items-center gap-2" aria-label="Upload current affairs content">
+                <Newspaper className="h-4 w-4" aria-hidden="true" />
                 News
               </TabsTrigger>
-              <TabsTrigger value="syllabus" className="flex items-center gap-2">
-                <FileText className="h-4 w-4" />
+              <TabsTrigger value="syllabus" className="flex items-center gap-2" aria-label="Manage UPSC syllabus data">
+                <FileText className="h-4 w-4" aria-hidden="true" />
                 Syllabus
               </TabsTrigger>
-              <TabsTrigger value="users" className="flex items-center gap-2">
-                <Users className="h-4 w-4" />
+              <TabsTrigger value="users" className="flex items-center gap-2" aria-label="User management operations">
+                <Users className="h-4 w-4" aria-hidden="true" />
                 Users
               </TabsTrigger>
-              <TabsTrigger value="analytics" className="flex items-center gap-2">
-                <BarChart3 className="h-4 w-4" />
+              <TabsTrigger value="analytics" className="flex items-center gap-2" aria-label="Analytics and reporting">
+                <BarChart3 className="h-4 w-4" aria-hidden="true" />
                 Analytics
               </TabsTrigger>
             </TabsList>
 
             {/* Upload Results Display */}
             {uploadResults.length > 0 && (
-              <Card className="mb-6">
+              <Card className="mb-6" role="region" aria-label="Upload results">
                 <CardHeader className="flex flex-row items-center justify-between">
                   <CardTitle className="text-lg">Upload Results</CardTitle>
-                  <Button variant="outline" size="sm" onClick={clearResults}>
-                    <X className="h-4 w-4" />
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={clearResults}
+                    aria-label="Clear all upload results"
+                  >
+                    <X className="h-4 w-4" aria-hidden="true" />
                   </Button>
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-2">
                     {uploadResults.map((result, index) => (
-                      <Alert key={index} variant={result.success ? 'default' : 'destructive'}>
+                      <Alert key={index} variant={result.success ? 'default' : 'destructive'} role="alert">
                         {result.success ? (
-                          <CheckCircle className="h-4 w-4" />
+                          <CheckCircle className="h-4 w-4" aria-hidden="true" />
                         ) : (
-                          <AlertCircle className="h-4 w-4" />
+                          <AlertCircle className="h-4 w-4" aria-hidden="true" />
                         )}
                         <AlertDescription>
                           {result.message}
@@ -415,7 +420,11 @@ export default function AdminUploadPage() {
                           onChange={(e) => setJsonInput(e.target.value)}
                           placeholder="Paste your JSON array here..."
                           className="h-32 font-mono text-sm"
+                          aria-describedby="json-input-help"
                         />
+                        <div id="json-input-help" className="sr-only">
+                          Paste JSON formatted questions array. Each question should include question text, options, correct answer ID, year, subject, and topic.
+                        </div>
                       </div>
                     </div>
                     <div>
@@ -500,7 +509,7 @@ export default function AdminUploadPage() {
                         {extractedQuestions.map((q, i) => (
                            <div key={i} className="p-2 border-b">
                              <p className="font-medium">{i+1}. {q.question}</p>
-                             <p className="text-xs text-muted-foreground pl-4">Correct Answer: {q.options.find(o => o.correct)?.text}</p>
+                             <p className="text-xs text-muted-foreground pl-4">Correct Answer: {q.options?.find((o: any) => o.correct)?.text || 'Not specified'}</p>
                            </div>
                         ))}
                       </div>
@@ -558,7 +567,7 @@ export default function AdminUploadPage() {
                         <Label htmlFor="book-title">Title</Label>
                         <Input
                           id="book-title"
-                          value={formData.title || ''}
+                          value={String(formData.title || '')}
                           onChange={(e) => setFormData({...formData, title: e.target.value})}
                           placeholder="Enter book title"
                         />
@@ -567,7 +576,7 @@ export default function AdminUploadPage() {
                         <Label htmlFor="book-author">Author</Label>
                         <Input
                           id="book-author"
-                          value={formData.author || ''}
+                          value={String(formData.author || '')}
                           onChange={(e) => setFormData({...formData, author: e.target.value})}
                           placeholder="Enter author name"
                         />
@@ -576,7 +585,7 @@ export default function AdminUploadPage() {
                     <div className="space-y-4">
                       <div>
                         <Label htmlFor="book-subject">Subject</Label>
-                        <Select value={formData.subject || ''} onValueChange={(value) => setFormData({...formData, subject: value})}>
+                        <Select value={String(formData.subject || '')} onValueChange={(value) => setFormData({...formData, subject: value})}>
                           <SelectTrigger>
                             <SelectValue placeholder="Select subject" />
                           </SelectTrigger>
@@ -593,7 +602,7 @@ export default function AdminUploadPage() {
                       </div>
                       <div>
                         <Label htmlFor="book-category">Category</Label>
-                        <Select value={formData.category || ''} onValueChange={(value) => setFormData({...formData, category: value})}>
+                        <Select value={String(formData.category || '')} onValueChange={(value) => setFormData({...formData, category: value})}>
                           <SelectTrigger>
                             <SelectValue placeholder="Select category" />
                           </SelectTrigger>
@@ -610,7 +619,7 @@ export default function AdminUploadPage() {
                         <Label htmlFor="book-description">Description</Label>
                         <Textarea
                           id="book-description"
-                          value={formData.description || ''}
+                          value={String(formData.description || '')}
                           onChange={(e) => setFormData({...formData, description: e.target.value})}
                           placeholder="Enter book description"
                           className="h-20"
@@ -658,7 +667,7 @@ export default function AdminUploadPage() {
                       </div>
                       <div>
                         <Label htmlFor="image-category">Category</Label>
-                        <Select value={formData.imageCategory || ''} onValueChange={(value) => setFormData({...formData, imageCategory: value})}>
+                        <Select value={String(formData.imageCategory || '')} onValueChange={(value) => setFormData({...formData, imageCategory: value})}>
                           <SelectTrigger>
                             <SelectValue placeholder="Select category" />
                           </SelectTrigger>
@@ -677,7 +686,7 @@ export default function AdminUploadPage() {
                     <div className="space-y-4">
                       <div>
                         <Label htmlFor="image-subject">Subject</Label>
-                        <Select value={formData.imageSubject || ''} onValueChange={(value) => setFormData({...formData, imageSubject: value})}>
+                        <Select value={String(formData.imageSubject || '')} onValueChange={(value) => setFormData({...formData, imageSubject: value})}>
                           <SelectTrigger>
                             <SelectValue placeholder="Select subject" />
                           </SelectTrigger>
@@ -696,7 +705,7 @@ export default function AdminUploadPage() {
                         <Label htmlFor="image-tags">Tags (comma separated)</Label>
                         <Input
                           id="image-tags"
-                          value={formData.imageTags || ''}
+                          value={String(formData.imageTags || '')}
                           onChange={(e) => setFormData({...formData, imageTags: e.target.value})}
                           placeholder="Enter tags separated by commas"
                         />
@@ -733,7 +742,7 @@ export default function AdminUploadPage() {
                     <div className="space-y-4">
                       <div>
                         <Label htmlFor="news-source">Source</Label>
-                        <Select value={formData.newsSource || ''} onValueChange={(value) => setFormData({...formData, newsSource: value})}>
+                        <Select value={String(formData.newsSource || '')} onValueChange={(value) => setFormData({...formData, newsSource: value})}>
                           <SelectTrigger>
                             <SelectValue placeholder="Select source" />
                           </SelectTrigger>
@@ -751,7 +760,7 @@ export default function AdminUploadPage() {
                         <Label htmlFor="news-url">Article URL</Label>
                         <Input
                           id="news-url"
-                          value={formData.newsUrl || ''}
+                          value={String(formData.newsUrl || '')}
                           onChange={(e) => setFormData({...formData, newsUrl: e.target.value})}
                           placeholder="Enter article URL"
                         />
@@ -761,7 +770,7 @@ export default function AdminUploadPage() {
                         <Input
                           id="news-date"
                           type="date"
-                          value={formData.newsDate || ''}
+                          value={String(formData.newsDate || '')}
                           onChange={(e) => setFormData({...formData, newsDate: e.target.value})}
                         />
                       </div>
@@ -769,7 +778,7 @@ export default function AdminUploadPage() {
                     <div className="space-y-4">
                       <div>
                         <Label htmlFor="news-category">Category</Label>
-                        <Select value={formData.newsCategory || ''} onValueChange={(value) => setFormData({...formData, newsCategory: value})}>
+                        <Select value={String(formData.newsCategory || '')} onValueChange={(value) => setFormData({...formData, newsCategory: value})}>
                           <SelectTrigger>
                             <SelectValue placeholder="Select category" />
                           </SelectTrigger>
@@ -787,7 +796,7 @@ export default function AdminUploadPage() {
                       </div>
                       <div>
                         <Label htmlFor="news-relevance">UPSC Relevance</Label>
-                        <Select value={formData.newsRelevance || ''} onValueChange={(value) => setFormData({...formData, newsRelevance: value})}>
+                        <Select value={String(formData.newsRelevance || '')} onValueChange={(value) => setFormData({...formData, newsRelevance: value})}>
                           <SelectTrigger>
                             <SelectValue placeholder="Select relevance" />
                           </SelectTrigger>
@@ -839,7 +848,7 @@ export default function AdminUploadPage() {
                   <div className="space-y-4">
                     <div>
                       <Label htmlFor="syllabus-type">Syllabus Type</Label>
-                      <Select value={formData.syllabusType || ''} onValueChange={(value) => setFormData({...formData, syllabusType: value})}>
+                      <Select value={String(formData.syllabusType || '')} onValueChange={(value) => setFormData({...formData, syllabusType: value})}>
                         <SelectTrigger>
                           <SelectValue placeholder="Select syllabus type" />
                         </SelectTrigger>
@@ -892,7 +901,7 @@ export default function AdminUploadPage() {
                     <div className="space-y-4">
                       <div>
                         <Label htmlFor="user-operation">Operation</Label>
-                        <Select value={formData.userOperation || ''} onValueChange={(value) => setFormData({...formData, userOperation: value})}>
+                        <Select value={String(formData.userOperation || '')} onValueChange={(value) => setFormData({...formData, userOperation: value})}>
                           <SelectTrigger>
                             <SelectValue placeholder="Select operation" />
                           </SelectTrigger>
@@ -917,7 +926,7 @@ export default function AdminUploadPage() {
                     <div className="space-y-4">
                       <div>
                         <Label htmlFor="user-role">Default Role</Label>
-                        <Select value={formData.userRole || ''} onValueChange={(value) => setFormData({...formData, userRole: value})}>
+                        <Select value={String(formData.userRole || '')} onValueChange={(value) => setFormData({...formData, userRole: value})}>
                           <SelectTrigger>
                             <SelectValue placeholder="Select role" />
                           </SelectTrigger>
@@ -933,7 +942,7 @@ export default function AdminUploadPage() {
                         <Label htmlFor="user-batch">Batch/Group</Label>
                         <Input
                           id="user-batch"
-                          value={formData.userBatch || ''}
+                          value={String(formData.userBatch || '')}
                           onChange={(e) => setFormData({...formData, userBatch: e.target.value})}
                           placeholder="Enter batch or group name"
                         />
@@ -970,7 +979,7 @@ export default function AdminUploadPage() {
                     <div className="space-y-4">
                       <div>
                         <Label htmlFor="analytics-type">Analytics Type</Label>
-                        <Select value={formData.analyticsType || ''} onValueChange={(value) => setFormData({...formData, analyticsType: value})}>
+                        <Select value={String(formData.analyticsType || '')} onValueChange={(value) => setFormData({...formData, analyticsType: value})}>
                           <SelectTrigger>
                             <SelectValue placeholder="Select type" />
                           </SelectTrigger>
@@ -998,12 +1007,12 @@ export default function AdminUploadPage() {
                         <div className="flex gap-2">
                           <Input
                             type="date"
-                            value={formData.startDate || ''}
+                            value={String(formData.startDate || '')}
                             onChange={(e) => setFormData({...formData, startDate: e.target.value})}
                           />
                           <Input
                             type="date"
-                            value={formData.endDate || ''}
+                            value={String(formData.endDate || '')}
                             onChange={(e) => setFormData({...formData, endDate: e.target.value})}
                           />
                         </div>
@@ -1012,7 +1021,7 @@ export default function AdminUploadPage() {
                         <Label htmlFor="analytics-description">Description</Label>
                         <Textarea
                           id="analytics-description"
-                          value={formData.analyticsDescription || ''}
+                          value={String(formData.analyticsDescription || '')}
                           onChange={(e) => setFormData({...formData, analyticsDescription: e.target.value})}
                           placeholder="Enter description for this analytics data"
                           className="h-20"

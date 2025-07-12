@@ -5,21 +5,24 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { ProgressTrackingService } from '@/services/progressTrackingService';
+import { createAuthenticatedHandler, AuthenticatedRequest } from '@/lib/auth-middleware';
 import { z } from 'zod';
 
-export async function GET(request: NextRequest) {
+async function getHandler(request: AuthenticatedRequest) {
   try {
     const { searchParams } = new URL(request.url);
+    const authenticatedUserId = request.user.uid;
     
     const querySchema = z.object({
-      userId: z.string().min(1, 'User ID required'),
       timeframe: z.enum(['7d', '30d', '90d', 'all']).default('30d')
     });
 
-    const { userId, timeframe } = querySchema.parse({
-      userId: searchParams.get('userId'),
+    const { timeframe } = querySchema.parse({
       timeframe: searchParams.get('timeframe') || '30d'
     });
+
+    // Always use the authenticated user's ID for security
+    const userId = authenticatedUserId;
 
     const progressService = new ProgressTrackingService();
     const analytics = await progressService.getProgressAnalytics(userId, timeframe);
@@ -55,12 +58,12 @@ export async function GET(request: NextRequest) {
   }
 }
 
-export async function POST(request: NextRequest) {
+async function postHandler(request: AuthenticatedRequest) {
   try {
     const body = await request.json();
+    const authenticatedUserId = request.user.uid;
     
     const sessionSchema = z.object({
-      userId: z.string().min(1, 'User ID required'),
       questionId: z.string().min(1, 'Question ID required'),
       examType: z.string().min(1, 'Exam type required'),
       subject: z.string().min(1, 'Subject required'),
@@ -80,7 +83,13 @@ export async function POST(request: NextRequest) {
       })
     });
 
-    const sessionData = sessionSchema.parse(body);
+    const validatedData = sessionSchema.parse(body);
+    
+    // Always use authenticated user ID for security
+    const sessionData = {
+      ...validatedData,
+      userId: authenticatedUserId
+    };
 
     const progressService = new ProgressTrackingService();
     const recordedSession = await progressService.recordWritingSession(sessionData);
@@ -114,3 +123,6 @@ export async function POST(request: NextRequest) {
     );
   }
 }
+
+export const GET = createAuthenticatedHandler(getHandler);
+export const POST = createAuthenticatedHandler(postHandler);

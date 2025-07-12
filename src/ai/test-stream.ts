@@ -1,7 +1,6 @@
 
 import { analyzeNewspaperArticle } from './flows/newspaper-analysis-flow';
 import type { NewspaperAnalysisInput } from './flows/newspaper-analysis-flow';
-import { runFlow } from 'genkit/flow';
 
 // A simple test script to verify the streaming functionality of the newspaper analysis flow.
 async function runTest() {
@@ -15,18 +14,15 @@ async function runTest() {
   };
 
   try {
-    const stream = runFlow(analyzeNewspaperArticle, testInput);
+    const result = await analyzeNewspaperArticle(testInput);
 
-    if (!stream) {
-      console.error('Error: The runFlow function did not return a stream.');
+    if (!result) {
+      console.error('Error: The run function did not return a result.');
       return;
     }
 
-    console.log('\n--- Receiving Stream Chunks ---');
-    for await (const chunk of stream) {
-      console.log('Chunk received:', JSON.stringify(chunk, null, 2));
-    }
-    console.log('\n--- Stream Ended ---');
+    console.log('\n--- Result Received ---');
+    console.log('Result:', JSON.stringify(result, null, 2));
     
   } catch (error) {
     console.error('\n--- An error occurred during the test ---');

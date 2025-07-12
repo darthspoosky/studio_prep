@@ -10,7 +10,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { ArrowLeft, Loader2, Sparkles, FileText, Clock } from "lucide-react";
 import EnhancedWritingEditor from "@/components/writing/EnhancedWritingEditor";
 import EvaluationReport from "@/components/writing/EvaluationReport";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { useRouter } from "next/navigation";
@@ -37,6 +37,7 @@ export default function WritingPracticePage() {
   const [currentMode, setCurrentMode] = useState<'practice' | 'evaluation'>('practice');
   const [evaluationResult, setEvaluationResult] = useState(null);
   const [currentQuestion, setCurrentQuestion] = useState("Discuss the role of technology in modern governance and its impact on citizen-state interaction.");
+  const abortControllerRef = useRef<AbortController | null>(null);
 
   // Layout-related state
   const [quizStats, setQuizStats] = useState<ExtendedUserQuizStats | null>(null);
@@ -63,9 +64,26 @@ export default function WritingPracticePage() {
       fetchStats();
     }
   }, [user, loading, router]);
+  
+  // Cleanup effect for component unmount
+  useEffect(() => {
+    return () => {
+      // Cancel any pending requests
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+      }
+    };
+  }, []);
 
   const handleSubmitAnswer = async (data: any) => {
     setIsLoading(true);
+    
+    // Cancel any existing request
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
+    abortControllerRef.current = new AbortController();
+    
     try {
       const response = await fetch('/api/writing-evaluation', {
         method: 'POST',
@@ -78,7 +96,8 @@ export default function WritingPracticePage() {
           examType: 'UPSC Mains',
           subject: 'General Studies',
           metadata: data.metadata
-        })
+        }),
+        signal: abortControllerRef.current.signal
       });
 
       if (response.ok) {
@@ -92,7 +111,11 @@ export default function WritingPracticePage() {
       } else {
         throw new Error('Evaluation failed');
       }
-    } catch (error) {
+    } catch (error: any) {
+      if (error.name === 'AbortError') {
+        // Request was cancelled, don't show error
+        return;
+      }
       console.error('Evaluation error:', error);
       toast({
         title: "Evaluation Failed",

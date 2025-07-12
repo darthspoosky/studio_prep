@@ -5,6 +5,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { OCRService } from '@/services/ocrService';
+import { createAuthenticatedHandler, getRateLimitKey, rateLimit } from '@/lib/auth-middleware';
 import { z } from 'zod';
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
@@ -16,7 +17,32 @@ const ALLOWED_MIME_TYPES = [
   'application/pdf'
 ];
 
-export async function POST(request: NextRequest) {
+// Enhanced file signature validation
+const FILE_SIGNATURES = {
+  'image/jpeg': [0xFF, 0xD8, 0xFF],
+  'image/png': [0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A],
+  'application/pdf': [0x25, 0x50, 0x44, 0x46] // %PDF
+};
+
+function validateFileSignature(buffer: Buffer, mimeType: string): boolean {
+  const signature = FILE_SIGNATURES[mimeType as keyof typeof FILE_SIGNATURES];
+  if (!signature) return false;
+  
+  if (buffer.length < signature.length) return false;
+  
+  return signature.every((byte, index) => buffer[index] === byte);
+}
+
+async function handler(request: NextRequest) {
+  // Rate limiting - 15 file uploads per hour per user
+  const rateLimitKey = getRateLimitKey(request);
+  if (!rateLimit(rateLimitKey, 15, 3600000)) {
+    return NextResponse.json(
+      { error: 'Rate limit exceeded. Please try again later.' },
+      { status: 429 }
+    );
+  }
+
   try {
     const formData = await request.formData();
     const file = formData.get('file') as File;
@@ -45,8 +71,26 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Validate file name for suspicious patterns
+    const fileName = file.name.toLowerCase();
+    const suspiciousExtensions = ['.exe', '.bat', '.cmd', '.scr', '.jar'];
+    if (suspiciousExtensions.some(ext => fileName.endsWith(ext))) {
+      return NextResponse.json(
+        { error: 'Invalid file type detected.' },
+        { status: 400 }
+      );
+    }
+
     // Convert file to buffer
     const buffer = Buffer.from(await file.arrayBuffer());
+    
+    // Validate file signature for security
+    if (!validateFileSignature(buffer, file.type)) {
+      return NextResponse.json(
+        { error: 'File content does not match declared file type.' },
+        { status: 400 }
+      );
+    }
 
     // Initialize OCR service
     const ocrService = new OCRService();
@@ -115,7 +159,7 @@ export async function POST(request: NextRequest) {
   }
 }
 
-export async function GET() {
+function healthCheckHandler() {
   return NextResponse.json({
     service: 'ocr-upload',
     status: 'active',
@@ -127,6 +171,14 @@ export async function GET() {
       'Automatic error correction',
       'Quality validation',
       'Structure analysis'
-    ]
+    ],
+    security: {
+      fileSignatureValidation: true,
+      rateLimitPerHour: 15,
+      maxFileSize: MAX_FILE_SIZE
+    }
   });
 }
+
+export const POST = createAuthenticatedHandler(handler);
+export const GET = createAuthenticatedHandler(healthCheckHandler);

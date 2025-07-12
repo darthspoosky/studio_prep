@@ -56,6 +56,7 @@ export default function PastYearQuizSession({
     }, 1000);
 
     // Fetch user progress data if logged in
+    const abortController = new AbortController();
     const fetchProgressData = async () => {
       if (user?.uid) {
         try {
@@ -63,7 +64,9 @@ export default function PastYearQuizSession({
           // We don't need to do anything with this yet, but it ensures
           // the user progress document exists for later updates
         } catch (error) {
-          console.error('Error fetching user progress data:', error);
+          if (error instanceof Error && error.name !== 'AbortError') {
+            console.error('Error fetching user progress data:', error);
+          }
         }
       }
     };
@@ -71,7 +74,11 @@ export default function PastYearQuizSession({
     fetchProgressData();
 
     return () => {
-      if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
+      if (timerIntervalRef.current) {
+        clearInterval(timerIntervalRef.current);
+        timerIntervalRef.current = null;
+      }
+      abortController.abort();
     };
   }, [questionSet, startTime, user]);
 
@@ -112,7 +119,10 @@ export default function PastYearQuizSession({
 
   const handleFinish = () => {
     // Stop timer
-    if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
+    if (timerIntervalRef.current) {
+      clearInterval(timerIntervalRef.current);
+      timerIntervalRef.current = null;
+    }
     
     // Save any unanswered questions as skipped
     if (user?.uid) {

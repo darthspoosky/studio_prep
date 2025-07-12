@@ -5,41 +5,20 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { ModelAnswerService } from '@/services/modelAnswerService';
+import { createAuthenticatedHandler, getRateLimitKey, rateLimit } from '@/lib/auth-middleware';
 import { z } from 'zod';
 
-const comparisonRateLimit = new Map<string, { count: number; resetTime: number }>();
-const COMPARISON_RATE_LIMIT = {
-  maxRequests: 5,
-  windowMs: 60 * 1000, // 1 minute
-};
-
-function checkComparisonRateLimit(clientId: string): boolean {
-  const now = Date.now();
-  const clientData = comparisonRateLimit.get(clientId);
-
-  if (!clientData || now > clientData.resetTime) {
-    comparisonRateLimit.set(clientId, { count: 1, resetTime: now + COMPARISON_RATE_LIMIT.windowMs });
-    return true;
+async function handler(request: NextRequest) {
+  // Rate limiting - 5 model comparisons per minute per user
+  const rateLimitKey = getRateLimitKey(request);
+  if (!rateLimit(rateLimitKey, 5, 60000)) {
+    return NextResponse.json(
+      { error: 'Rate limit exceeded for model comparison. Please try again later.' },
+      { status: 429 }
+    );
   }
 
-  if (clientData.count >= COMPARISON_RATE_LIMIT.maxRequests) {
-    return false;
-  }
-
-  clientData.count++;
-  return true;
-}
-
-export async function POST(request: NextRequest) {
   try {
-    // Rate limiting
-    const clientId = request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || 'anonymous';
-    if (!checkComparisonRateLimit(clientId)) {
-      return NextResponse.json(
-        { error: 'Rate limit exceeded for model comparison. Please try again later.' },
-        { status: 429 }
-      );
-    }
 
     const body = await request.json();
     
@@ -145,7 +124,7 @@ export async function POST(request: NextRequest) {
   }
 }
 
-export async function GET() {
+function healthCheckHandler() {
   return NextResponse.json({
     service: 'model-comparison',
     status: 'active',
@@ -155,6 +134,12 @@ export async function GET() {
       'Improvement roadmap generation',
       'Peer performance benchmarking'
     ],
-    rateLimit: COMPARISON_RATE_LIMIT
+    rateLimit: {
+      maxRequests: 5,
+      windowMs: 60000
+    }
   });
 }
+
+export const POST = createAuthenticatedHandler(handler);
+export const GET = createAuthenticatedHandler(healthCheckHandler);
