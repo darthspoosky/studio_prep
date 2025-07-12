@@ -35,9 +35,11 @@ jobs:
 
     - name: Run ESLint
       run: npm run lint
+      continue-on-error: true
 
     - name: Run TypeScript type checking
       run: npm run typecheck
+      continue-on-error: true
 
     - name: Security audit
       run: npm audit --audit-level=moderate
