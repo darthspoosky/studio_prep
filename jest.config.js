@@ -25,7 +25,7 @@ const customJestConfig = {
     '!src/**/index.ts',
     '!src/app/**/layout.tsx',
     '!src/app/**/page.tsx',
-    '!src/ai/**/*', // Exclude AI flows from coverage for now
+    '!src/ai/newspaper-analysis-flow.ts', // Exclude old monolithic file
   ],
   coverageThreshold: {
     global: {
@@ -42,7 +42,7 @@ const customJestConfig = {
   testPathIgnorePatterns: [
     '<rootDir>/.next/',
     '<rootDir>/node_modules/',
-    '<rootDir>/src/ai/', // Temporarily ignore AI tests
+    '<rootDir>/src/ai/newspaper-analysis-flow.ts', // Ignore old monolithic file
   ],
   transformIgnorePatterns: [
     'node_modules/(?!(.*\\.mjs$|@genkit-ai/.*|genkit.*))',

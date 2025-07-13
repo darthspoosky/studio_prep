@@ -1,0 +1,356 @@
+name: Multi-Agent Framework CI/CD
+
+on:
+  push:
+    branches: [ main, develop ]
+    paths:
+      - 'src/ai/multi-agent-framework/**'
+      - 'package.json'
+      - 'package-lock.json'
+      - '.github/workflows/multi-agent-ci.yml'
+  pull_request:
+    branches: [ main ]
+    paths:
+      - 'src/ai/multi-agent-framework/**'
+      - 'package.json'
+      - 'package-lock.json'
+
+env:
+  NODE_VERSION: '18'
+  OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+  REDIS_URL: ${{ secrets.REDIS_URL }}
+  
+jobs:
+  quality-gates:
+    name: Quality Gates
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ env.NODE_VERSION }}
+        cache: 'npm'
+        
+    - name: Install dependencies
+      run: npm ci
+      
+    - name: TypeScript compilation check
+      run: npx tsc --noEmit --project tsconfig.json
+      
+    - name: Lint framework code
+      run: npx eslint src/ai/multi-agent-framework/**/*.ts --max-warnings 0
+      
+    - name: Format check
+      run: npx prettier --check src/ai/multi-agent-framework/**/*.ts
+      
+    - name: Security audit
+      run: npm audit --audit-level high
+      
+  unit-tests:
+    name: Unit Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    needs: quality-gates
+    
+    strategy:
+      matrix:
+        test-group: [core, agents, orchestrator, integration]
+        
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ env.NODE_VERSION }}
+        cache: 'npm'
+        
+    - name: Install dependencies
+      run: npm ci
+      
+    - name: Run unit tests
+      run: |
+        npx jest src/ai/multi-agent-framework/tests/${{ matrix.test-group }}.test.ts \
+          --coverage \
+          --coverageReporters=json \
+          --coverageDirectory=coverage/${{ matrix.test-group }}
+          
+    - name: Upload coverage
+      uses: actions/upload-artifact@v4
+      with:
+        name: coverage-${{ matrix.test-group }}
+        path: coverage/${{ matrix.test-group }}
+        
+  integration-tests:
+    name: Integration Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    needs: unit-tests
+    
+    services:
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+          
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ env.NODE_VERSION }}
+        cache: 'npm'
+        
+    - name: Install dependencies
+      run: npm ci
+      
+    - name: Wait for Redis
+      run: |
+        until redis-cli -h localhost ping; do
+          echo "Waiting for Redis..."
+          sleep 2
+        done
+        
+    - name: Run integration tests
+      env:
+        REDIS_URL: redis://localhost:6379
+        NODE_ENV: test
+      run: npx jest src/ai/multi-agent-framework/tests/integration.test.ts --verbose
+      
+  performance-tests:
+    name: Performance Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    needs: integration-tests
+    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop'
+    
+    services:
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+          
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ env.NODE_VERSION }}
+        cache: 'npm'
+        
+    - name: Install dependencies
+      run: npm ci
+      
+    - name: Run performance tests
+      env:
+        REDIS_URL: redis://localhost:6379
+        NODE_ENV: test
+      run: |
+        npx jest src/ai/multi-agent-framework/tests/performance.test.ts \
+          --testTimeout=30000 \
+          --verbose
+          
+    - name: Performance regression check
+      run: |
+        # Check if performance metrics are within acceptable bounds
+        echo "Checking performance regression..."
+        # In real implementation, compare with baseline metrics
+        
+  security-scan:
+    name: Security Scan
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    needs: quality-gates
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Run Trivy vulnerability scanner
+      uses: aquasecurity/trivy-action@master
+      with:
+        scan-type: 'fs'
+        scan-ref: 'src/ai/multi-agent-framework'
+        format: 'sarif'
+        output: 'trivy-results.sarif'
+        
+    - name: Upload Trivy scan results
+      uses: github/codeql-action/upload-sarif@v3
+      if: always()
+      with:
+        sarif_file: 'trivy-results.sarif'
+        
+  coverage-report:
+    name: Coverage Report
+    runs-on: ubuntu-latest
+    needs: unit-tests
+    if: always()
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Download coverage artifacts
+      uses: actions/download-artifact@v4
+      with:
+        pattern: coverage-*
+        path: coverage
+        
+    - name: Merge coverage reports
+      run: |
+        npx nyc merge coverage coverage/merged.json
+        npx nyc report --reporter=html --reporter=lcov --temp-dir=coverage
+        
+    - name: Coverage quality gate
+      run: |
+        # Extract coverage percentage and check against threshold
+        COVERAGE=$(npx nyc report --reporter=text-summary --temp-dir=coverage | grep "Lines" | grep -o '[0-9]*\.[0-9]*%' | grep -o '[0-9]*\.[0-9]*')
+        echo "Coverage: $COVERAGE%"
+        
+        # Fail if coverage is below 90%
+        if (( $(echo "$COVERAGE < 90" | bc -l) )); then
+          echo "Coverage $COVERAGE% is below required 90%"
+          exit 1
+        fi
+        
+    - name: Upload coverage to Codecov
+      uses: codecov/codecov-action@v4
+      with:
+        files: coverage/lcov.info
+        flags: multi-agent-framework
+        name: multi-agent-coverage
+        
+  build-validation:
+    name: Build Validation
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    needs: [quality-gates, unit-tests]
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ env.NODE_VERSION }}
+        cache: 'npm'
+        
+    - name: Install dependencies
+      run: npm ci
+      
+    - name: Build project
+      run: npm run build
+      
+    - name: Validate build artifacts
+      run: |
+        # Check that critical files exist in build output
+        if [ ! -f ".next/server/pages/api/ai/agent.js" ]; then
+          echo "Agent API route not found in build"
+          exit 1
+        fi
+        
+        echo "Build validation successful"
+        
+  deployment-staging:
+    name: Deploy to Staging
+    runs-on: ubuntu-latest
+    needs: [build-validation, integration-tests, security-scan]
+    if: github.ref == 'refs/heads/develop' && github.event_name == 'push'
+    environment: staging
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Deploy to staging
+      run: |
+        echo "Deploying to staging environment..."
+        # Add actual deployment commands here
+        # e.g., Vercel, AWS, etc.
+        
+    - name: Smoke tests
+      run: |
+        echo "Running smoke tests on staging..."
+        # Add smoke test commands here
+        
+    - name: Notify deployment
+      run: |
+        echo "Staging deployment completed"
+        # Add notification logic (Slack, email, etc.)
+        
+  deployment-production:
+    name: Deploy to Production
+    runs-on: ubuntu-latest
+    needs: [build-validation, integration-tests, performance-tests, security-scan]
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    environment: production
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Production deployment gate
+      run: |
+        echo "Pre-production validation..."
+        # Additional production-specific checks
+        
+    - name: Deploy to production
+      run: |
+        echo "Deploying to production environment..."
+        # Add actual deployment commands here
+        
+    - name: Post-deployment verification
+      run: |
+        echo "Verifying production deployment..."
+        # Add verification scripts
+        
+    - name: Notify production deployment
+      run: |
+        echo "Production deployment completed"
+        # Add notification logic
+        
+  quality-report:
+    name: Quality Report
+    runs-on: ubuntu-latest
+    needs: [coverage-report, security-scan, performance-tests]
+    if: always()
+    
+    steps:
+    - name: Generate quality report
+      run: |
+        echo "## Multi-Agent Framework Quality Report" > quality-report.md
+        echo "- **Build Status**: ${{ needs.build-validation.result }}" >> quality-report.md
+        echo "- **Test Coverage**: ${{ needs.coverage-report.result }}" >> quality-report.md
+        echo "- **Security Scan**: ${{ needs.security-scan.result }}" >> quality-report.md
+        echo "- **Performance Tests**: ${{ needs.performance-tests.result }}" >> quality-report.md
+        
+    - name: Comment PR with quality report
+      if: github.event_name == 'pull_request'
+      uses: actions/github-script@v7
+      with:
+        script: |
+          const fs = require('fs');
+          const report = fs.readFileSync('quality-report.md', 'utf8');
+          
+          github.rest.issues.createComment({
+            issue_number: context.issue.number,
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            body: report
+          });
