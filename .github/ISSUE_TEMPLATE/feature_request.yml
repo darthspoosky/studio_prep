@@ -1,0 +1,71 @@
+
+name: 🚀 Feature Request
+description: Suggest a new feature or enhancement for PrepTalk
+title: "[FEAT] "
+labels: ["enhancement", "needs-triage"]
+
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to suggest a feature!
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: Feature Area
+      description: Which part of the application would this feature enhance?
+      options:
+        - Daily Quiz
+        - Writing Practice
+        - Mock Interview
+        - Newspaper Analysis
+        - Admin Panel
+        - Dashboard
+        - Authentication
+        - AI Features
+        - UI/UX
+        - Other
+    validations:
+      required: true
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: Is your feature request related to a problem?
+      description: A clear and concise description of what the problem is.
+      placeholder: "I'm always frustrated when..."
+    validations:
+      required: true
+
+  - type: textarea
+    id: solution
+    attributes:
+      label: Describe the solution you'd like
+      description: A clear and concise description of what you want to happen.
+      placeholder: "I would like to see..."
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Describe alternatives you've considered
+      description: A clear and concise description of any alternative solutions or features you've considered.
+
+  - type: checkboxes
+    id: value
+    attributes:
+      label: Value Proposition
+      description: How would this feature benefit users?
+      options:
+        - label: Improves user experience
+        - label: Increases efficiency
+        - label: Adds new capabilities
+        - label: Enhances learning outcomes
+        - label: Fixes a major inconvenience
+
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for your suggestion! We'll review it and get back to you.

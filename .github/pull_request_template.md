@@ -1,7 +1,8 @@
+
 # Pull Request
 
 ## 📋 **Description**
-<\!-- Provide a clear and concise description of the changes -->
+<!-- Provide a clear and concise description of the changes -->
 
 ## 🎯 **Type of Change**
 - [ ] 🐛 Bug fix
@@ -30,4 +31,3 @@
 ## 📋 **Final Checklist**
 - [ ] All CI checks passing
 - [ ] Ready for deployment
-EOF < /dev/null
