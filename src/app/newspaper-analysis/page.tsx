@@ -1,1092 +1,534 @@
+'use client';
 
+import React, { useState, useEffect } from 'react';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import { Badge } from '@/components/ui/badge';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { ArrowLeft, Newspaper, Target, BookOpen, Lightbulb, Clock, Lock, Star, Zap, Users, ChevronRight } from 'lucide-react';
+import { useAuth } from '@/hooks/useAuth';
+import { useToast } from '@/hooks/use-toast';
+import Link from 'next/link';
+import { cn } from '@/lib/utils';
 
-"use client";
-
-import React, { useState, useMemo, useEffect, useRef } from "react";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Textarea } from "@/components/ui/textarea";
-import { ArrowLeft, Loader2, Sparkles, CheckCircle, XCircle, Circle, Info, Maximize, Volume2, Gauge, IndianRupee, MoveRight, Share2, Bookmark } from "lucide-react";
-import { useToast } from "@/hooks/use-toast";
-import type { NewspaperAnalysisInput, NewspaperAnalysisOutput, MCQ as MCQType, MainsQuestion, KnowledgeGraph, NewspaperAnalysisChunk } from "@/ai/flows/newspaper-analysis-flow";
-import { analyzeNewspaperArticle } from "@/ai/flows/newspaper-analysis-flow";
-
-// Layout Imports
-import MainLayout from '@/app/dashboard/components/layout/MainLayout';
-import LeftSidebar from '@/app/dashboard/components/layout/LeftSidebar';
-import RightSidebar from '@/app/dashboard/components/layout/RightSidebar';
-import MobileHeader from '@/app/dashboard/components/layout/MobileHeader';
-import { UserNav } from '@/components/layout/user-nav';
-import { getUserUsage, type UsageStats } from '@/services/usageService';
-import { getUserQuizStats, type UserQuizStats } from '@/services/quizAttemptsService';
-
-
-const textToSpeech = async (text: string, signal?: AbortSignal): Promise<{ audio: string }> => {
-  const response = await fetch('/api/tts', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ text }),
-    signal
-  });
-  if (!response.ok) {
-    throw new Error('TTS Failed');
-  }
-  return response.json();
-};
-
-import { ScrollArea } from "@/components/ui/scroll-area";
-import ReactMarkdown from "react-markdown";
-import remarkGfm from "remark-gfm";
-import { Badge } from "@/components/ui/badge";
-import { cn } from "@/lib/utils";
-import { motion, AnimatePresence } from "framer-motion";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { useAuth } from "@/contexts/AuthContext";
-import { useRouter } from "next/navigation";
-import { addHistory, type PrelimsQuestionWithContext } from "@/services/historyService";
-import { Timestamp } from "firebase/firestore";
-import { incrementToolUsage } from "@/services/usageService";
-import { saveQuizAttempt } from "@/services/quizAttemptsService";
-import { saveMainsAnswer } from "@/services/mainsAnswerService";
-import { saveQuestion, unsaveQuestion, getSavedStatus, getSavedQuestionId } from "@/services/savedQuestionsService";
-import { Skeleton } from "@/components/ui/skeleton";
-
-
-const DifficultyGauge = ({ score }: { score: number }) => {
-    if (isNaN(score) || score < 1 || score > 10) return null;
-    const percentage = score * 10;
-
-    const label = score <= 3 ? 'Easy' : score <= 7 ? 'Medium' : 'Hard';
-
-    return (
-        <div className="flex items-center gap-2 mb-2">
-            <span className="text-xs font-semibold text-muted-foreground uppercase">Difficulty: {label}</span>
-            <div className="w-20 h-2 bg-muted rounded-full overflow-hidden">
-                <div 
-                    className="h-full bg-gradient-to-r from-green-400 via-yellow-400 to-red-500"
-                    style={{ width: `${percentage}%` }}
-                />
-            </div>
-            <span className="text-xs font-bold text-foreground">{score}/10</span>
-        </div>
-    );
-};
-
-const FormattedQuestion = ({ text }: { text: string }) => {
-    const lines = text.split('\n').filter(line => line.trim() !== '');
-
-    if (lines.length <= 1) {
-        return <p className="font-semibold leading-relaxed text-foreground">{text}</p>;
-    }
-
-    const firstStatementIndex = lines.findIndex(line => /^\d+\.\s/.test(line.trim()));
-
-    if (firstStatementIndex === -1) {
-        return <p className="font-semibold leading-relaxed text-foreground" style={{ whiteSpace: 'pre-line' }}>{text}</p>;
-    }
-
-    const preamble = lines.slice(0, firstStatementIndex).join('\n');
-    
-    let lastStatementIndex = firstStatementIndex;
-    for (let i = firstStatementIndex + 1; i < lines.length; i++) {
-        if (/^\d+\.\s/.test(lines[i].trim())) {
-            lastStatementIndex = i;
-        } else {
-            break; 
-        }
-    }
-    
-    const statements = lines.slice(firstStatementIndex, lastStatementIndex + 1);
-    const conclusion = lines.slice(lastStatementIndex + 1).join('\n');
-    
-    return (
-        <div className="font-semibold leading-relaxed text-foreground">
-            {preamble && <p className="mb-3" style={{ whiteSpace: 'pre-line' }}>{preamble}</p>}
-            <ol className="list-decimal list-inside space-y-2 my-3">
-                {statements.map((stmt, index) => (
-                    <li key={index} className="pl-2">{stmt.trim().replace(/^\d+\.\s/, '')}</li>
-                ))}
-            </ol>
-            {conclusion && <p className="mt-3" style={{ whiteSpace: 'pre-line' }}>{conclusion}</p>}
-        </div>
-    );
-};
-
-
-const MCQ = ({ mcq, onAnswer, isSaved, onSaveToggle }: { mcq: MCQType, onAnswer: (question: string, selectedOption: string, isCorrect: boolean, subject?: string, difficulty?: number) => void, isSaved: boolean, onSaveToggle: (mcq: MCQType) => void }) => {
-  const { question, subject, explanation, options, difficulty } = mcq;
-  const [selected, setSelected] = useState<string | null>(null);
-  const [isAnswered, setIsAnswered] = useState(false);
-  const score = difficulty;
-
-  const handleSelect = (optionValue: string) => {
-    if (isAnswered) return;
-    setSelected(optionValue);
-    setIsAnswered(true);
-    const isCorrect = options.find(o => o.text === optionValue)?.correct || false;
-    onAnswer(question, optionValue, isCorrect, subject, difficulty);
-  };
-  
-  const hasSelectedCorrect = options.some(o => o.text === selected && o.correct);
-
-  return (
-    <motion.div 
-      className="my-6 p-4 border rounded-lg bg-background/50 shadow-sm relative"
-      initial={{ opacity: 0, y: 10 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.3 }}
-    >
-       <div className="absolute top-2 right-2 flex items-center gap-2">
-         <TooltipProvider>
-            <Tooltip>
-                <TooltipTrigger asChild>
-                    <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-primary" onClick={() => onSaveToggle(mcq)}>
-                        <Bookmark className={cn("w-4 h-4", isSaved && "fill-primary text-primary")} />
-                    </Button>
-                </TooltipTrigger>
-                <TooltipContent>
-                    <p>{isSaved ? 'Remove from Question Wall' : 'Save to Question Wall'}</p>
-                </TooltipContent>
-            </Tooltip>
-        </TooltipProvider>
-      </div>
-
-      {score && <DifficultyGauge score={score} />}
-      <FormattedQuestion text={question} />
-      {subject && <Badge variant="secondary" className="mb-4 mt-2 font-normal">{subject}</Badge>}
-      <div className="grid grid-cols-1 gap-2 mt-4">
-        {options.map((option, index) => {
-          const optionValue = option.text;
-          const isCorrect = option.correct;
-          const isSelected = selected === optionValue;
-          
-          let icon;
-          if (isAnswered) {
-              if (isCorrect) {
-                  icon = <CheckCircle className="w-4 h-4 text-green-600 dark:text-green-400 flex-shrink-0"/>;
-              } else if (isSelected) {
-                  icon = <XCircle className="w-4 h-4 text-red-600 dark:text-red-400 flex-shrink-0"/>;
-              } else {
-                  icon = <Circle className="w-4 h-4 text-muted-foreground/50 flex-shrink-0"/>;
-              }
-          } else {
-              icon = <Circle className="w-4 h-4 text-muted-foreground flex-shrink-0"/>;
-          }
-          
-          return (
-            <Button
-              key={index}
-              variant="outline"
-              onClick={() => handleSelect(optionValue)}
-              disabled={isAnswered}
-              className={cn(
-                "justify-start text-left h-auto py-2 px-3 whitespace-normal w-full items-center gap-3 transition-all duration-200 hover:bg-accent/80 hover:border-primary/50",
-                isAnswered && {
-                  "border-green-400 bg-green-50 text-green-900 hover:bg-green-100 dark:bg-green-900/30 dark:border-green-600 dark:text-green-100 dark:hover:bg-green-900/40": isCorrect,
-                  "border-red-400 bg-red-50 text-red-900 hover:bg-red-100 dark:bg-red-900/30 dark:border-red-600 dark:text-red-100 dark:hover:bg-red-900/40": isSelected && !isCorrect,
-                  "opacity-60 hover:opacity-80": !isSelected && !isCorrect
-                }
-              )}
-            >
-              {icon}
-              <span className="flex items-start gap-2">
-                <span className="font-bold">({String.fromCharCode(65 + index)})</span>
-                <span>{optionValue}</span>
-              </span>
-            </Button>
-          );
-        })}
-      </div>
-      {isAnswered && !hasSelectedCorrect && (
-          <p className="text-xs text-red-600 dark:text-red-400 mt-3 font-medium">
-              Not quite. The correct answer is highlighted in green.
-          </p>
-      )}
-      {isAnswered && hasSelectedCorrect && (
-          <p className="text-xs text-green-600 dark:text-green-400 mt-3 font-medium">
-              Correct! Well done.
-          </p>
-      )}
-      <AnimatePresence>
-      {isAnswered && explanation && (
-        <motion.div 
-            initial={{ opacity: 0, height: 0, marginTop: 0 }}
-            animate={{ opacity: 1, height: 'auto', marginTop: '1rem' }}
-            exit={{ opacity: 0, height: 0, marginTop: 0 }}
-            transition={{ duration: 0.3, ease: "easeOut" }}
-            className="overflow-hidden"
-        >
-            <div className="p-3 bg-primary/10 border-l-4 border-primary rounded-r-lg">
-              <div className="flex items-start gap-3">
-                <Info className="w-5 h-5 text-primary mt-0.5 flex-shrink-0" />
-                <div>
-                  <h4 className="font-semibold text-sm text-primary">Explanation</h4>
-                  <p className="text-sm text-muted-foreground mt-1">{explanation}</p>
-                </div>
-              </div>
-            </div>
-        </motion.div>
-      )}
-      </AnimatePresence>
-    </motion.div>
-  );
-};
-
-const MCQList = ({ mcqs, onAnswer, onSaveToggle, savedQuestionIds, user }: { mcqs: MCQType[], onAnswer: (question: string, selectedOption: string, isCorrect: boolean, subject?: string, difficulty?: number) => void, onSaveToggle: (mcq: MCQType) => void, savedQuestionIds: Set<string>, user: any }) => {
-    if (!mcqs || mcqs.length === 0) {
-        return (
-            <div className="text-center text-muted-foreground p-8">
-                No Prelims questions were generated for this analysis.
-            </div>
-        );
-    }
-    return (
-        <div>
-            <AnimatePresence>
-                {mcqs.map((q, idx) => {
-                    const mcqWithContext = q as PrelimsQuestionWithContext;
-                    const savedQuestionId = getSavedQuestionId(user?.uid || '', mcqWithContext);
-                    return <MCQ 
-                        key={idx} 
-                        mcq={q} 
-                        onAnswer={onAnswer}
-                        onSaveToggle={onSaveToggle} 
-                        isSaved={savedQuestionIds.has(savedQuestionId)} 
-                    />
-                })}
-            </AnimatePresence>
-        </div>
-    );
-};
-
-const markdownComponents = {
-  h2: (props: any) => {
-    const content = React.Children.toArray(props.children).join('');
-    const difficultyRegex = / \(Difficulty: (\d{1,2})\/10\)$/;
-    const match = content.match(difficultyRegex);
-    
-    const title = match ? content.replace(difficultyRegex, '') : content;
-    const score = match ? parseInt(match[1], 10) : null;
-
-    return (
-      <div className="text-2xl font-bold font-headline mt-8 mb-4 p-4 bg-primary/5 border-l-4 border-primary rounded-r-lg">
-          <h2 {...props}>{title}</h2>
-          {score && <div className="mt-2"><DifficultyGauge score={score} /></div>}
-      </div>
-    );
+// Stage-based Current Affairs Configuration
+const STAGE_MODES = {
+  FOUNDATION: {
+    name: 'Foundation Current Affairs',
+    description: 'Simplified analysis focusing on basic understanding',
+    color: 'blue',
+    features: [
+      'Simple language explanations',
+      'Basic concept linking', 
+      'Key facts highlighting',
+      'Simple MCQs (5-10)',
+      'Basic timeline'
+    ],
+    duration: '10-15 minutes',
+    complexity: 'Basic',
+    target: 'New aspirants building base knowledge'
   },
-  h3: (props: any) => <h3 className="text-xl font-semibold font-headline mt-6 mb-2 text-primary/90" {...props} />,
-  p: (props: any) => <p className="leading-relaxed my-4" {...props} />,
-  ul: (props: any) => <ul className="list-disc list-outside pl-6 my-4 space-y-2 text-muted-foreground" {...props} />,
-  ol: (props: any) => <ol className="list-decimal list-inside pl-6 my-4 space-y-2" {...props} />,
-  li: (props: any) => <li className="pl-2" {...props} />,
-  strong: (props: any) => <strong className="font-bold text-foreground" {...props} />,
-};
-
-const MainsQuestionList = ({ questions, userId, historyId }: { questions: MainsQuestion[], userId: string, historyId: string | null }) => {
-    const [answers, setAnswers] = useState<Record<string, string>>({});
-    const [saving, setSaving] = useState<string | null>(null);
-    const { toast } = useToast();
-
-    const handleAnswerChange = (question: string, answer: string) => {
-        setAnswers(prev => ({ ...prev, [question]: answer }));
-    };
-
-    const handleSaveAnswer = async (question: string) => {
-        if (!historyId) {
-            toast({
-                variant: 'destructive',
-                title: "Cannot Save",
-                description: "The analysis must be generated and saved before you can save an answer.",
-            });
-            return;
-        }
-        setSaving(question);
-        try {
-            await saveMainsAnswer(userId, historyId, question, answers[question]);
-            toast({ title: "Answer Saved!" });
-        } catch (error) {
-            toast({
-                variant: 'destructive',
-                title: 'Save Failed',
-                description: 'Could not save your answer. Please try again.',
-            });
-        } finally {
-            setSaving(null);
-        }
-    };
-
-    if (!questions || questions.length === 0) {
-        return (
-            <div className="text-center text-muted-foreground p-8">
-                No Mains questions were generated for this analysis.
-            </div>
-        );
-    }
-    return (
-        <div className="space-y-8">
-            <AnimatePresence>
-                {questions.map((q, i) => (
-                    <motion.div 
-                        key={i} 
-                        className="p-4 border rounded-lg bg-background/50 shadow-sm"
-                        initial={{ opacity: 0, y: 10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ duration: 0.3, delay: i * 0.1 }}
-                    >
-                        <h2 className="text-xl font-bold font-headline text-primary">{q.question}</h2>
-                        {q.difficulty && <div className="mt-2"><DifficultyGauge score={q.difficulty} /></div>}
-                        {q.guidance && (
-                            <div className="prose-sm dark:prose-invert max-w-none text-muted-foreground mt-4">
-                                <ReactMarkdown remarkPlugins={[remarkGfm]} components={markdownComponents}>
-                                    {q.guidance}
-                                </ReactMarkdown>
-                            </div>
-                        )}
-                        <div className="mt-6 border-t pt-4 space-y-2">
-                            <Label htmlFor={`mains-q-${i}`} className="font-semibold">Your Answer</Label>
-                            <Textarea
-                                id={`mains-q-${i}`}
-                                placeholder="Draft your answer here..."
-                                className="h-48 bg-background/80"
-                                value={answers[q.question] || ''}
-                                onChange={(e) => handleAnswerChange(q.question, e.target.value)}
-                            />
-                            <Button 
-                                onClick={() => handleSaveAnswer(q.question)}
-                                disabled={!historyId || saving === q.question || !answers[q.question]}
-                            >
-                                {saving === q.question && <Loader2 className="animate-spin" />}
-                                Save Answer
-                            </Button>
-                        </div>
-                    </motion.div>
-                ))}
-            </AnimatePresence>
-        </div>
-    );
-};
-
-const entityColors: { [key: string]: string } = {
-  Person: "bg-blue-100 text-blue-800 dark:bg-blue-900/50 dark:text-blue-200",
-  Organization: "bg-purple-100 text-purple-800 dark:bg-purple-900/50 dark:text-purple-200",
-  Location: "bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-200",
-  Policy: "bg-orange-100 text-orange-800 dark:bg-orange-900/50 dark:text-orange-200",
-  Concept: "bg-pink-100 text-pink-800 dark:bg-pink-900/50 dark:text-pink-200",
-  Date: "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/50 dark:text-yellow-200",
-  Statistic: "bg-indigo-100 text-indigo-800 dark:bg-indigo-900/50 dark:text-indigo-200",
-};
-
-const KnowledgeGraphVisualizer = ({ graphData }: { graphData?: KnowledgeGraph }) => {
-  if (!graphData || !graphData.nodes || graphData.nodes.length === 0) {
-    return <div className="text-center text-muted-foreground p-8">No key connections were identified in this article.</div>;
+  PRACTICE: {
+    name: 'Regular Practice Mode',
+    description: 'Comprehensive analysis for consistent preparation',
+    color: 'green',
+    features: [
+      'Detailed analysis',
+      'Multiple perspectives',
+      'Moderate MCQs (10-15)',
+      'Short mains questions',
+      'Cross-topic connections'
+    ],
+    duration: '20-30 minutes', 
+    complexity: 'Intermediate',
+    target: 'Regular preparation and skill building'
+  },
+  MAINS_FOCUSED: {
+    name: 'Mains Preparation',
+    description: 'Deep analysis for answer writing practice',
+    color: 'orange',
+    features: [
+      'Multi-dimensional analysis',
+      'Government policy context',
+      'Detailed mains questions',
+      'Essay topics',
+      'Administrative perspectives'
+    ],
+    duration: '30-45 minutes',
+    complexity: 'Advanced',
+    target: 'Mains qualified candidates'
+  },
+  INTERVIEW_READY: {
+    name: 'Interview Preparation', 
+    description: 'Opinion formation and current issues discussion',
+    color: 'purple',
+    features: [
+      'Balanced viewpoints',
+      'Ethical dimensions',
+      'Policy critique',
+      'Contemporary relevance',
+      'Interview questions'
+    ],
+    duration: '45-60 minutes',
+    complexity: 'Expert',
+    target: 'Interview qualified candidates'
   }
-
-  const nodesByType = graphData.nodes.reduce((acc, node) => {
-    if (!acc[node.type]) {
-      acc[node.type] = [];
-    }
-    acc[node.type].push(node);
-    return acc;
-  }, {} as { [key: string]: typeof graphData.nodes });
-
-  const getNode = (nodeId: string) => {
-    return graphData.nodes.find(n => n.id === nodeId);
-  };
-
-  return (
-    <div className="space-y-8">
-      <div>
-        <h3 className="text-lg font-semibold mb-4 flex items-center gap-2"><Share2 className="w-5 h-5 text-primary"/> Key Entities</h3>
-        <div className="space-y-4">
-          {Object.entries(nodesByType).map(([type, nodes]) => (
-            <motion.div 
-                key={type}
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-            >
-              <h4 className={cn("font-semibold mb-2", entityColors[type])}>{type}</h4>
-              <div className="flex flex-wrap gap-2">
-                {nodes.map(node => <Badge key={node.id} variant="secondary" className={cn("text-base", entityColors[type])}>{node.label}</Badge>)}
-              </div>
-            </motion.div>
-          ))}
-        </div>
-      </div>
-      <div>
-        <h3 className="text-lg font-semibold mb-4 flex items-center gap-2"><MoveRight className="w-5 h-5 text-primary"/> Key Relationships</h3>
-        <div className="space-y-3">
-            <AnimatePresence>
-          {graphData.edges.map((edge, index) => {
-            const sourceNode = getNode(edge.source);
-            const targetNode = getNode(edge.target);
-            if (!sourceNode || !targetNode) return null;
-            
-            return (
-              <motion.div 
-                key={index} 
-                className="flex items-center gap-3 text-sm p-3 bg-primary/5 border border-primary/20 rounded-lg"
-                initial={{ opacity: 0, x: -10 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ duration: 0.3, delay: index * 0.1 }}
-                >
-                <Badge variant="outline" className={cn(entityColors[sourceNode.type])}>{sourceNode.label}</Badge>
-                <div className="flex-1 text-center text-primary font-medium text-xs tracking-wider uppercase">
-                  {edge.label}
-                </div>
-                <Badge variant="outline" className={cn(entityColors[targetNode.type])}>{targetNode.label}</Badge>
-              </motion.div>
-            )
-          })}
-          </AnimatePresence>
-        </div>
-      </div>
-    </div>
-  );
 };
 
-
-const UsageStats = ({
-  totalTokens,
-  inputTokens,
-  outputTokens,
-  cost,
-}: {
-  totalTokens?: number;
-  inputTokens?: number;
-  outputTokens?: number;
-  cost?: number;
-}) => {
-  if (totalTokens === undefined || cost === undefined) return null;
-
-  return (
-    <div className="flex items-center gap-6 text-xs text-muted-foreground border-b mb-4 pb-4">
-      <TooltipProvider>
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <div className="flex items-center gap-1.5">
-              <Gauge className="w-3.5 h-3.5" />
-              <span>
-                <span className="font-semibold text-foreground">
-                  {totalTokens.toLocaleString()}
-                </span>{" "}
-                tokens
-              </span>
-            </div>
-          </TooltipTrigger>
-          <TooltipContent>
-            <p className="font-medium">Total tokens used by the AI Agent.</p>
-            {inputTokens !== undefined && outputTokens !== undefined && (
-              <p className="text-muted-foreground">
-                {inputTokens.toLocaleString()} input +{" "}
-                {outputTokens.toLocaleString()} output
-              </p>
-            )}
-          </TooltipContent>
-        </Tooltip>
-      </TooltipProvider>
-
-      <TooltipProvider>
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <div className="flex items-center gap-1.5">
-              <IndianRupee className="w-3.5 h-3.5" />
-              <span>
-                Cost:{" "}
-                <span className="font-semibold text-foreground">
-                  ₹{cost.toFixed(4)}
-                </span>
-              </span>
-            </div>
-          </TooltipTrigger>
-          <TooltipContent>
-            <p>
-              Estimated cost in INR based on Gemini Flash model pricing.
-            </p>
-          </TooltipContent>
-        </Tooltip>
-      </TooltipProvider>
-    </div>
-  );
+// Freemium Access Control
+const ACCESS_TIERS = {
+  free: {
+    dailyLimit: 2,
+    modes: ['FOUNDATION'],
+    features: ['Basic analysis', 'Simple MCQs']
+  },
+  foundation: {
+    dailyLimit: 5,
+    modes: ['FOUNDATION', 'PRACTICE'],
+    features: ['All foundation features', 'Detailed analysis', 'More questions']
+  },
+  practice: {
+    dailyLimit: 10, 
+    modes: ['FOUNDATION', 'PRACTICE', 'MAINS_FOCUSED'],
+    features: ['All practice features', 'Mains questions', 'Essay topics']
+  },
+  premium: {
+    dailyLimit: -1, // Unlimited
+    modes: ['FOUNDATION', 'PRACTICE', 'MAINS_FOCUSED', 'INTERVIEW_READY'],
+    features: ['All features', 'Interview prep', 'Expert analysis']
+  }
 };
 
-interface ExtendedUserQuizStats extends UserQuizStats {
-    streak: number;
-    improvement: number;
+const INPUT_METHODS = [
+  {
+    id: 'url',
+    title: 'Article URL',
+    description: 'Paste link from news websites',
+    icon: <Newspaper className="w-5 h-5" />,
+    placeholder: 'https://example.com/article...',
+    inputType: 'url'
+  },
+  {
+    id: 'text',
+    title: 'Copy-Paste Text',
+    description: 'Paste article content directly',
+    icon: <BookOpen className="w-5 h-5" />,
+    placeholder: 'Paste your article content here...',
+    inputType: 'textarea'
+  },
+  {
+    id: 'topic',
+    title: 'Topic Research',
+    description: 'Research any current affairs topic',
+    icon: <Lightbulb className="w-5 h-5" />,
+    placeholder: 'Enter topic: e.g., "Digital India Initiative"',
+    inputType: 'text'
+  }
+];
+
+interface UserProgress {
+  tier: keyof typeof ACCESS_TIERS;
+  currentStage: keyof typeof STAGE_MODES;
+  dailyAnalysisUsed: number;
+  totalAnalysisCount: number;
+  preferredLanguage: string;
 }
 
+// Mock user progress - replace with actual API
+const useUserProgress = (): UserProgress => {
+  return {
+    tier: 'free',
+    currentStage: 'FOUNDATION', 
+    dailyAnalysisUsed: 1,
+    totalAnalysisCount: 12,
+    preferredLanguage: 'English'
+  };
+};
 
-export default function NewspaperAnalysisPage() {
-  const { user, loading } = useAuth();
-  const router = useRouter();
-  const finalAnalysisForHistory = useRef<Partial<NewspaperAnalysisOutput>>({});
-  const abortControllerRef = useRef<AbortController | null>(null);
-
-  const [isLoading, setIsLoading] = useState(false);
-  const [isGeneratingAudio, setIsGeneratingAudio] = useState(false);
-  const [analysisResult, setAnalysisResult] = useState<Partial<NewspaperAnalysisOutput> | null>(null);
-  const [historyId, setHistoryId] = useState<string | null>(null);
-  const [audioSrc, setAudioSrc] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState("url");
-  const [currentAnalysisTab, setCurrentAnalysisTab] = useState('prelims');
-  const [savedQuestionIds, setSavedQuestionIds] = useState(new Set<string>());
-  const [inputs, setInputs] = useState({
-    url: "",
-    text: "",
-    examType: "UPSC Civil Services",
-    analysisFocus: "Generate Questions (Mains & Prelims)",
-    outputLanguage: "English",
-  });
-  const { toast } = useToast();
+const StageCard = ({ stage, mode, isAccessible, isRecommended, userTier, onSelect }: {
+  stage: keyof typeof STAGE_MODES;
+  mode: typeof STAGE_MODES[keyof typeof STAGE_MODES];
+  isAccessible: boolean;
+  isRecommended: boolean;
+  userTier: keyof typeof ACCESS_TIERS;
+  onSelect: (stage: keyof typeof STAGE_MODES) => void;
+}) => {
+  const tierInfo = ACCESS_TIERS[userTier];
   
-  // Layout-related state
-  const [quizStats, setQuizStats] = useState<ExtendedUserQuizStats | null>(null);
-  const [usageStats, setUsageStats] = useState<UsageStats | null>(null);
-
-  useEffect(() => {
-    if (!loading && !user) {
-      router.push('/login');
-    }
-     if (user?.uid) {
-      const fetchStats = async () => {
-        try {
-          const [stats, usage] = await Promise.all([
-            getUserQuizStats(user.uid),
-            getUserUsage(user.uid)
-          ]);
-          setQuizStats({ ...stats, streak: 0, improvement: 0 }); // Add dummy data
-          setUsageStats(usage);
-        } catch (error) {
-          console.error("Error fetching dashboard stats:", error);
-        }
-      };
+  return (
+    <Card className={cn(
+      'relative cursor-pointer transition-all duration-300 hover:shadow-lg',
+      isAccessible ? 'hover:border-primary' : 'opacity-60',
+      isRecommended && 'ring-2 ring-primary ring-offset-2'
+    )}>
+      {isRecommended && (
+        <Badge className="absolute -top-2 -right-2 bg-primary">
+          Recommended
+        </Badge>
+      )}
       
-      fetchStats();
-    }
-  }, [user, loading, router]);
-  
-  // Cleanup effect for component unmount
-  useEffect(() => {
-    return () => {
-      // Cancel any pending requests
-      if (abortControllerRef.current) {
-        abortControllerRef.current.abort();
-      }
-    };
-  }, []);
+      <CardHeader>
+        <div className="flex items-center justify-between">
+          <Target className={cn(
+            'w-8 h-8 rounded-lg p-1.5',
+            `bg-${mode.color}-100 text-${mode.color}-600`
+          )} />
+          {!isAccessible && <Lock className="w-4 h-4 text-muted-foreground" />}
+        </div>
+        <CardTitle className="text-lg">{mode.name}</CardTitle>
+        <CardDescription>{mode.description}</CardDescription>
+      </CardHeader>
 
-  const handleInputChange = (field: keyof typeof inputs, value: string) => {
-    setInputs(prev => ({ ...prev, [field]: value }));
+      <CardContent className="space-y-4">
+        <div className="grid grid-cols-2 gap-4 text-sm">
+          <div>
+            <span className="text-muted-foreground">Duration:</span>
+            <div className="font-medium">{mode.duration}</div>
+          </div>
+          <div>
+            <span className="text-muted-foreground">Level:</span>
+            <div className="font-medium">{mode.complexity}</div>
+          </div>
+        </div>
+
+        <div>
+          <span className="text-sm text-muted-foreground">Features:</span>
+          <ul className="mt-2 space-y-1">
+            {mode.features.slice(0, 3).map((feature, idx) => (
+              <li key={idx} className="text-sm flex items-center gap-2">
+                <div className="w-1.5 h-1.5 bg-primary rounded-full" />
+                {feature}
+              </li>
+            ))}
+          </ul>
+        </div>
+
+        <div className="pt-2 border-t">
+          <div className="text-xs text-muted-foreground">
+            {mode.target}
+          </div>
+        </div>
+      </CardContent>
+
+      <div className="p-6 pt-0">
+        {isAccessible ? (
+          <Button 
+            className="w-full" 
+            onClick={() => onSelect(stage)}
+          >
+            Select This Mode
+            <ChevronRight className="w-4 h-4 ml-2" />
+          </Button>
+        ) : (
+          <Button variant="outline" className="w-full" disabled>
+            <Lock className="w-4 h-4 mr-2" />
+            Upgrade Required
+          </Button>
+        )}
+      </div>
+    </Card>
+  );
+};
+
+const InputMethodCard = ({ method, isSelected, onSelect }: {
+  method: typeof INPUT_METHODS[0];
+  isSelected: boolean;
+  onSelect: (id: string) => void;
+}) => {
+  return (
+    <Card 
+      className={cn(
+        'cursor-pointer transition-all duration-200',
+        isSelected ? 'ring-2 ring-primary border-primary' : 'hover:border-primary/50'
+      )}
+      onClick={() => onSelect(method.id)}
+    >
+      <CardHeader className="text-center">
+        <div className={cn(
+          'w-12 h-12 rounded-lg mx-auto flex items-center justify-center',
+          isSelected ? 'bg-primary text-primary-foreground' : 'bg-muted'
+        )}>
+          {method.icon}
+        </div>
+        <CardTitle className="text-base">{method.title}</CardTitle>
+        <CardDescription className="text-sm">{method.description}</CardDescription>
+      </CardHeader>
+    </Card>
+  );
+};
+
+export default function NewspaperAnalysisRevamped() {
+  const { user } = useAuth();
+  const { toast } = useToast();
+  const userProgress = useUserProgress();
+  
+  const [selectedStage, setSelectedStage] = useState<keyof typeof STAGE_MODES | null>(null);
+  const [selectedInputMethod, setSelectedInputMethod] = useState<string>('url');
+  const [inputValue, setInputValue] = useState('');
+  const [language, setLanguage] = useState(userProgress.preferredLanguage);
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
+
+  const tierInfo = ACCESS_TIERS[userProgress.tier];
+  const canUseToday = userProgress.dailyAnalysisUsed < tierInfo.dailyLimit || tierInfo.dailyLimit === -1;
+
+  const handleStageSelect = (stage: keyof typeof STAGE_MODES) => {
+    setSelectedStage(stage);
   };
 
   const handleAnalyze = async () => {
-    if (!user) {
-        toast({ variant: 'destructive', title: "Not logged in", description: "You need to be logged in to analyze articles." });
-        return;
-    }
-    let sourceText = inputs.text;
-
-    if (activeTab === 'url') {
-        if (!inputs.url.trim()) {
-            toast({ variant: 'destructive', title: "Input Required", description: "Please provide an article URL or paste the text to analyze." });
-            return;
-        }
-        setIsLoading(true);
-        // Cancel any existing request
-        if (abortControllerRef.current) {
-            abortControllerRef.current.abort();
-        }
-        abortControllerRef.current = new AbortController();
-        
-        try {
-            const res = await fetch(`/api/readArticle?url=${encodeURIComponent(inputs.url)}`, {
-                signal: abortControllerRef.current.signal
-            });
-            if (!res.ok) {
-                const err = await res.json().catch(() => ({}));
-                const description = err.error 
-                    ? `Reason: ${err.error}`
-                    : 'The website might be blocking requests, or the URL might be incorrect. Try pasting the article text directly.';
-                toast({
-                    variant: 'destructive',
-                    title: 'Article Fetch Failed',
-                    description: description,
-                });
-                setIsLoading(false);
-                return;
-            }
-            const data = await res.json();
-            sourceText = data.text || '';
-        } catch (err: any) {
-            if (err.name === 'AbortError') {
-                // Request was cancelled, don't show error
-                return;
-            }
-            console.error('Article fetch error:', err);
-            toast({
-                variant: 'destructive',
-                title: 'Network Error',
-                description: 'Could not connect to the server to fetch the article. Please check your internet connection.',
-            });
-            setIsLoading(false);
-            return;
-        }
-    } else {
-        sourceText = inputs.text;
-    }
-
-    if (!sourceText.trim() || !inputs.examType || !inputs.analysisFocus) {
-        toast({ variant: 'destructive', title: "Input Required", description: "Please complete all fields." });
-        setIsLoading(false); // Make sure to stop loading if validation fails after a fetch
-        return;
-    }
-    
-    // This was already set to true for URL fetch, ensure it's set for text paste too
-    if (activeTab === 'text') {
-        setIsLoading(true);
-    }
-    
-    setAnalysisResult({ prelims: { mcqs: [] }, mains: { questions: [] }, knowledgeGraph: { nodes: [], edges: [] }});
-    finalAnalysisForHistory.current = { prelims: { mcqs: [] }, mains: { questions: [] }, knowledgeGraph: { nodes: [], edges: [] } };
-    setHistoryId(null);
-    setAudioSrc(null);
-    setSavedQuestionIds(new Set());
-    setCurrentAnalysisTab('prelims');
-
-    try {
-        const flowInput: NewspaperAnalysisInput = {
-            sourceText,
-            examType: inputs.examType,
-            analysisFocus: inputs.analysisFocus,
-            outputLanguage: inputs.outputLanguage,
-        };
-        const stream = await analyzeNewspaperArticle(flowInput);
-
-        for await (const chunk of stream) {
-            setAnalysisResult(currentResult => {
-                const newResult = JSON.parse(JSON.stringify(currentResult || {})); // Deep copy
-                
-                switch (chunk.type) {
-                    case 'summary':
-                        newResult.summary = chunk.data;
-                        finalAnalysisForHistory.current.summary = chunk.data;
-                        break;
-                    case 'prelims':
-                        if (!newResult.prelims) newResult.prelims = { mcqs: [] };
-                        newResult.prelims.mcqs.push(chunk.data);
-                        finalAnalysisForHistory.current.prelims?.mcqs.push(chunk.data);
-                        break;
-                    case 'mains':
-                        if (!newResult.mains) newResult.mains = { questions: [] };
-                        newResult.mains.questions.push(chunk.data);
-                        finalAnalysisForHistory.current.mains?.questions.push(chunk.data);
-                        break;
-                    case 'knowledgeGraph':
-                        newResult.knowledgeGraph = chunk.data;
-                        finalAnalysisForHistory.current.knowledgeGraph = chunk.data;
-                        break;
-                    case 'metadata':
-                        Object.assign(newResult, chunk.data);
-                        Object.assign(finalAnalysisForHistory.current, chunk.data);
-                        break;
-                    case 'error':
-                        toast({ variant: 'destructive', title: 'Analysis Error', description: chunk.data });
-                        break;
-                }
-                return newResult;
-            });
-        }
-        
-        const newHistoryId = await addHistory(user.uid, finalAnalysisForHistory.current as NewspaperAnalysisOutput, activeTab === 'url' ? inputs.url : undefined);
-        if (newHistoryId) {
-            setHistoryId(newHistoryId);
-            const prelimsQuestions = finalAnalysisForHistory.current.prelims?.mcqs || [];
-            if (prelimsQuestions.length > 0) {
-                const questionIds = prelimsQuestions.map(mcq => {
-                    const questionWithContext: PrelimsQuestionWithContext = { ...mcq, historyId: newHistoryId, timestamp: Timestamp.fromDate(new Date()), articleUrl: activeTab === 'url' ? inputs.url : undefined };
-                    return getSavedQuestionId(user.uid, questionWithContext);
-                });
-                const savedStatus = await getSavedStatus(user.uid, questionIds);
-                setSavedQuestionIds(savedStatus);
-            }
-        }
-        await incrementToolUsage(user.uid, 'newspaperAnalysis');
-
-    } catch (error: any) {
-        console.error("Analysis error:", error);
-        toast({
-            variant: "destructive",
-            title: "Analysis Failed",
-            description: "The AI failed to analyze the article. Please try again later.",
-        });
-    } finally {
-        setIsLoading(false);
-    }
-  };
-
-  const handleGenerateAudio = async () => {
-    if (!analysisResult?.summary) return;
-
-    setIsGeneratingAudio(true);
-    setAudioSrc(null);
-    try {
-      const { audio } = await textToSpeech(analysisResult.summary);
-      setAudioSrc(audio);
-    } catch (error) {
-      console.error("Audio generation error:", error);
+    if (!selectedStage || !inputValue.trim()) {
       toast({
-          variant: "destructive",
-          title: "Audio Failed",
-          description: "Could not generate an audio summary for this article.",
+        title: "Missing Information",
+        description: "Please select a mode and provide input",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    if (!canUseToday) {
+      toast({
+        title: "Daily Limit Reached", 
+        description: "Upgrade your plan for more daily analysis",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    setIsAnalyzing(true);
+    try {
+      // Implementation of analysis API call
+      // This would connect to the existing newspaper analysis flow
+      // but with stage-specific parameters
+      
+      console.log('Analyzing with:', {
+        stage: selectedStage,
+        input: inputValue,
+        method: selectedInputMethod,
+        language
+      });
+      
+      // Navigate to results page with parameters
+      // router.push(`/newspaper-analysis/results?stage=${selectedStage}&method=${selectedInputMethod}`);
+      
+    } catch (error) {
+      toast({
+        title: "Analysis Failed",
+        description: "Please try again or contact support",
+        variant: "destructive"
       });
     } finally {
-      setIsGeneratingAudio(false);
-    }
-  };
-  
-  const handleAnswer = (question: string, selectedOption: string, isCorrect: boolean, subject?: string, difficulty?: number) => {
-      if (user && historyId) {
-          saveQuizAttempt(user.uid, historyId, question, selectedOption, isCorrect, subject, difficulty);
-      }
-  };
-
-  const handleSaveToggle = async (mcq: MCQType) => {
-    if (!user || !historyId) return;
-
-    const questionWithContext: PrelimsQuestionWithContext = {
-      ...mcq,
-      historyId,
-      timestamp: Timestamp.fromDate(new Date()),
-      articleUrl: activeTab === 'url' ? inputs.url : undefined
-    };
-
-    const savedQuestionId = getSavedQuestionId(user.uid, questionWithContext);
-    const isCurrentlySaved = savedQuestionIds.has(savedQuestionId);
-    
-    // Optimistic UI Update
-    const newSavedIds = new Set(savedQuestionIds);
-    if (isCurrentlySaved) {
-      newSavedIds.delete(savedQuestionId);
-    } else {
-      newSavedIds.add(savedQuestionId);
-    }
-    setSavedQuestionIds(newSavedIds);
-
-    try {
-      if (isCurrentlySaved) {
-        await unsaveQuestion(user.uid, questionWithContext);
-        toast({ title: "Removed from Question Wall" });
-      } else {
-        await saveQuestion(user.uid, questionWithContext);
-        toast({ title: "Saved to Question Wall" });
-      }
-    } catch (err) {
-      // Revert UI on failure
-      setSavedQuestionIds(savedQuestionIds);
-      toast({ variant: 'destructive', title: "Action Failed", description: "Please try again." });
+      setIsAnalyzing(false);
     }
   };
 
-  const prelimsContent = useMemo(() => analysisResult?.prelims?.mcqs || [], [analysisResult]);
-  const mainsContent = useMemo(() => analysisResult?.mains?.questions || [], [analysisResult]);
-  const knowledgeGraphContent = useMemo(() => analysisResult?.knowledgeGraph, [analysisResult]);
-
-  useEffect(() => {
-    if (analysisResult) {
-        const hasPrelims = prelimsContent.length > 0;
-        const hasMains = mainsContent.length > 0;
-        const hasGraph = knowledgeGraphContent && knowledgeGraphContent.nodes.length > 0;
-  
-        if (hasPrelims) setCurrentAnalysisTab('prelims');
-        else if (hasMains) setCurrentAnalysisTab('mains');
-        else if (hasGraph) setCurrentAnalysisTab('connections');
-        else setCurrentAnalysisTab('prelims');
-    }
-  }, [prelimsContent, mainsContent, knowledgeGraphContent, analysisResult]);
-
-  const showPrelims = prelimsContent.length > 0;
-  const showMains = mainsContent.length > 0;
-  const showGraph = knowledgeGraphContent && knowledgeGraphContent.nodes.length > 0;
-
-  const audioButton = (
-    <Button 
-        onClick={handleGenerateAudio} 
-        disabled={isGeneratingAudio || inputs.outputLanguage !== 'English'} 
-        variant="outline" 
-        size="sm"
-    >
-        {isGeneratingAudio ? <Loader2 className="animate-spin" /> : <Volume2 />}
-        {isGeneratingAudio ? "Generating..." : "Listen"}
-    </Button>
-  );
-
-  if (loading || !user) {
-    return null;
-  }
+  const selectedMethod = INPUT_METHODS.find(m => m.id === selectedInputMethod);
 
   return (
-    <MainLayout
-      leftSidebar={<LeftSidebar usageStats={usageStats} />}
-      rightSidebar={<RightSidebar quizStats={quizStats} />}
-    >
-        <div className="text-center mb-16">
-            <h1 className="font-headline text-4xl sm:text-5xl font-bold tracking-tighter">
-            <span className="animate-gradient-anim bg-[length:200%_auto] bg-gradient-to-r from-primary via-accent to-pink-500 bg-clip-text text-transparent">
-                Newspaper Analysis
-            </span>
-            </h1>
-            <p className="text-muted-foreground mt-4 max-w-2xl mx-auto text-lg">
-                Go beyond summarization. Extract exam-ready insights from any news article.
-            </p>
+    <div className="flex flex-col min-h-screen bg-gray-50 dark:bg-gray-900">
+      <div className="border-b bg-white/80 backdrop-blur supports-[backdrop-filter]:bg-white/60">
+        <div className="container mx-auto px-4 py-4">
+          <div className="flex items-center justify-between">
+            <Link href="/dashboard" className="inline-flex items-center text-sm text-muted-foreground hover:text-primary transition-colors">
+              <ArrowLeft className="mr-2 h-4 w-4" />
+              Back to Dashboard
+            </Link>
+            <div className="flex items-center gap-4 text-sm">
+              <div className="flex items-center gap-2">
+                <Users className="w-4 h-4" />
+                <span>{userProgress.dailyAnalysisUsed}/{tierInfo.dailyLimit === -1 ? '∞' : tierInfo.dailyLimit} used today</span>
+              </div>
+              <Badge variant="secondary">{userProgress.tier.toUpperCase()}</Badge>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <main className="flex-1 container mx-auto px-4 py-8">
+        {/* Header */}
+        <div className="text-center mb-12">
+          <h1 className="font-headline text-4xl font-bold mb-4">
+            AI-Powered Current Affairs Analysis
+          </h1>
+          <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
+            Transform news articles into UPSC-ready knowledge with stage-specific analysis designed for your preparation level.
+          </p>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
-            {/* Left Column: Input */}
-            <div className="lg:col-span-1 lg:sticky top-24">
-                <Card className="glassmorphic shadow-2xl shadow-primary/10">
-                    <CardHeader>
-                        <CardTitle>Analyze an Article</CardTitle>
-                        <CardDescription>Provide an article by URL or by pasting the text directly.</CardDescription>
-                    </CardHeader>
-                    <CardContent className="space-y-6">
-                        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-                            <TabsList className="grid w-full grid-cols-2">
-                                <TabsTrigger value="url">From URL</TabsTrigger>
-                                <TabsTrigger value="text">Paste Text</TabsTrigger>
-                            </TabsList>
-                            <TabsContent value="url" className="pt-4">
-                                <div className="space-y-2">
-                                    <Label htmlFor="url">Article URL</Label>
-                                    <Input id="url" placeholder="https://www.thehindu.com/opinion/editorial/..." value={inputs.url} onChange={(e) => handleInputChange("url", e.target.value)} />
-                                </div>
-                            </TabsContent>
-                            <TabsContent value="text" className="pt-4">
-                                <div className="space-y-2">
-                                    <Label htmlFor="article-text">Article Text</Label>
-                                    <Textarea id="article-text" placeholder="Paste the full text of an editorial or news article here..." className="h-40" value={inputs.text} onChange={(e) => handleInputChange("text", e.target.value)} />
-                                </div>
-                            </TabsContent>
-                        </Tabs>
-                        
-                        <div className="space-y-2">
-                            <Label htmlFor="analysis-focus">Analysis Focus</Label>
-                            <Select value={inputs.analysisFocus} onValueChange={(value) => handleInputChange("analysisFocus", value)}>
-                                <SelectTrigger id="analysis-focus">
-                                    <SelectValue placeholder="Select an analysis type" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem value="Generate Questions (Mains & Prelims)">Generate Questions (Mains & Prelims)</SelectItem>
-                                    <SelectItem value="Mains Analysis (Arguments, Keywords, Viewpoints)">Mains Analysis (Arguments, Keywords, Viewpoints)</SelectItem>
-                                    <SelectItem value="Prelims Fact Finder (Key Names, Dates, Schemes)">Prelims Fact Finder (Key Names, Dates, Schemes)</SelectItem>
-                                    <SelectItem value="Critical Analysis (Tone, Bias, Fact vs. Opinion)">Critical Analysis (Tone, Bias, Fact vs. Opinion)</SelectItem>
-                                    <SelectItem value="Vocabulary Builder for Editorials">Vocabulary Builder for Editorials</SelectItem>
-                                    <SelectItem value="Comprehensive Summary">Comprehensive Summary</SelectItem>
-                                </SelectContent>
-                            </Select>
-                        </div>
-                         <div className="space-y-2">
-                            <Label htmlFor="output-language">Output Language</Label>
-                            <Select value={inputs.outputLanguage} onValueChange={(value) => handleInputChange("outputLanguage", value)}>
-                                <SelectTrigger id="output-language">
-                                    <SelectValue placeholder="Select a language" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem value="English">English</SelectItem>
-                                    <SelectItem value="Hindi">Hindi (हिन्दी)</SelectItem>
-                                    <SelectItem value="Tamil">Tamil (தமிழ்)</SelectItem>
-                                    <SelectItem value="Bengali">Bengali (বাংলা)</SelectItem>
-                                    <SelectItem value="Telugu">Telugu (తెలుగు)</SelectItem>
-                                </SelectContent>
-                            </Select>
-                        </div>
-                         <div className="space-y-2">
-                            <Label htmlFor="exam-type">Exam Type</Label>
-                            <Select value={inputs.examType} onValueChange={(value) => handleInputChange("examType", value)}>
-                                <SelectTrigger id="exam-type">
-                                    <SelectValue placeholder="Select an exam type" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem value="UPSC Civil Services">UPSC Civil Services</SelectItem>
-                                    <SelectItem value="State PSC">State PSC</SelectItem>
-                                    <SelectItem value="RBI Grade B">RBI Grade B</SelectItem>
-                                    <SelectItem value="Other Competitive Exams">Other Competitive Exams</SelectItem>
-                                </SelectContent>
-                            </Select>
-                        </div>
-                    </CardContent>
-                    <CardFooter>
-                        <Button size="lg" className="w-full" onClick={handleAnalyze} disabled={isLoading}>
-                            {isLoading ? (
-                              <>
-                                <Loader2 className="animate-spin" />
-                                Analyzing Article...
-                              </>
-                            ) : (
-                              <>
-                                <Sparkles className="w-5 h-5" />
-                                Analyze Article
-                              </>
-                            )}
-                        </Button>
-                    </CardFooter>
-                </Card>
+        {/* Stage Selection */}
+        {!selectedStage ? (
+          <div className="space-y-8">
+            <div className="text-center">
+              <h2 className="text-2xl font-semibold mb-2">Choose Your Preparation Mode</h2>
+              <p className="text-muted-foreground">
+                Select the analysis depth that matches your current preparation stage
+              </p>
             </div>
 
-
-            {/* Right Column: Analysis Output */}
-            <div className="lg:col-span-2">
-                <Dialog>
-                     <Card className="relative glassmorphic shadow-2xl shadow-primary/10 lg:min-h-[620px] flex flex-col">
-                        <CardHeader>
-                            <div className="flex justify-between items-start">
-                                <div>
-                                    <CardTitle>AI Analysis</CardTitle>
-                                    <CardDescription>The breakdown of your article will appear here.</CardDescription>
-                                </div>
-                                {analysisResult && (
-                                    <DialogTrigger asChild>
-                                        <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-primary -mr-2 -mt-2 flex-shrink-0">
-                                            <Maximize className="w-5 h-5" />
-                                        </Button>
-                                    </DialogTrigger>
-                                )}
-                            </div>
-                        </CardHeader>
-                        <div className="flex-1 flex flex-col px-6 pb-6 pt-0">
-                            {isLoading && !analysisResult?.summary && (
-                                <div className="flex flex-col items-center justify-center text-center h-full flex-1 p-8">
-                                    <Loader2 className="w-16 h-16 text-primary/50 animate-spin mb-4" />
-                                    <p className="text-muted-foreground font-medium text-lg">Our AI is reading...</p>
-                                    <p className="text-muted-foreground">This can take a moment for long articles.</p>
-                                </div>
-                            )}
-                            {!isLoading && !analysisResult && (
-                                <div className="flex flex-col items-center justify-center text-center h-full flex-1 p-8">
-                                    <Sparkles className="w-24 h-24 text-primary/30 mb-4" />
-                                    <h3 className="font-semibold text-foreground text-xl">Waiting for article</h3>
-                                    <p className="text-muted-foreground mt-2 max-w-sm">Submit an article on the left to see the AI-powered analysis.</p>
-                                </div>
-                            )}
-                            {analysisResult && user && (
-                              <div className="flex-1 flex flex-col">
-                                {analysisResult.totalTokens !== undefined && analysisResult.cost !== undefined && (
-                                    <UsageStats
-                                        totalTokens={analysisResult.totalTokens}
-                                        inputTokens={analysisResult.inputTokens}
-                                        outputTokens={analysisResult.outputTokens}
-                                        cost={analysisResult.cost}
-                                    />
-                                )}
-                                {analysisResult.summary && (
-                                  <motion.div 
-                                    className="mb-4 p-4 bg-primary/10 rounded-lg flex items-center gap-4"
-                                    initial={{ opacity: 0 }}
-                                    animate={{ opacity: 1 }}
-                                   >
-                                    <p className="flex-1 text-sm text-muted-foreground italic">
-                                      {analysisResult.summary}
-                                    </p>
-                                    {inputs.outputLanguage !== 'English' ? (
-                                        <TooltipProvider>
-                                            <Tooltip>
-                                                <TooltipTrigger asChild>
-                                                    <span tabIndex={0}>{audioButton}</span>
-                                                </TooltipTrigger>
-                                                <TooltipContent>
-                                                    <p>Audio summaries are only available in English for now.</p>
-                                                </TooltipContent>
-                                            </Tooltip>
-                                        </TooltipProvider>
-                                    ) : (
-                                        audioButton
-                                    )}
-                                  </motion.div>
-                                )}
-                                {audioSrc && (
-                                  <motion.div initial={{ opacity: 0}} animate={{ opacity: 1}}>
-                                    <audio controls src={audioSrc} className="w-full h-10" />
-                                  </motion.div>
-                                )}
-
-                                <Tabs value={currentAnalysisTab} onValueChange={setCurrentAnalysisTab} className="w-full flex-1 flex flex-col mt-4">
-                                    <TabsList>
-                                        {showPrelims && (
-                                            <TabsTrigger 
-                                                value="prelims"
-                                                className="data-[state=active]:bg-blue-100 data-[state=active]:text-blue-800 dark:data-[state=active]:bg-blue-900/50 dark:data-[state=active]:text-blue-200"
-                                            >
-                                                Prelims Questions
-                                            </TabsTrigger>
-                                        )}
-                                        {showMains && (
-                                            <TabsTrigger 
-                                                value="mains"
-                                                className="data-[state=active]:bg-purple-100 data-[state=active]:text-purple-800 dark:data-[state=active]:bg-purple-900/50 dark:data-[state=active]:text-purple-200"
-                                            >
-                                                Mains Questions
-                                            </TabsTrigger>
-                                        )}
-                                        {showGraph && (
-                                            <TabsTrigger 
-                                                value="connections"
-                                                className="data-[state=active]:bg-teal-100 data-[state=active]:text-teal-800 dark:data-[state=active]:bg-teal-900/50 dark:data-[state=active]:text-teal-200"
-                                            >
-                                                Key Connections
-                                            </TabsTrigger>
-                                        )}
-                                    </TabsList>
-                                    {showPrelims && (
-                                        <TabsContent value="prelims" className="flex-1 mt-4">
-                                            <ScrollArea className="h-[400px] w-full pr-4 -mr-4">
-                                                <MCQList mcqs={prelimsContent} onAnswer={handleAnswer} onSaveToggle={handleSaveToggle} savedQuestionIds={savedQuestionIds} user={user} />
-                                            </ScrollArea>
-                                        </TabsContent>
-                                    )}
-                                    {showMains && (
-                                        <TabsContent value="mains" className="flex-1 mt-4">
-                                            <ScrollArea className="h-[400px] w-full pr-4 -mr-4">
-                                                <MainsQuestionList questions={mainsContent} userId={user.uid} historyId={historyId} />
-                                            </ScrollArea>
-                                        </TabsContent>
-                                    )}
-                                    {showGraph && (
-                                         <TabsContent value="connections" className="flex-1 mt-4">
-                                            <ScrollArea className="h-[400px] w-full pr-4 -mr-4">
-                                                <KnowledgeGraphVisualizer graphData={knowledgeGraphContent} />
-                                            </ScrollArea>
-                                        </TabsContent>
-                                    )}
-                                </Tabs>
-                              </div>
-                            )}
-                        </div>
-                    </Card>
-                    <DialogContent className="max-w-5xl h-[90vh] flex flex-col">
-                        <DialogHeader>
-                            <DialogTitle>Expanded Analysis</DialogTitle>
-                        </DialogHeader>
-                        <ScrollArea className="flex-1 pr-6 -mr-6">
-                           {analysisResult?.prelims && user && (
-                             <MCQList mcqs={prelimsContent} onAnswer={handleAnswer} onSaveToggle={handleSaveToggle} savedQuestionIds={savedQuestionIds} user={user}/>
-                           )}
-                           {analysisResult?.mains && user && (
-                             <MainsQuestionList questions={mainsContent} userId={user.uid} historyId={historyId}/>
-                           )}
-                           {analysisResult?.knowledgeGraph && (
-                            <div className="mt-8">
-                                <KnowledgeGraphVisualizer graphData={knowledgeGraphContent} />
-                            </div>
-                           )}
-                        </ScrollArea>
-                    </DialogContent>
-                </Dialog>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+              {Object.entries(STAGE_MODES).map(([stage, mode]) => {
+                const isAccessible = tierInfo.modes.includes(stage as keyof typeof STAGE_MODES);
+                const isRecommended = stage === userProgress.currentStage;
+                
+                return (
+                  <StageCard
+                    key={stage}
+                    stage={stage as keyof typeof STAGE_MODES}
+                    mode={mode}
+                    isAccessible={isAccessible}
+                    isRecommended={isRecommended}
+                    userTier={userProgress.tier}
+                    onSelect={handleStageSelect}
+                  />
+                );
+              })}
             </div>
-        </div>
-    </MainLayout>
+
+            {/* Upgrade CTA for limited users */}
+            {userProgress.tier === 'free' && (
+              <Card className="max-w-2xl mx-auto p-6 bg-gradient-to-r from-blue-50 to-indigo-50 border-blue-200">
+                <CardContent className="text-center space-y-4">
+                  <Star className="w-12 h-12 text-primary mx-auto" />
+                  <h3 className="text-xl font-semibold">Unlock Advanced Analysis</h3>
+                  <p className="text-muted-foreground">
+                    Get unlimited daily analysis, all preparation modes, and advanced features with our premium plans.
+                  </p>
+                  <Button size="lg">
+                    <Zap className="w-4 h-4 mr-2" />
+                    Upgrade Now
+                  </Button>
+                </CardContent>
+              </Card>
+            )}
+          </div>
+        ) : (
+          /* Input Form */
+          <div className="max-w-4xl mx-auto space-y-8">
+            {/* Selected Stage Info */}
+            <Card className="p-6 bg-gradient-to-r from-primary/10 to-primary/5 border-primary/20">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="text-lg font-semibold text-primary">
+                    {STAGE_MODES[selectedStage].name}
+                  </h3>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    {STAGE_MODES[selectedStage].description}
+                  </p>
+                </div>
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  onClick={() => setSelectedStage(null)}
+                >
+                  Change Mode
+                </Button>
+              </div>
+            </Card>
+
+            {/* Input Method Selection */}
+            <div>
+              <h3 className="text-lg font-semibold mb-4">How would you like to provide the content?</h3>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                {INPUT_METHODS.map((method) => (
+                  <InputMethodCard
+                    key={method.id}
+                    method={method}
+                    isSelected={selectedInputMethod === method.id}
+                    onSelect={setSelectedInputMethod}
+                  />
+                ))}
+              </div>
+            </div>
+
+            {/* Input Form */}
+            <Card className="p-6">
+              <div className="space-y-6">
+                <div>
+                  <label className="text-sm font-medium mb-2 block">
+                    {selectedMethod?.title}
+                  </label>
+                  {selectedMethod?.inputType === 'textarea' ? (
+                    <Textarea
+                      placeholder={selectedMethod.placeholder}
+                      value={inputValue}
+                      onChange={(e) => setInputValue(e.target.value)}
+                      rows={8}
+                      className="resize-none"
+                    />
+                  ) : (
+                    <Input
+                      type={selectedMethod?.inputType || 'text'}
+                      placeholder={selectedMethod?.placeholder}
+                      value={inputValue}
+                      onChange={(e) => setInputValue(e.target.value)}
+                    />
+                  )}
+                </div>
+
+                {/* Language Selection */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="text-sm font-medium mb-2 block">Analysis Language</label>
+                    <Select value={language} onValueChange={setLanguage}>
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="English">English</SelectItem>
+                        <SelectItem value="Hindi">Hindi</SelectItem>
+                        <SelectItem value="Tamil">Tamil</SelectItem>
+                        <SelectItem value="Bengali">Bengali</SelectItem>
+                        <SelectItem value="Telugu">Telugu</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="flex items-end">
+                    <div className="text-sm text-muted-foreground">
+                      <Clock className="w-4 h-4 inline mr-1" />
+                      Expected duration: {STAGE_MODES[selectedStage].duration}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Analysis Button */}
+                <Button 
+                  size="lg" 
+                  className="w-full"
+                  onClick={handleAnalyze}
+                  disabled={!inputValue.trim() || isAnalyzing || !canUseToday}
+                >
+                  {isAnalyzing ? (
+                    <>
+                      <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin mr-2" />
+                      Analyzing...
+                    </>
+                  ) : !canUseToday ? (
+                    <>
+                      <Lock className="w-4 h-4 mr-2" />
+                      Daily Limit Reached
+                    </>
+                  ) : (
+                    <>
+                      <Zap className="w-4 h-4 mr-2" />
+                      Start Analysis
+                    </>
+                  )}
+                </Button>
+
+                {/* Usage Info */}
+                <div className="text-center text-sm text-muted-foreground">
+                  Analysis will consume 1 of your daily credits
+                  {tierInfo.dailyLimit !== -1 && (
+                    <span> ({tierInfo.dailyLimit - userProgress.dailyAnalysisUsed} remaining today)</span>
+                  )}
+                </div>
+              </div>
+            </Card>
+          </div>
+        )}
+      </main>
+    </div>
   );
 }
