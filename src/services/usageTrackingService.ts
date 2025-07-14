@@ -15,6 +15,7 @@ import {
   validateWritingAccess,
   validateInterviewAccess
 } from '@/lib/subscription-tiers';
+import { isDevMode, hasDevFeature } from '@/lib/dev-mode';
 
 // Types
 export interface UsageTracking {
@@ -100,9 +101,19 @@ export class UsageTrackingService {
   static async validateToolAccess(
     userId: string, 
     userTier: SubscriptionTier, 
-    toolType: ToolType
+    toolType: ToolType,
+    userEmail?: string
   ): Promise<UsageValidationResult> {
     try {
+      // Dev mode override - unlimited access
+      if (hasDevFeature('bypassUsageLimits', userEmail)) {
+        return { 
+          allowed: true, 
+          remaining: -1, 
+          message: 'Dev mode: Unlimited access' 
+        };
+      }
+
       const usage = await this.getCurrentUsage(userId);
       
       switch (toolType) {
