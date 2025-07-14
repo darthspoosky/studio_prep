@@ -2,7 +2,7 @@ import { writeFile, unlink, mkdir, readFile } from 'fs/promises';
 import { join } from 'path';
 import { v4 as uuidv4 } from 'uuid';
 import { existsSync } from 'fs';
-import * as pdf from 'pdf-parse';
+import pdf from 'pdf-parse';
 
 // File processing types
 export interface FileProcessingOptions {
@@ -90,14 +90,18 @@ export class FileProcessingService {
       let fileName: string;
       let mimeType: string;
       
-      if (file instanceof File) {
+      if (file && typeof file === 'object' && 'name' in file && 'type' in file && 'arrayBuffer' in file) {
+        // Browser File object
         fileName = file.name;
         mimeType = file.type;
         fileBuffer = Buffer.from(await file.arrayBuffer());
-      } else {
+      } else if (Buffer.isBuffer(file)) {
+        // Buffer input
         fileName = `processed_${uuidv4()}`;
         mimeType = this.detectMimeType(file);
         fileBuffer = file;
+      } else {
+        throw new Error('Invalid file input: must be File object or Buffer');
       }
 
       // Validate file
@@ -314,22 +318,27 @@ export class FileProcessingService {
   }
 
   // Get file info without processing
-  static getFileInfo(file: File): {
+  static getFileInfo(file: File | any): {
     name: string;
     size: number;
     type: string;
     format: FileFormat;
     isSupported: boolean;
   } {
-    const format = this.determineFileFormat(file.type);
+    // Handle both browser File and server-side file objects
+    const fileName = file.name || file.filename || 'unknown';
+    const fileSize = file.size || 0;
+    const fileType = file.type || 'application/octet-stream';
+    
+    const format = this.determineFileFormat(fileType);
     const supportedTypes = [...this.SUPPORTED_IMAGE_TYPES, ...this.SUPPORTED_PDF_TYPES];
     
     return {
-      name: file.name,
-      size: file.size,
-      type: file.type,
+      name: fileName,
+      size: fileSize,
+      type: fileType,
       format,
-      isSupported: supportedTypes.includes(file.type)
+      isSupported: supportedTypes.includes(fileType)
     };
   }
 }

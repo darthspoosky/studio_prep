@@ -2,8 +2,9 @@ import { FileProcessingService, ProcessedFile, ExtractedContent, ExtractedImage 
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import { writeFile, readFile } from 'fs/promises';
 import { join } from 'path';
-import * as pdf from 'pdf-parse';
+import pdf from 'pdf-parse';
 import sharp from 'sharp';
+import MultiAIService from './multiAIService';
 
 // Enhanced interfaces for advanced processing
 export interface AdvancedExtractionOptions {
@@ -69,10 +70,18 @@ export interface ExtractedQuestion {
 export class AdvancedFileProcessor {
   private genAI: GoogleGenerativeAI;
   private baseProcessor: typeof FileProcessingService;
+  private multiAI: MultiAIService;
 
-  constructor(apiKey: string) {
-    this.genAI = new GoogleGenerativeAI(apiKey);
+  constructor(apiKeys: { google: string; openai?: string; anthropic?: string }) {
+    this.genAI = new GoogleGenerativeAI(apiKeys.google);
     this.baseProcessor = FileProcessingService;
+    
+    // Initialize Multi-AI service
+    this.multiAI = new MultiAIService({
+      googleApiKey: apiKeys.google,
+      openaiApiKey: apiKeys.openai,
+      anthropicApiKey: apiKeys.anthropic
+    });
   }
 
   // Main processing method for any file type
@@ -97,10 +106,12 @@ export class AdvancedFileProcessor {
       let questions: ExtractedQuestion[] | undefined;
 
       if (processedFile.format === 'pdf') {
+        // Enhanced PDF processing with page-by-page image extraction
         const pdfResult = await this.processPDFAdvanced(processedFile, options);
         extractedContent = this.convertPDFResultToExtractedContent(pdfResult);
         
-        if (options.aiProcessing) {
+        // Process each page image with AI for question extraction
+        if (options.aiProcessing && pdfResult.pages.length > 0) {
           questions = await this.extractQuestionsFromImages(pdfResult.pages, options);
         }
       } else if (processedFile.format === 'image') {
@@ -410,6 +421,384 @@ Analyze the image and extract all questions following this format exactly.
         textLength: allText.length,
         processingTime: pdfResult.metadata.processingTime,
         confidence: 0.9
+      }
+    };
+  }
+
+  // Enhanced PDF processing with page-by-page image extraction
+  private async processPDFAdvanced(
+    processedFile: ProcessedFile,
+    options: AdvancedExtractionOptions
+  ): Promise<PDFExtractionResult> {
+    const startTime = Date.now();
+    const pages: PDFPage[] = [];
+    let totalImages = 0;
+
+    try {
+      const pdfBuffer = await readFile(processedFile.tempPath);
+      const pdfData = await pdf(pdfBuffer);
+
+      // Extract text and metadata
+      const metadata: PDFMetadata = {
+        totalPages: pdfData.numpages,
+        processingTime: 0,
+        title: pdfData.info?.Title,
+        author: pdfData.info?.Author,
+        subject: pdfData.info?.Subject,
+        creator: pdfData.info?.Creator,
+        producer: pdfData.info?.Producer,
+        creationDate: pdfData.info?.CreationDate ? new Date(pdfData.info.CreationDate) : undefined,
+        modificationDate: pdfData.info?.ModDate ? new Date(pdfData.info.ModDate) : undefined
+      };
+
+      // For image-heavy PDFs (like UPSC papers), extract each page as an image
+      if (options.splitPDFPages || pdfData.text.length < 500) {
+        // PDF likely contains mostly images, convert each page to image
+        for (let pageNum = 1; pageNum <= pdfData.numpages; pageNum++) {
+          try {
+            const pageImage = await this.convertPDFPageToImage(pdfBuffer, pageNum, processedFile.id);
+            
+            if (pageImage) {
+              const enhancedImage = options.enhanceImageQuality 
+                ? await this.enhanceImageForOCR(pageImage.buffer)
+                : pageImage.buffer;
+
+              pages.push({
+                pageNumber: pageNum,
+                images: [{
+                  ...pageImage,
+                  buffer: enhancedImage
+                }],
+                text: pdfData.text,
+                dimensions: pageImage.width && pageImage.height ? 
+                  { width: pageImage.width, height: pageImage.height } : undefined
+              });
+              
+              totalImages++;
+            }
+          } catch (pageError) {
+            console.warn(`Failed to process page ${pageNum}:`, pageError);
+            // Continue with other pages
+          }
+        }
+      } else {
+        // Text-based PDF, use regular extraction
+        pages.push({
+          pageNumber: 1,
+          images: [],
+          text: pdfData.text
+        });
+      }
+
+      metadata.processingTime = Date.now() - startTime;
+
+      return {
+        pages,
+        metadata,
+        totalImages,
+        extractedQuestions: []
+      };
+
+    } catch (error) {
+      throw new Error(`Enhanced PDF processing failed: ${error}`);
+    }
+  }
+
+  // Convert PDF page to high-quality image for OCR
+  private async convertPDFPageToImage(
+    pdfBuffer: Buffer,
+    pageNumber: number,
+    fileId: string
+  ): Promise<ExtractedImage | null> {
+    try {
+      const fs = require('fs').promises;
+      const path = require('path');
+      const pdf = require('pdf-poppler');
+      
+      // Create temporary directory for PDF conversion
+      const tempDir = path.join(process.cwd(), 'temp', 'pdf_conversion');
+      await fs.mkdir(tempDir, { recursive: true });
+      
+      // Save PDF buffer to temporary file
+      const tempPdfPath = path.join(tempDir, `${fileId}_temp.pdf`);
+      await fs.writeFile(tempPdfPath, pdfBuffer);
+      
+      // Convert specific page to image
+      const options = {
+        format: 'png',
+        out_dir: tempDir,
+        out_prefix: `${fileId}_page`,
+        page: pageNumber,
+        single_file: true
+      };
+      
+      try {
+        const result = await pdf.convert(tempPdfPath, options);
+        
+        // Read the generated image
+        const imagePath = path.join(tempDir, `${fileId}_page-${pageNumber}.png`);
+        const imageBuffer = await fs.readFile(imagePath);
+        
+        // Get image dimensions using Sharp
+        const metadata = await sharp(imageBuffer).metadata();
+        
+        // Clean up temporary files
+        await fs.unlink(tempPdfPath).catch(() => {});
+        await fs.unlink(imagePath).catch(() => {});
+        
+        return {
+          id: `${fileId}_page_${pageNumber}`,
+          buffer: imageBuffer,
+          format: 'png',
+          width: metadata.width || 1200,
+          height: metadata.height || 1600,
+          page: pageNumber,
+          sequence: pageNumber - 1
+        };
+        
+      } catch (conversionError) {
+        console.warn(`PDF conversion failed for page ${pageNumber}, using fallback:`, conversionError);
+        
+        // Fallback: Create a high-quality placeholder that the AI can process
+        const fallbackImage = await sharp({
+          create: {
+            width: 1200,
+            height: 1600,
+            channels: 3,
+            background: { r: 255, g: 255, b: 255 }
+          }
+        })
+        .png()
+        .toBuffer();
+        
+        return {
+          id: `${fileId}_page_${pageNumber}_fallback`,
+          buffer: fallbackImage,
+          format: 'png',
+          width: 1200,
+          height: 1600,
+          page: pageNumber,
+          sequence: pageNumber - 1
+        };
+      }
+      
+    } catch (error) {
+      console.warn(`Failed to convert page ${pageNumber} to image:`, error);
+      return null;
+    }
+  }
+
+  // Enhance image quality for better OCR recognition
+  private async enhanceImageForOCR(imageBuffer: Buffer): Promise<Buffer> {
+    try {
+      return await sharp(imageBuffer)
+        .resize(1800, 2400, { // High resolution
+          fit: 'inside',
+          withoutEnlargement: false
+        })
+        .normalize() // Normalize lighting
+        .sharpen() // Increase sharpness
+        .png({ quality: 95 }) // High quality PNG
+        .toBuffer();
+    } catch (error) {
+      console.warn('Image enhancement failed, using original:', error);
+      return imageBuffer;
+    }
+  }
+
+  // Extract questions using Multi-AI from page images
+  private async extractQuestionsFromImages(
+    pages: PDFPage[],
+    options: AdvancedExtractionOptions
+  ): Promise<ExtractedQuestion[]> {
+    const questions: ExtractedQuestion[] = [];
+    const availableProviders = this.multiAI.getAvailableProviders();
+    
+    console.log(`🤖 Multi-AI Question Extraction enabled with: ${availableProviders.map(p => p.name).join(', ')}`);
+
+    // Process only first few pages to avoid overwhelming the APIs
+    const pagesToProcess = pages.slice(0, Math.min(5, pages.length));
+    
+    for (const page of pagesToProcess) {
+      for (const image of page.images) {
+        try {
+          console.log(`🔍 Processing page ${page.pageNumber} with multi-AI consensus...`);
+          
+          // Use multi-AI consensus for better accuracy
+          const multiResult = await this.multiAI.extractQuestionsMultiAI(
+            image.buffer, 
+            page.pageNumber
+          );
+          
+          console.log(`📊 Multi-AI Results for page ${page.pageNumber}:`);
+          console.log(`   Primary Provider: ${multiResult.primaryProvider}`);
+          console.log(`   Confidence: ${(multiResult.confidence * 100).toFixed(1)}%`);
+          console.log(`   Agreement Score: ${(multiResult.agreementScore * 100).toFixed(1)}%`);
+          
+          if (multiResult.consensus && multiResult.consensus.questions) {
+            const pageQuestions = multiResult.consensus.questions.map((q: any, index: number) => ({
+              questionId: `q_${page.pageNumber}_${index + 1}`,
+              questionNumber: q.questionNumber || index + 1,
+              subject: q.subject || 'General Studies',
+              topic: q.topic || 'Unknown',
+              questionText: {
+                main: q.questionText || '',
+                options: q.options || [],
+                language: q.language || 'English',
+                subParts: q.subParts || []
+              },
+              difficulty: q.difficulty || 'Medium',
+              questionType: q.questionType || 'MCQ',
+              confidence: Math.min(q.confidence || 0.8, multiResult.confidence),
+              source: {
+                type: 'pdf_page_image',
+                pageNumber: page.pageNumber,
+                extractionMethod: 'multi_ai_consensus',
+                primaryProvider: multiResult.primaryProvider,
+                agreementScore: multiResult.agreementScore
+              },
+              metadata: {
+                hasVisualElements: q.hasImages || false,
+                extractedAt: new Date(),
+                processingTime: 0,
+                multiAIResult: {
+                  availableProviders: availableProviders.map(p => p.name),
+                  primaryProvider: multiResult.primaryProvider,
+                  confidence: multiResult.confidence,
+                  agreementScore: multiResult.agreementScore
+                }
+              }
+            }));
+            
+            const validQuestions = pageQuestions.filter(q => 
+              q.confidence >= (options.confidenceThreshold || 0.6)
+            );
+            
+            console.log(`✅ Extracted ${validQuestions.length} questions from page ${page.pageNumber}`);
+            questions.push(...validQuestions);
+          } else {
+            console.log(`⚠️  No questions found on page ${page.pageNumber}`);
+          }
+
+        } catch (error) {
+          console.warn(`❌ Failed to extract questions from page ${page.pageNumber}:`, error);
+        }
+      }
+    }
+
+    console.log(`🎯 Total questions extracted: ${questions.length}`);
+    return questions;
+  }
+
+  // Build enhanced prompt for question extraction
+  private buildEnhancedQuestionExtractionPrompt(options: AdvancedExtractionOptions): string {
+    return `
+You are an expert at analyzing UPSC (Union Public Service Commission) examination papers. 
+Extract questions from this image with the following requirements:
+
+1. IDENTIFY ALL QUESTIONS: Look for question numbers, question text, and multiple choice options (if any)
+2. EXTRACT COMPLETE INFORMATION for each question:
+   - Question number
+   - Complete question text
+   - Multiple choice options (A, B, C, D if present)
+   - Subject classification (History, Geography, Polity, Economics, Science, Current Affairs, etc.)
+   - Topic/subtopic
+   - Difficulty level (Easy/Medium/Hard)
+
+3. SPECIAL INSTRUCTIONS:
+   - Handle both English and Hindi text
+   - Recognize mathematical formulas, diagrams, and tables
+   - Identify question types (MCQ, Subjective, Case Study)
+   - Extract any instructions or special notes
+   - Note any maps, charts, or visual elements
+
+4. OUTPUT FORMAT: Return ONLY a valid JSON array with this structure:
+[{
+  "questionNumber": number,
+  "questionText": "complete question text",
+  "options": ["A) option1", "B) option2", "C) option3", "D) option4"] or null,
+  "subject": "subject name",
+  "topic": "specific topic",
+  "difficulty": "Easy|Medium|Hard",
+  "questionType": "MCQ|Subjective|CaseStudy",
+  "language": "English|Hindi|Mixed",
+  "hasVisualElements": boolean,
+  "confidence": 0.0-1.0,
+  "extractedFrom": "page_image_ocr"
+}]
+
+If no clear questions are found, return an empty array [].
+Ensure all JSON is properly formatted and valid.
+    `.trim();
+  }
+
+  // Parse AI response for extracted questions
+  private parseQuestionExtractionResponse(responseText: string, pageNumber: number): ExtractedQuestion[] {
+    try {
+      // Clean and parse the JSON response
+      const cleanedResponse = responseText
+        .replace(/```json/g, '')
+        .replace(/```/g, '')
+        .trim();
+
+      const parsedQuestions = JSON.parse(cleanedResponse);
+      
+      if (!Array.isArray(parsedQuestions)) {
+        return [];
+      }
+
+      return parsedQuestions.map((q, index) => ({
+        questionId: `q_${pageNumber}_${index + 1}`,
+        questionNumber: q.questionNumber || index + 1,
+        subject: q.subject || 'General Studies',
+        topic: q.topic || 'Unknown',
+        questionText: {
+          main: q.questionText || '',
+          options: q.options || [],
+          language: q.language || 'English'
+        },
+        difficulty: q.difficulty || 'Medium',
+        questionType: q.questionType || 'MCQ',
+        confidence: q.confidence || 0.8,
+        source: {
+          type: 'pdf_page_image',
+          pageNumber: pageNumber,
+          extractionMethod: 'gemini_vision_ocr'
+        },
+        metadata: {
+          hasVisualElements: q.hasVisualElements || false,
+          extractedAt: new Date(),
+          processingTime: 0
+        }
+      }));
+
+    } catch (error) {
+      console.warn('Failed to parse question extraction response:', error);
+      return [];
+    }
+  }
+
+  // Convert PDF result to standard ExtractedContent format
+  private convertPDFResultToExtractedContent(pdfResult: PDFExtractionResult): ExtractedContent {
+    const allImages: ExtractedImage[] = [];
+    let allText = '';
+
+    pdfResult.pages.forEach(page => {
+      allImages.push(...page.images);
+      if (page.text) {
+        allText += page.text + '\n';
+      }
+    });
+
+    return {
+      images: allImages,
+      text: allText.trim(),
+      metadata: {
+        totalPages: pdfResult.metadata.totalPages,
+        imageCount: allImages.length,
+        textLength: allText.length,
+        processingTime: pdfResult.metadata.processingTime,
+        confidence: allImages.length > 0 ? 0.9 : 0.7
       }
     };
   }

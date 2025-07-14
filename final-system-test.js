@@ -81,7 +81,8 @@ const serviceFiles = [
   'src/services/fileProcessingService.ts',
   'src/services/advancedFileProcessor.ts',
   'src/services/tempFileManager.ts',
-  'src/services/extractionServiceIntegration.ts'
+  'src/services/extractionServiceIntegration.ts',
+  'src/services/answerEvaluationService.ts'
 ];
 
 let serviceScore = 0;
@@ -99,7 +100,9 @@ console.log(`   📊 Services Score: ${serviceScore}/${serviceFiles.length} (${M
 console.log('\n5️⃣ Testing API Endpoints...');
 const apiFiles = [
   'src/app/api/ai/extract-questions-advanced/route.ts',
-  'src/app/admin/question-extraction-advanced/page.tsx'
+  'src/app/api/ai/evaluate-answer/route.ts',
+  'src/app/admin/question-extraction-advanced/page.tsx',
+  'src/app/admin/answer-evaluation/page.tsx'
 ];
 
 let apiScore = 0;

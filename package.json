@@ -15,7 +15,7 @@
     "test:mock-interview": "tsx src/scripts/test-mock-interview.ts"
   },
   "dependencies": {
-    "@anthropic-ai/sdk": "^0.17.1",
+    "@anthropic-ai/sdk": "^0.17.2",
     "@genkit-ai/firebase": "^1.14.0",
     "@genkit-ai/flow": "^0.5.17",
     "@genkit-ai/googleai": "^1.14.0",
@@ -63,10 +63,13 @@
     "lucide-react": "^0.475.0",
     "next": "15.3.3",
     "node-fetch": "^3.3.2",
-    "openai": "^4.35.0",
+    "openai": "^4.104.0",
     "patch-package": "^8.0.0",
+    "pdf-lib": "^1.17.1",
     "pdf-parse": "^1.1.1",
+    "pdf-poppler": "^0.2.1",
     "pdf2pic": "^3.2.0",
+    "pdfjs-dist": "^5.3.93",
     "razorpay": "^2.9.6",
     "react": "^18.3.1",
     "react-day-picker": "^8.10.1",
