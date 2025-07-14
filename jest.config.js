@@ -7,7 +7,7 @@ const createJestConfig = nextJest({
 
 // Add any custom config to be passed to Jest
 const customJestConfig = {
-  setupFilesAfterEnv: ['<rootDir>/src/test/setup.ts'],
+  setupFilesAfterEnv: ['<rootDir>/jest.setup.js'],
   moduleNameMapper: {
     '^@/(.*)$': '<rootDir>/src/$1',
     '^@/components/(.*)$': '<rootDir>/src/components/$1',
@@ -26,6 +26,9 @@ const customJestConfig = {
     '!src/app/**/layout.tsx',
     '!src/app/**/page.tsx',
     '!src/ai/newspaper-analysis-flow.ts', // Exclude old monolithic file
+    // Include quiz components for coverage
+    'src/app/daily-quiz/components/**/*.{ts,tsx}',
+    'src/app/api/daily-quiz/**/*.ts',
   ],
   coverageThreshold: {
     global: {
