@@ -398,7 +398,7 @@ export default function ImprovedDashboardPage() {
                           Article Analysis
                         </p>
                         <p className="text-sm text-gray-600 dark:text-gray-400">
-                          {new Date(entry.createdAt.toDate()).toLocaleDateString()}
+                          {entry.timestamp ? new Date(entry.timestamp.toDate()).toLocaleDateString() : 'Recent'}
                         </p>
                       </div>
                       <ChevronRight className="h-4 w-4 text-gray-400" />
