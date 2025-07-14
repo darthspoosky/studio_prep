@@ -12,6 +12,7 @@ import {
 } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { SubscriptionTier, UserStage } from '@/lib/subscription-tiers';
+import { isDevMode, getDevTier, hasDevFeature } from '@/lib/dev-mode';
 
 // Types
 export interface UserSubscription {
@@ -375,13 +376,26 @@ export class SubscriptionService {
   }
 
   // Utility methods
-  static async getUserProfile(userId: string): Promise<UserProfile | null> {
+  static async getUserProfile(userId: string, userEmail?: string): Promise<UserProfile | null> {
     try {
       const profileDoc = await getDoc(doc(db, 'userProfiles', userId));
+      let profile: UserProfile | null = null;
+      
       if (profileDoc.exists()) {
-        return profileDoc.data() as UserProfile;
+        profile = profileDoc.data() as UserProfile;
       }
-      return null;
+      
+      // Dev mode override - upgrade to elite tier
+      if (profile && isDevMode(userEmail || profile.email)) {
+        return {
+          ...profile,
+          currentTier: 'elite',
+          subscriptionStatus: 'active',
+          currentStage: 'interview' // Highest stage for full access
+        };
+      }
+      
+      return profile;
     } catch (error) {
       console.error('Error getting user profile:', error);
       throw error;

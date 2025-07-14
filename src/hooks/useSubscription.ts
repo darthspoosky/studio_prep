@@ -3,6 +3,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { SubscriptionTier, UserStage } from '@/lib/subscription-tiers';
 import { useRazorpayPayment } from '@/lib/payment/razorpay';
 import { useToast } from '@/hooks/use-toast';
+import { isDevMode, getDevTier, hasDevFeature } from '@/lib/dev-mode';
 
 // Types
 interface UserSubscription {
@@ -211,11 +212,16 @@ export function useSubscription() {
 
   // Check if feature is available
   const hasFeature = useCallback((feature: string): boolean => {
+    // Dev mode override - all features available
+    if (hasDevFeature('accessAllTools', user?.email)) {
+      return true;
+    }
+    
     if (!data.profile) return false;
     
     // Import subscription tiers to check features
     // This is a simplified check - in reality, you'd import and use the actual feature checking logic
-    const tier = data.profile.currentTier;
+    const tier = getDevTier(user?.email) || data.profile.currentTier;
     
     // Basic feature availability based on tier
     const featureMap: Record<SubscriptionTier, string[]> = {
@@ -270,7 +276,7 @@ export function useSubscription() {
     isPending: data.subscription?.status === 'past_due',
     isCancelled: data.subscription?.status === 'cancelled',
     willCancelAtPeriodEnd: data.subscription?.cancelAtPeriodEnd || false,
-    currentTier: data.profile?.currentTier || 'free',
+    currentTier: getDevTier(user?.email) || data.profile?.currentTier || 'free',
     currentStage: data.profile?.currentStage || 'assessment'
   };
 }
