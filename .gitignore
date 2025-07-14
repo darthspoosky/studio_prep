@@ -30,3 +30,27 @@ pnpm-debug.log*
 
 # Next.js
 next-env.d.ts
+
+# Logs
+*.log
+dev.log
+firebase-debug.log
+firestore-debug.log
+pglite-debug.log
+
+# Build artifacts
+.turbo/
+*.tsbuildinfo
+
+# Test outputs
+test-results.html
+*_test_results.json
+coverage/
+
+# IDE
+*.swp
+*.swo
+
+# Temporary files
+*.tmp
+*.temp
