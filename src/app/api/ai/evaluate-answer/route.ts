@@ -22,16 +22,23 @@ export async function POST(request: NextRequest) {
     // Convert File to Buffer
     const answerBuffer = Buffer.from(await answerImage.arrayBuffer());
 
-    // Initialize evaluation service
-    const apiKey = process.env.GOOGLE_AI_API_KEY;
-    if (!apiKey) {
+    // Initialize evaluation service with multi-AI support
+    const googleApiKey = process.env.GOOGLE_AI_API_KEY;
+    const openaiApiKey = process.env.OPENAI_API_KEY;
+    const anthropicApiKey = process.env.ANTHROPIC_API_KEY;
+    
+    if (!googleApiKey) {
       return NextResponse.json(
         { error: 'Google AI API key not configured' },
         { status: 500 }
       );
     }
 
-    const evaluationService = new AnswerEvaluationService(apiKey);
+    const evaluationService = new AnswerEvaluationService({
+      google: googleApiKey,
+      openai: openaiApiKey,
+      anthropic: anthropicApiKey
+    });
 
     // Evaluate the answer
     const evaluation = await evaluationService.evaluateAnswer(answerBuffer, {
@@ -136,16 +143,23 @@ export async function PUT(request: NextRequest) {
       answerImages.map(file => file.arrayBuffer().then(buffer => Buffer.from(buffer)))
     );
 
-    // Initialize evaluation service
-    const apiKey = process.env.GOOGLE_AI_API_KEY;
-    if (!apiKey) {
+    // Initialize evaluation service with multi-AI support
+    const googleApiKey = process.env.GOOGLE_AI_API_KEY;
+    const openaiApiKey = process.env.OPENAI_API_KEY;
+    const anthropicApiKey = process.env.ANTHROPIC_API_KEY;
+    
+    if (!googleApiKey) {
       return NextResponse.json(
         { error: 'Google AI API key not configured' },
         { status: 500 }
       );
     }
 
-    const evaluationService = new AnswerEvaluationService(apiKey);
+    const evaluationService = new AnswerEvaluationService({
+      google: googleApiKey,
+      openai: openaiApiKey,
+      anthropic: anthropicApiKey
+    });
 
     // Perform batch evaluation
     const batchResult = await evaluationService.evaluateBatch(answerBuffers, questions);
